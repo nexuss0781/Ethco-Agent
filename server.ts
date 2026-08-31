@@ -70,27 +70,7 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", timestamp: Date.now() });
 });
 
-// 2. System prompt API
-app.get("/api/system-prompt", (req, res) => {
-  const prompt = getSystemPrompt();
-  res.json({ systemPrompt: prompt });
-});
-
-app.post("/api/system-prompt", (req, res) => {
-  try {
-    const { systemPrompt } = req.body;
-    if (typeof systemPrompt === "string") {
-      fs.writeFileSync(systemPromptPath, systemPrompt, "utf-8");
-      res.json({ success: true, message: "System prompt updated in SYSTEM.md" });
-    } else {
-      res.status(400).json({ error: "Invalid system prompt format" });
-    }
-  } catch (err: any) {
-    res.status(500).json({ error: err.message || "Failed to update SYSTEM.md" });
-  }
-});
-
-// 3. Persistent Conversations API (Server-side multi-session storage)
+// 2. Persistent Conversations API (Server-side multi-session storage)
 app.get("/api/conversations", (req, res) => {
   const convos = loadServerConversations();
   res.json({ conversations: convos });

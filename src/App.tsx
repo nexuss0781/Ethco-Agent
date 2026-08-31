@@ -4,7 +4,6 @@ import { ChatHeader } from './components/ChatHeader';
 import { EmptyState } from './components/EmptyState';
 import { ChatMessageList } from './components/ChatMessageList';
 import { ChatInput } from './components/ChatInput';
-import { PersonaModal } from './components/PersonaModal';
 import { UpgradeModal } from './components/UpgradeModal';
 import { Conversation, Message, Attachment, ModelOption, ActionMode } from './types';
 import { StorageService } from './lib/storage';
@@ -22,7 +21,6 @@ export default function App() {
   const [thinkingEnabled, setThinkingEnabled] = useState(true);
   const [actionMode, setActionMode] = useState<ActionMode>('planning');
   const [isLoading, setIsLoading] = useState(false);
-  const [isPersonaModalOpen, setIsPersonaModalOpen] = useState(false);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
 
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -47,7 +45,6 @@ export default function App() {
         handleNewChat();
       }
       if (e.key === 'Escape') {
-        setIsPersonaModalOpen(false);
         setIsUpgradeModalOpen(false);
         setIsSidebarOpen(false);
       }
@@ -133,7 +130,7 @@ export default function App() {
       timestamp: Date.now(),
       isStreaming: true,
       thinkingContent: thinkingEnabled
-        ? `Reasoning step (${currentMode.toUpperCase()} mode): Analyzing user query in depth, evaluating core nuances, and formulating structured response based on active persona...`
+        ? `Reasoning step (${currentMode.toUpperCase()} mode): Analyzing inquiry in depth, evaluating core nuances, and formulating structured response...`
         : undefined,
       model: selectedModel.id,
     };
@@ -349,7 +346,6 @@ export default function App() {
         onTogglePin={handleTogglePin}
         onRenameConversation={handleRenameConversation}
         onOpenUpgradeModal={() => setIsUpgradeModalOpen(true)}
-        onOpenPersonaModal={() => setIsPersonaModalOpen(true)}
       />
 
       {/* Main Conversation Stage */}
@@ -362,7 +358,6 @@ export default function App() {
           onSelectModel={setSelectedModel}
           thinkingEnabled={thinkingEnabled}
           onToggleThinking={() => setThinkingEnabled(!thinkingEnabled)}
-          onOpenPersonaModal={() => setIsPersonaModalOpen(true)}
           onOpenUpgradeModal={() => setIsUpgradeModalOpen(true)}
         />
 
@@ -393,12 +388,6 @@ export default function App() {
           />
         </div>
       </main>
-
-      {/* SYSTEM.md Persona Editor Modal */}
-      <PersonaModal
-        isOpen={isPersonaModalOpen}
-        onClose={() => setIsPersonaModalOpen(false)}
-      />
 
       {/* Upgrade Plan Modal */}
       <UpgradeModal

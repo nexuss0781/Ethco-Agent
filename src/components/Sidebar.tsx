@@ -12,7 +12,6 @@ import {
   Layers,
   ChevronRight,
   Shield,
-  FileCode2,
 } from 'lucide-react';
 import { Conversation } from '../types';
 import { StorageService } from '../lib/storage';
@@ -28,7 +27,6 @@ interface SidebarProps {
   onTogglePin: (id: string) => void;
   onRenameConversation: (id: string, newTitle: string) => void;
   onOpenUpgradeModal: () => void;
-  onOpenPersonaModal: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -42,7 +40,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onTogglePin,
   onRenameConversation,
   onOpenUpgradeModal,
-  onOpenPersonaModal,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -337,24 +334,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </div>
 
-        {/* Footer: User status, Persona settings, and Plan */}
-        <div className="p-3 border-t border-[#22221f] bg-[#171714] space-y-2">
-          {/* Persona quick indicator */}
-          <button
-            id="btn-sidebar-persona"
-            onClick={onOpenPersonaModal}
-            className="w-full flex items-center justify-between px-2.5 py-2 rounded-lg bg-[#20201d] hover:bg-[#282824] border border-[#2e2e2a] text-xs text-[#b4b4aa] hover:text-[#ecece7] transition-colors"
-          >
-            <div className="flex items-center gap-2">
-              <FileCode2 className="w-3.5 h-3.5 text-[#d97757]" />
-              <div className="text-left">
-                <div className="text-[11px] font-medium text-[#ecece7]">SYSTEM.md Active</div>
-                <div className="text-[10px] text-[#85857a]">Persona injected into Gemini</div>
-              </div>
-            </div>
-            <ChevronRight className="w-3.5 h-3.5 text-[#85857a]" />
-          </button>
-
+        {/* Footer: Upgrade Plan */}
+        <div className="p-3 border-t border-[#22221f] bg-[#171714]">
           {/* Upgrade Banner */}
           <div
             onClick={onOpenUpgradeModal}

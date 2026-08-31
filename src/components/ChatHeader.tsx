@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Menu, Plus, Sparkles, SlidersHorizontal, Settings2, Brain, ChevronDown, Check, ShieldCheck } from 'lucide-react';
+import { Menu, Plus, Brain, ChevronDown, Check } from 'lucide-react';
 import { ModelOption } from '../types';
 import { AVAILABLE_MODELS } from '../data/models';
 
@@ -10,7 +10,6 @@ interface ChatHeaderProps {
   onSelectModel: (model: ModelOption) => void;
   thinkingEnabled: boolean;
   onToggleThinking: () => void;
-  onOpenPersonaModal: () => void;
   onOpenUpgradeModal: () => void;
   hasUnread?: boolean;
 }
@@ -22,7 +21,6 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   onSelectModel,
   thinkingEnabled,
   onToggleThinking,
-  onOpenPersonaModal,
   onOpenUpgradeModal,
   hasUnread = true,
 }) => {
@@ -139,16 +137,6 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
             </>
           )}
         </div>
-
-        {/* Persona / SYSTEM.md Inspector */}
-        <button
-          id="btn-open-persona"
-          onClick={onOpenPersonaModal}
-          className="p-1.5 rounded-lg text-[#b4b4aa] hover:text-[#ecece7] hover:bg-[#262623] transition-colors"
-          title="System Persona & SYSTEM.md Settings"
-        >
-          <Settings2 className="w-4 h-4" />
-        </button>
       </div>
     </header>
   );
