@@ -1,5 +1,14 @@
 export type ActionMode = 'planning' | 'build' | 'chat';
 
+export interface ToolInvocation {
+  id: string;
+  name: string;
+  args: Record<string, any>;
+  result?: any;
+  status: 'running' | 'completed' | 'error';
+  timestamp?: number;
+}
+
 export interface Attachment {
   id: string;
   name: string;
@@ -16,6 +25,7 @@ export interface Message {
   timestamp: number;
   attachments?: Attachment[];
   thinkingContent?: string;
+  toolInvocations?: ToolInvocation[];
   isStreaming?: boolean;
   model?: string;
 }

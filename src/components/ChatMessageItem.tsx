@@ -13,6 +13,7 @@ import {
   User,
 } from 'lucide-react';
 import { Message } from '../types';
+import { ToolInvocationsList } from './ToolInvocationsList';
 
 interface ChatMessageItemProps {
   message: Message;
@@ -138,6 +139,11 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                 </div>
               )}
             </div>
+          )}
+
+          {/* Tool Invocations (view_file, create_file, edit_file, etc.) */}
+          {!isUser && message.toolInvocations && message.toolInvocations.length > 0 && (
+            <ToolInvocationsList tools={message.toolInvocations} />
           )}
 
           {/* Message Body */}

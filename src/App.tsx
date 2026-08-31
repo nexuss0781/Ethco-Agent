@@ -5,7 +5,7 @@ import { EmptyState } from './components/EmptyState';
 import { ChatMessageList } from './components/ChatMessageList';
 import { ChatInput } from './components/ChatInput';
 import { UpgradeModal } from './components/UpgradeModal';
-import { Conversation, Message, Attachment, ModelOption, ActionMode } from './types';
+import { Conversation, Message, Attachment, ModelOption, ActionMode, ToolInvocation } from './types';
 import { StorageService } from './lib/storage';
 import { AVAILABLE_MODELS } from './data/models';
 
@@ -183,6 +183,7 @@ export default function App() {
       const reader = response.body?.getReader();
       const decoder = new TextDecoder('utf-8');
       let accumulatedText = '';
+      let accumulatedTools: ToolInvocation[] = [];
 
       if (reader) {
         let done = false;
@@ -200,7 +201,43 @@ export default function App() {
 
                 try {
                   const parsed = JSON.parse(jsonStr);
-                  if (parsed.text) {
+
+                  if (parsed.toolEvent) {
+                    const evt = parsed.toolEvent;
+                    if (evt.type === 'tool_start') {
+                      accumulatedTools = [
+                        ...accumulatedTools,
+                        {
+                          id: evt.id,
+                          name: evt.name,
+                          args: evt.args,
+                          status: 'running',
+                          timestamp: Date.now(),
+                        },
+                      ];
+                    } else if (evt.type === 'tool_finish') {
+                      accumulatedTools = accumulatedTools.map((t) =>
+                        t.id === evt.id
+                          ? { ...t, result: evt.result, status: evt.result?.error ? 'error' : 'completed' }
+                          : t
+                      );
+                    }
+
+                    // Update UI state with new tool call state
+                    setConversations((prevConvos) =>
+                      prevConvos.map((c) => {
+                        if (c.id === targetConvo?.id) {
+                          const msgs = c.messages.map((m) =>
+                            m.id === assistantPlaceholderId
+                              ? { ...m, toolInvocations: [...accumulatedTools], isStreaming: true }
+                              : m
+                          );
+                          return { ...c, messages: msgs, updatedAt: Date.now() };
+                        }
+                        return c;
+                      })
+                    );
+                  } else if (parsed.text) {
                     accumulatedText += parsed.text;
 
                     // Update streaming message in state
@@ -209,7 +246,12 @@ export default function App() {
                         if (c.id === targetConvo?.id) {
                           const msgs = c.messages.map((m) =>
                             m.id === assistantPlaceholderId
-                              ? { ...m, content: accumulatedText, isStreaming: true }
+                              ? {
+                                  ...m,
+                                  content: accumulatedText,
+                                  toolInvocations: [...accumulatedTools],
+                                  isStreaming: true,
+                                }
                               : m
                           );
                           return { ...c, messages: msgs, updatedAt: Date.now() };
@@ -239,6 +281,7 @@ export default function App() {
           ? {
               ...m,
               content: accumulatedText || 'I am ready to help. What shall we think through next?',
+              toolInvocations: accumulatedTools.length > 0 ? accumulatedTools : undefined,
               isStreaming: false,
             }
           : m

@@ -4,6 +4,7 @@ import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
+import { WORKSPACE_TOOL_DECLARATIONS, executeWorkspaceTool } from "./server_tools";
 
 dotenv.config();
 
@@ -70,7 +71,26 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", timestamp: Date.now() });
 });
 
-// 2. Persistent Conversations API (Server-side multi-session storage)
+// 2. Tools Metadata API
+app.get("/api/tools", (req, res) => {
+  res.json({ tools: WORKSPACE_TOOL_DECLARATIONS });
+});
+
+// 3. Direct Tool Execution API
+app.post("/api/tools/execute", async (req, res) => {
+  try {
+    const { name, args } = req.body;
+    if (!name) {
+      return res.status(400).json({ error: "Tool name is required" });
+    }
+    const result = await executeWorkspaceTool(name, args || {});
+    res.json({ success: !result.error, result });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Tool execution failed" });
+  }
+});
+
+// 4. Persistent Conversations API (Server-side multi-session storage)
 app.get("/api/conversations", (req, res) => {
   const convos = loadServerConversations();
   res.json({ conversations: convos });
@@ -90,90 +110,7 @@ app.post("/api/conversations", (req, res) => {
   }
 });
 
-// Helper function to call generateContentStream with retry, chunk-level protection and fallback models
-async function streamWithResilientFailover(
-  modelsToTry: string[],
-  contents: any[],
-  config: any,
-  onChunk: (text: string) => void
-) {
-  let lastError: any = null;
-  let hasSentAnyChunk = false;
-
-  for (const modelName of modelsToTry) {
-    // Attempt up to 2 tries per model if transient 503/429
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      try {
-        const stream = await ai.models.generateContentStream({
-          model: modelName,
-          contents,
-          config,
-        });
-
-        for await (const chunk of stream) {
-          const chunkText = chunk.text || "";
-          if (chunkText) {
-            hasSentAnyChunk = true;
-            onChunk(chunkText);
-          }
-        }
-
-        // If we reached here, generation succeeded
-        return { success: true, model: modelName };
-      } catch (err: any) {
-        lastError = err;
-        const errMsg = (err?.message || "").toLowerCase();
-        console.warn(`Model ${modelName} attempt ${attempt} error (sentChunks: ${hasSentAnyChunk}):`, err?.message || err);
-
-        // If chunks were already transmitted to the client, we cannot cleanly switch models mid-sentence
-        if (hasSentAnyChunk) {
-          throw err;
-        }
-
-        const isTransient =
-          err?.status === 503 ||
-          err?.status === 429 ||
-          err?.code === 503 ||
-          err?.code === 429 ||
-          errMsg.includes("high demand") ||
-          errMsg.includes("unavailable") ||
-          errMsg.includes("resource exhausted") ||
-          errMsg.includes("rate limit") ||
-          errMsg.includes("overloaded");
-
-        if (isTransient && attempt < 2) {
-          await new Promise((r) => setTimeout(r, 400));
-        } else {
-          break; // move to next fallback model
-        }
-      }
-    }
-  }
-
-  // If all streaming models failed and no chunks were sent, try single-shot generateContent as emergency fallback
-  if (!hasSentAnyChunk) {
-    const emergencyModels = ["gemini-3.1-flash-lite", "gemini-flash-latest", "gemini-3.7-flash"];
-    for (const emModel of emergencyModels) {
-      try {
-        const directResp = await ai.models.generateContent({
-          model: emModel,
-          contents,
-          config,
-        });
-        if (directResp.text) {
-          onChunk(directResp.text);
-          return { success: true, model: emModel };
-        }
-      } catch (e: any) {
-        console.warn(`Emergency non-streaming fallback on ${emModel} failed:`, e?.message || e);
-      }
-    }
-  }
-
-  throw lastError;
-}
-
-// 4. Auto-generate Conversation Title
+// 5. Auto-generate Conversation Title
 app.post("/api/chat/title", async (req, res) => {
   const userMessage = req.body?.userMessage || "";
   const assistantMessage = req.body?.assistantMessage || "";
@@ -216,7 +153,136 @@ Title:`,
   }
 });
 
-// 5. Chat Streaming SSE Endpoint
+// Helper for multi-turn tool calling and streaming
+async function executeAgentTurnWithTools(
+  modelsToTry: string[],
+  contents: any[],
+  baseConfig: any,
+  onChunk: (text: string) => void,
+  onToolEvent: (event: any) => void
+) {
+  const maxToolIterations = 6;
+  let iteration = 0;
+
+  const toolsConfig = {
+    ...baseConfig,
+    tools: [{ functionDeclarations: WORKSPACE_TOOL_DECLARATIONS }],
+  };
+
+  while (iteration < maxToolIterations) {
+    iteration++;
+    let response: any = null;
+    let successfulModel = "";
+    let lastError: any = null;
+
+    for (const modelName of modelsToTry) {
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          response = await ai.models.generateContent({
+            model: modelName,
+            contents,
+            config: toolsConfig,
+          });
+          successfulModel = modelName;
+          break;
+        } catch (err: any) {
+          lastError = err;
+          const msg = (err?.message || "").toLowerCase();
+          const status = err?.status || err?.code;
+          const isTransient =
+            status === 503 ||
+            status === 429 ||
+            msg.includes("503") ||
+            msg.includes("429") ||
+            msg.includes("high demand") ||
+            msg.includes("unavailable") ||
+            msg.includes("resource exhausted") ||
+            msg.includes("quota");
+
+          console.warn(`Model ${modelName} attempt ${attempt} error in agent loop:`, err?.message || err);
+
+          if (isTransient && attempt < 3) {
+            // Exponential backoff
+            await new Promise((r) => setTimeout(r, 600 * attempt));
+          } else {
+            break; // Try next fallback model
+          }
+        }
+      }
+      if (response) break;
+    }
+
+    if (!response) {
+      throw lastError || new Error("All AI models are currently experiencing high demand. Please try again.");
+    }
+
+    const candidate = response.candidates?.[0];
+    const candidateContent = candidate?.content;
+    const functionCalls = response.functionCalls;
+
+    // If the model did not request any tools, send the final text response
+    if (!functionCalls || functionCalls.length === 0) {
+      const finalText = response.text || "";
+      if (finalText) {
+        onChunk(finalText);
+      }
+      return { success: true, model: successfulModel };
+    }
+
+    // Preserve the complete model turn content (including thoughts, thought_signatures, and functionCalls)
+    if (candidateContent) {
+      contents.push(candidateContent);
+    } else {
+      contents.push({
+        role: "model",
+        parts: functionCalls.map((fc: any) => ({ functionCall: { name: fc.name, args: fc.args || {} } })),
+      });
+    }
+
+    // Execute all tools requested in this step and collect the tool responses
+    const responseParts: any[] = [];
+    for (const call of functionCalls) {
+      const callId = `call_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const toolName = call.name;
+      const toolArgs = call.args || {};
+
+      onToolEvent({
+        type: "tool_start",
+        id: callId,
+        name: toolName,
+        args: toolArgs,
+      });
+
+      const result = await executeWorkspaceTool(toolName, toolArgs);
+
+      onToolEvent({
+        type: "tool_finish",
+        id: callId,
+        name: toolName,
+        result,
+      });
+
+      responseParts.push({
+        functionResponse: {
+          name: toolName,
+          response: {
+            output: result,
+          },
+        },
+      });
+    }
+
+    // Append user turn containing all functionResponses
+    contents.push({
+      role: "user",
+      parts: responseParts,
+    });
+  }
+
+  return { success: true };
+}
+
+// 6. Chat Streaming SSE Endpoint
 app.post("/api/chat/stream", async (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -236,10 +302,10 @@ app.post("/api/chat/stream", async (req, res) => {
     let modeDirective = "";
     if (actionMode === "planning") {
       modeDirective = `\n\n## ACTIVE MODE: PLANNING
-You are in Planning Mode. Structure your analysis with deep architectural clarity, systematic step-by-step roadmaps, edge-case breakdowns, component interaction diagrams (ASCII/markdown), and validation strategies before writing final code. Provide clear choices and trade-offs.`;
+You are in Planning Mode. Structure your analysis with deep architectural clarity, systematic step-by-step roadmaps, edge-case breakdowns, component interaction diagrams (ASCII/markdown), and validation strategies before writing final code. Provide clear choices and trade-offs. You have access to workspace tools (view_file, create_file, edit_file, list_directory, generate_architecture_plan) to inspect or draft specs.`;
     } else if (actionMode === "build") {
       modeDirective = `\n\n## ACTIVE MODE: BUILD
-You are in Build Mode. Focus on concrete, production-ready implementation, complete file artifacts, clean modular code without placeholders, and direct actionable solutions with robust error handling.`;
+You are in Build Mode. Focus on concrete, production-ready implementation, complete file artifacts, clean modular code without placeholders, and direct actionable solutions with robust error handling. You have access to workspace tools (view_file, create_file, edit_file, list_directory, generate_architecture_plan) to directly read, create, or update files.`;
     }
 
     const activeSystemInstruction = (customSystemPrompt
@@ -257,7 +323,6 @@ You are in Build Mode. Focus on concrete, production-ready implementation, compl
       if (msg.attachments && Array.isArray(msg.attachments)) {
         for (const att of msg.attachments) {
           if (att.type === "image" && att.data) {
-            // Strip data:image/...;base64, prefix if present
             const base64Data = att.data.includes("base64,") ? att.data.split("base64,")[1] : att.data;
             parts.push({
               inlineData: {
@@ -292,13 +357,16 @@ You are in Build Mode. Focus on concrete, production-ready implementation, compl
       temperature: 0.7,
     };
 
-    // Call streaming API with resilient model failover & chunk protection
-    await streamWithResilientFailover(
+    // Execute agent turn with tool calling support
+    await executeAgentTurnWithTools(
       modelsToTry,
       contents,
       config,
       (textChunk: string) => {
         res.write(`data: ${JSON.stringify({ text: textChunk })}\n\n`);
+      },
+      (toolEvent: any) => {
+        res.write(`data: ${JSON.stringify({ toolEvent })}\n\n`);
       }
     );
 
