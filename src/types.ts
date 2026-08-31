@@ -1,3 +1,5 @@
+export type ActionMode = 'planning' | 'build' | 'chat';
+
 export interface Attachment {
   id: string;
   name: string;

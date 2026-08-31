@@ -110,13 +110,15 @@ app.post("/api/conversations", (req, res) => {
   }
 });
 
-// Helper function to call generateContentStream with retry and fallback models
-async function generateStreamWithFallback(
+// Helper function to call generateContentStream with retry, chunk-level protection and fallback models
+async function streamWithResilientFailover(
   modelsToTry: string[],
   contents: any[],
-  config: any
+  config: any,
+  onChunk: (text: string) => void
 ) {
   let lastError: any = null;
+  let hasSentAnyChunk = false;
 
   for (const modelName of modelsToTry) {
     // Attempt up to 2 tries per model if transient 503/429
@@ -127,10 +129,27 @@ async function generateStreamWithFallback(
           contents,
           config,
         });
-        return { stream, usedModel: modelName };
+
+        for await (const chunk of stream) {
+          const chunkText = chunk.text || "";
+          if (chunkText) {
+            hasSentAnyChunk = true;
+            onChunk(chunkText);
+          }
+        }
+
+        // If we reached here, generation succeeded
+        return { success: true, model: modelName };
       } catch (err: any) {
         lastError = err;
         const errMsg = (err?.message || "").toLowerCase();
+        console.warn(`Model ${modelName} attempt ${attempt} error (sentChunks: ${hasSentAnyChunk}):`, err?.message || err);
+
+        // If chunks were already transmitted to the client, we cannot cleanly switch models mid-sentence
+        if (hasSentAnyChunk) {
+          throw err;
+        }
+
         const isTransient =
           err?.status === 503 ||
           err?.status === 429 ||
@@ -142,13 +161,31 @@ async function generateStreamWithFallback(
           errMsg.includes("rate limit") ||
           errMsg.includes("overloaded");
 
-        console.warn(`Attempt ${attempt} for model ${modelName} failed (transient: ${isTransient}):`, err?.message || err);
-
         if (isTransient && attempt < 2) {
           await new Promise((r) => setTimeout(r, 400));
         } else {
-          break; // move immediately to next fallback model
+          break; // move to next fallback model
         }
+      }
+    }
+  }
+
+  // If all streaming models failed and no chunks were sent, try single-shot generateContent as emergency fallback
+  if (!hasSentAnyChunk) {
+    const emergencyModels = ["gemini-3.1-flash-lite", "gemini-flash-latest", "gemini-3.7-flash"];
+    for (const emModel of emergencyModels) {
+      try {
+        const directResp = await ai.models.generateContent({
+          model: emModel,
+          contents,
+          config,
+        });
+        if (directResp.text) {
+          onChunk(directResp.text);
+          return { success: true, model: emModel };
+        }
+      } catch (e: any) {
+        console.warn(`Emergency non-streaming fallback on ${emModel} failed:`, e?.message || e);
       }
     }
   }
@@ -165,7 +202,7 @@ app.post("/api/chat/title", async (req, res) => {
       return res.json({ title: "New Conversation" });
     }
 
-    const modelsToTry = ["gemini-flash-latest", "gemini-3.1-flash-lite", "gemini-3.7-flash"];
+    const modelsToTry = ["gemini-3.1-flash-lite", "gemini-flash-latest", "gemini-3.7-flash"];
     let generated = "";
 
     for (const modelName of modelsToTry) {
@@ -207,7 +244,7 @@ app.post("/api/chat/stream", async (req, res) => {
   res.flushHeaders?.();
 
   try {
-    const { messages, thinkingEnabled = true, customSystemPrompt, model } = req.body;
+    const { messages, thinkingEnabled = true, customSystemPrompt, model, actionMode = "planning" } = req.body;
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       res.write(`data: ${JSON.stringify({ error: "Messages array is required" })}\n\n`);
@@ -216,9 +253,18 @@ app.post("/api/chat/stream", async (req, res) => {
 
     // Load active persona instructions from SYSTEM.md
     const baseSystemPrompt = getSystemPrompt();
-    const activeSystemInstruction = customSystemPrompt
+    let modeDirective = "";
+    if (actionMode === "planning") {
+      modeDirective = `\n\n## ACTIVE MODE: PLANNING
+You are in Planning Mode. Structure your analysis with deep architectural clarity, systematic step-by-step roadmaps, edge-case breakdowns, component interaction diagrams (ASCII/markdown), and validation strategies before writing final code. Provide clear choices and trade-offs.`;
+    } else if (actionMode === "build") {
+      modeDirective = `\n\n## ACTIVE MODE: BUILD
+You are in Build Mode. Focus on concrete, production-ready implementation, complete file artifacts, clean modular code without placeholders, and direct actionable solutions with robust error handling.`;
+    }
+
+    const activeSystemInstruction = (customSystemPrompt
       ? `${baseSystemPrompt}\n\nAdditional User Context/Preferences:\n${customSystemPrompt}`
-      : baseSystemPrompt;
+      : baseSystemPrompt) + modeDirective;
 
     // Convert messages to Gemini format
     const contents: Array<{ role: "user" | "model"; parts: any[] }> = [];
@@ -257,8 +303,8 @@ app.post("/api/chat/stream", async (req, res) => {
     }
 
     // Model fallback sequence
-    const preferredModel = typeof model === "string" && model ? model : "gemini-flash-latest";
-    const candidates = [preferredModel, "gemini-flash-latest", "gemini-3.1-flash-lite", "gemini-3.7-flash"];
+    const preferredModel = typeof model === "string" && model ? model : "gemini-3.1-flash-lite";
+    const candidates = [preferredModel, "gemini-3.1-flash-lite", "gemini-flash-latest", "gemini-3.7-flash"];
     const modelsToTry = Array.from(new Set(candidates));
 
     const config: any = {
@@ -266,19 +312,15 @@ app.post("/api/chat/stream", async (req, res) => {
       temperature: 0.7,
     };
 
-    // Call streaming API with automatic retry and model fallback
-    const { stream: responseStream } = await generateStreamWithFallback(
+    // Call streaming API with resilient model failover & chunk protection
+    await streamWithResilientFailover(
       modelsToTry,
       contents,
-      config
-    );
-
-    for await (const chunk of responseStream) {
-      const chunkText = chunk.text || "";
-      if (chunkText) {
-        res.write(`data: ${JSON.stringify({ text: chunkText })}\n\n`);
+      config,
+      (textChunk: string) => {
+        res.write(`data: ${JSON.stringify({ text: textChunk })}\n\n`);
       }
-    }
+    );
 
     res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
     res.end();

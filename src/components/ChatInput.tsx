@@ -12,17 +12,25 @@ import {
   Paperclip,
   ChevronDown,
   Sparkles,
+  Compass,
+  Hammer,
+  MessageSquare,
+  Check,
+  Brain,
+  Code2,
 } from 'lucide-react';
-import { Attachment, ModelOption } from '../types';
+import { Attachment, ModelOption, ActionMode } from '../types';
 
 interface ChatInputProps {
-  onSendMessage: (text: string, attachments: Attachment[]) => void;
+  onSendMessage: (text: string, attachments: Attachment[], mode?: ActionMode) => void;
   isLoading: boolean;
   onStopGeneration: () => void;
   selectedModel: ModelOption;
   onOpenModelSelector?: () => void;
   thinkingEnabled: boolean;
   onToggleThinking?: () => void;
+  actionMode?: ActionMode;
+  onSelectActionMode?: (mode: ActionMode) => void;
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
@@ -33,7 +41,19 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   onOpenModelSelector,
   thinkingEnabled,
   onToggleThinking,
+  actionMode: controlledActionMode,
+  onSelectActionMode,
 }) => {
+  const [internalMode, setInternalMode] = useState<ActionMode>('planning');
+  const [modeDropdownOpen, setModeDropdownOpen] = useState(false);
+  const activeMode = controlledActionMode || internalMode;
+
+  const setActionMode = (mode: ActionMode) => {
+    setInternalMode(mode);
+    onSelectActionMode?.(mode);
+    setModeDropdownOpen(false);
+  };
+
   const [inputText, setInputText] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isRecording, setIsRecording] = useState(false);
@@ -127,7 +147,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       setIsRecording(false);
     }
 
-    onSendMessage(inputText.trim(), attachments);
+    onSendMessage(inputText.trim(), attachments, activeMode);
     setInputText('');
     setAttachments([]);
     if (textareaRef.current) {
@@ -268,10 +288,118 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               <Plus className="w-4 h-4" />
             </button>
 
-            {/* Chat Pill Mode (As in screenshot) */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#181816] border border-[#33332e] text-xs font-medium text-[#b4b4aa]">
-              <span>Chat</span>
-              <SlidersHorizontal className="w-3 h-3 text-[#85857a]" />
+            {/* Planning and Build Dropdown Selector */}
+            <div className="relative">
+              <button
+                id="btn-mode-dropdown"
+                type="button"
+                onClick={() => setModeDropdownOpen(!modeDropdownOpen)}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-all cursor-pointer select-none ${
+                  activeMode === 'planning'
+                    ? 'bg-[#d97757]/15 border-[#d97757]/40 text-[#f0a282] hover:bg-[#d97757]/20'
+                    : activeMode === 'build'
+                    ? 'bg-[#0284c7]/15 border-[#0284c7]/40 text-[#7dd3fc] hover:bg-[#0284c7]/20'
+                    : 'bg-[#181816] border-[#33332e] text-[#b4b4aa] hover:bg-[#282824] hover:text-[#ecece7]'
+                }`}
+                title="Select Planning, Build, or Chat mode"
+              >
+                {activeMode === 'planning' && <Compass className="w-3.5 h-3.5 text-[#d97757]" />}
+                {activeMode === 'build' && <Hammer className="w-3.5 h-3.5 text-[#38bdf8]" />}
+                {activeMode === 'chat' && <MessageSquare className="w-3.5 h-3.5 text-[#85857a]" />}
+                <span className="capitalize">{activeMode}</span>
+                <ChevronDown className="w-3 h-3 opacity-70" />
+              </button>
+
+              {/* Mode Dropdown Menu */}
+              {modeDropdownOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-30"
+                    onClick={() => setModeDropdownOpen(false)}
+                  />
+                  <div className="absolute left-0 bottom-full mb-2 w-64 p-1.5 bg-[#1c1c19] border border-[#33332e] rounded-xl shadow-2xl z-40 animate-in fade-in zoom-in-95 duration-100 divide-y divide-[#2a2a26]">
+                    <div className="p-1 space-y-1">
+                      {/* Planning Mode Option */}
+                      <button
+                        type="button"
+                        onClick={() => setActionMode('planning')}
+                        className={`w-full text-left px-2.5 py-2 rounded-lg text-xs flex items-start gap-2.5 transition-colors cursor-pointer ${
+                          activeMode === 'planning'
+                            ? 'bg-[#2a2a26] text-[#ecece7]'
+                            : 'text-[#b4b4aa] hover:bg-[#242421] hover:text-[#ecece7]'
+                        }`}
+                      >
+                        <div className="p-1.5 rounded-md bg-[#d97757]/15 text-[#d97757] shrink-0 mt-0.5 border border-[#d97757]/30">
+                          <Compass className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold text-[#ecece7]">Planning</span>
+                            {activeMode === 'planning' && (
+                              <Check className="w-3.5 h-3.5 text-[#d97757]" />
+                            )}
+                          </div>
+                          <p className="text-[11px] text-[#85857a] mt-0.5 leading-snug">
+                            Architectural strategy, blueprints, edge cases & steps before writing code.
+                          </p>
+                        </div>
+                      </button>
+
+                      {/* Build Mode Option */}
+                      <button
+                        type="button"
+                        onClick={() => setActionMode('build')}
+                        className={`w-full text-left px-2.5 py-2 rounded-lg text-xs flex items-start gap-2.5 transition-colors cursor-pointer ${
+                          activeMode === 'build'
+                            ? 'bg-[#2a2a26] text-[#ecece7]'
+                            : 'text-[#b4b4aa] hover:bg-[#242421] hover:text-[#ecece7]'
+                        }`}
+                      >
+                        <div className="p-1.5 rounded-md bg-[#0284c7]/15 text-[#38bdf8] shrink-0 mt-0.5 border border-[#0284c7]/30">
+                          <Hammer className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold text-[#ecece7]">Build</span>
+                            {activeMode === 'build' && (
+                              <Check className="w-3.5 h-3.5 text-[#38bdf8]" />
+                            )}
+                          </div>
+                          <p className="text-[11px] text-[#85857a] mt-0.5 leading-snug">
+                            Direct code generation, complete implementations & production artifacts.
+                          </p>
+                        </div>
+                      </button>
+
+                      {/* Chat Mode Option */}
+                      <button
+                        type="button"
+                        onClick={() => setActionMode('chat')}
+                        className={`w-full text-left px-2.5 py-2 rounded-lg text-xs flex items-start gap-2.5 transition-colors cursor-pointer ${
+                          activeMode === 'chat'
+                            ? 'bg-[#2a2a26] text-[#ecece7]'
+                            : 'text-[#b4b4aa] hover:bg-[#242421] hover:text-[#ecece7]'
+                        }`}
+                      >
+                        <div className="p-1.5 rounded-md bg-[#242421] text-[#85857a] shrink-0 mt-0.5 border border-[#33332e]">
+                          <MessageSquare className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold text-[#ecece7]">Chat</span>
+                            {activeMode === 'chat' && (
+                              <Check className="w-3.5 h-3.5 text-[#ecece7]" />
+                            )}
+                          </div>
+                          <p className="text-[11px] text-[#85857a] mt-0.5 leading-snug">
+                            General conversational inquiry and open-ended thought partner.
+                          </p>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 

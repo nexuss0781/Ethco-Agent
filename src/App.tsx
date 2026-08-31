@@ -6,7 +6,7 @@ import { ChatMessageList } from './components/ChatMessageList';
 import { ChatInput } from './components/ChatInput';
 import { PersonaModal } from './components/PersonaModal';
 import { UpgradeModal } from './components/UpgradeModal';
-import { Conversation, Message, Attachment, ModelOption } from './types';
+import { Conversation, Message, Attachment, ModelOption, ActionMode } from './types';
 import { StorageService } from './lib/storage';
 import { AVAILABLE_MODELS } from './data/models';
 
@@ -20,6 +20,7 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedModel, setSelectedModel] = useState<ModelOption>(AVAILABLE_MODELS[0]);
   const [thinkingEnabled, setThinkingEnabled] = useState(true);
+  const [actionMode, setActionMode] = useState<ActionMode>('planning');
   const [isLoading, setIsLoading] = useState(false);
   const [isPersonaModalOpen, setIsPersonaModalOpen] = useState(false);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
@@ -102,9 +103,10 @@ export default function App() {
   };
 
   // Send message flow
-  const handleSendMessage = async (text: string, attachments: Attachment[] = []) => {
+  const handleSendMessage = async (text: string, attachments: Attachment[] = [], mode?: ActionMode) => {
     if (!text && attachments.length === 0) return;
 
+    const currentMode = mode || actionMode;
     let targetConvo = activeConversation;
     let isBrandNew = false;
 
@@ -131,7 +133,7 @@ export default function App() {
       timestamp: Date.now(),
       isStreaming: true,
       thinkingContent: thinkingEnabled
-        ? `Reasoning step: Analyzing user query in depth, evaluating core nuances, and formulating structured response based on active persona...`
+        ? `Reasoning step (${currentMode.toUpperCase()} mode): Analyzing user query in depth, evaluating core nuances, and formulating structured response based on active persona...`
         : undefined,
       model: selectedModel.id,
     };
@@ -172,6 +174,7 @@ export default function App() {
           messages: messagesForBackend,
           thinkingEnabled,
           model: selectedModel.geminiModel,
+          actionMode: currentMode,
         }),
         signal: abortController.signal,
       });
@@ -385,6 +388,8 @@ export default function App() {
             selectedModel={selectedModel}
             onOpenModelSelector={() => {}}
             thinkingEnabled={thinkingEnabled}
+            actionMode={actionMode}
+            onSelectActionMode={setActionMode}
           />
         </div>
       </main>
