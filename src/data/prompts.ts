@@ -35,9 +35,9 @@ export const PROMPT_SUGGESTIONS: PromptSuggestion[] = [
   },
   {
     id: 'choice-1',
-    label: "Claude's choice",
+    label: "Ethco's choice",
     iconName: 'Lightbulb',
-    category: "Claude's choice",
+    category: "Ethco's choice",
     prompt: 'Walk me through an intriguing philosophical thought experiment about identity and continuity (like the Ship of Theseus or Star Trek Teleporter), and examine its modern implications for AI and consciousness.',
     subtitle: 'Curated philosophical and creative inquiries',
   },

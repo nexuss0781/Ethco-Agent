@@ -55,6 +55,6 @@ export interface PromptSuggestion {
   label: string;
   iconName: string;
   prompt: string;
-  category: 'Write' | 'Learn' | 'Code' | 'Life stuff' | "Claude's choice";
+  category: 'Write' | 'Learn' | 'Code' | 'Life stuff' | "Claude's choice" | "Ethco's choice";
   subtitle?: string;
 }
