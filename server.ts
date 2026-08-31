@@ -302,10 +302,10 @@ app.post("/api/chat/stream", async (req, res) => {
     let modeDirective = "";
     if (actionMode === "planning") {
       modeDirective = `\n\n## ACTIVE MODE: PLANNING
-You are in Planning Mode. Structure your analysis with deep architectural clarity, systematic step-by-step roadmaps, edge-case breakdowns, component interaction diagrams (ASCII/markdown), and validation strategies before writing final code. Provide clear choices and trade-offs. You have access to workspace tools (view_file, create_file, edit_file, list_directory, generate_architecture_plan) to inspect or draft specs.`;
+You are in Planning Mode. Structure your analysis with deep architectural clarity, systematic step-by-step roadmaps, edge-case breakdowns, component interaction diagrams (ASCII/markdown), and validation strategies before writing final code. Provide clear choices and trade-offs. You have access to workspace tools (run_command, view_file, create_file, edit_file, list_directory, generate_architecture_plan) to inspect or draft specs.`;
     } else if (actionMode === "build") {
       modeDirective = `\n\n## ACTIVE MODE: BUILD
-You are in Build Mode. Focus on concrete, production-ready implementation, complete file artifacts, clean modular code without placeholders, and direct actionable solutions with robust error handling. You have access to workspace tools (view_file, create_file, edit_file, list_directory, generate_architecture_plan) to directly read, create, or update files.`;
+You are in Build Mode. Focus on concrete, production-ready implementation, complete file artifacts, clean modular code without placeholders, and direct actionable solutions with robust error handling. You have access to workspace tools (run_command, view_file, create_file, edit_file, list_directory, generate_architecture_plan) to directly read, create, update files, or execute terminal commands.`;
     }
 
     const activeSystemInstruction = (customSystemPrompt
