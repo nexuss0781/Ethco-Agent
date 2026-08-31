@@ -1,145 +1,85 @@
-# Tool Capability & System Prompt Gap Analysis Report
+# Tool Implementation Status & Gap Analysis Report
 
-This document compares and contrasts the tools currently implemented in the workspace backend (`server_tools.ts`) against the tools declared in the active system prompt (`SYSTEM.md`).
+This document tracks the current state of workspace tools, system prompt alignments, backend tool executors (`server_tools.ts`), and UI visualizers (`ToolInvocationsList.tsx`, `TodoListTracker.tsx`).
 
 ---
 
-## 1. Executive Summary
+## 1. Executive Status Summary
 
-| Category | Count | Status / Notes |
+| Category | Count | Status |
 | :--- | :---: | :--- |
-| **System Prompt Declared Tools** | **11** | `bash`, `read`, `write`, `edit`, `glob`, `grep`, `webfetch`, `todowrite`, `task`, `skill`, `question` |
-| **Currently Implemented Workspace Tools** | **6** | `run_command`, `view_file`, `create_file`, `edit_file`, `list_directory`, `generate_architecture_plan` |
-| **Direct Functional Equivalence (Name / Signature Mismatch)** | **4** | `bash` $\leftrightarrow$ `run_command`, `read` $\leftrightarrow$ `view_file`, `write` $\leftrightarrow$ `create_file`, `edit` $\leftrightarrow$ `edit_file` |
-| **Missing Tools in Backend** | **7** | `glob`, `grep`, `webfetch`, `todowrite`, `task`, `skill`, `question` |
-| **Extra Tools in Backend** | **2** | `list_directory`, `generate_architecture_plan` |
+| **Fully Implemented Workspace & UI Tools** | **11** | Operational in backend and rendered in frontend |
+| **Specialized UI & Planning Tools** | **1** | `todowrite` (Manus floating tracker, 5-task scroll, auto-freeze) |
+| **Remaining High-Priority Tools** | **2** | `browser_action` / sandbox preview, Artifact / Canvas renderer |
+| **Remaining Medium-Priority Tools** | **2** | Python / Jupyter REPL, Workspace Directory Tree |
+| **Remaining Low-Priority Tools** | **1** | Background Task / Scheduler manager |
 
 ---
 
-## 2. Detailed Tool-by-Tool Comparison
+## 2. Currently Implemented & Operational Tools
 
-### A. Core File & Terminal Tools (Implemented with Signature Mismatches)
+### 1. Task Progress & Session Tracker (`todowrite`)
+* **Identifiers:** `todowrite`, `todo`
+* **Features:**
+  * Floating above-composer container.
+  * Collapsible compact bar with Mini Terminal screen mockup.
+  * 5-task vertical scroll limit (`max-h-[185px]`) with smooth scrolling.
+  * Single-line responsive text truncation (`...`) and hover tooltip (`title`).
+  * Auto-freeze state upon task completion: **"Agent todo completed"**.
+  * Complete exclusion from chat history to avoid visual clutter.
+* **Status:** ✅ **Fully Operational**.
 
-#### 1. Terminal / Shell Execution
-* **System Prompt:** `bash`
-  * Parameters: `command` (string, required), `workdir` (string, optional), `timeout` (integer, optional)
-* **Current Backend:** `run_command`
-  * Parameters: `command` (string, required), `cwd` (string, optional), `timeout` (integer, optional)
-* **Gap Analysis:**
-  * **Naming Mismatch:** The prompt expects tool name `bash`, whereas backend registers `run_command`.
-  * **Argument Key Mismatch:** Working directory parameter is `workdir` in the prompt vs `cwd` in the backend.
+### 2. Terminal / Shell Execution
+* **Identifiers:** `bash`, `run_command`
+* **Features:** Full process execution with stdout/stderr stream capture, status badges, syntax highlighting, exit codes, and duration metrics.
+* **Status:** ✅ **Fully Operational**.
 
----
+### 3. File Pattern Matching (`glob`)
+* **Identifier:** `glob`
+* **Features:** Fast recursive filesystem traversal with glob wildcard mapping and automatic exclusion of build directories.
+* **Status:** ✅ **Fully Operational**.
 
-#### 2. File Reading
-* **System Prompt:** `read`
-  * Parameters: `filePath` (string, required), `offset` (integer, optional line start, 1-indexed), `limit` (integer, optional line count)
-* **Current Backend:** `view_file`
-  * Parameters: `path` (string, required), `startLine` (integer, optional), `endLine` (integer, optional)
-* **Gap Analysis:**
-  * **Naming Mismatch:** `read` vs `view_file`.
-  * **Parameter Mismatch:** `filePath` vs `path`.
-  * **Range Pagination:** `offset` + `limit` windowing vs `startLine` + `endLine` bounds.
+### 4. Content Regex Search (`grep`)
+* **Identifier:** `grep`
+* **Features:** Line-by-line regex scanning, returns file path, line number, and matching code snippets.
+* **Status:** ✅ **Fully Operational**.
 
----
+### 5. File System Operations (`view_file`, `create_file`, `edit_file`, `delete_file`)
+* **Identifiers:** `read`, `view_file`, `write`, `create_file`, `edit`, `edit_file`, `delete_file`
+* **Features:** Surgical substring replacement, line bounds, automatic parent directory creation, diff visualizers.
+* **Status:** ✅ **Fully Operational**.
 
-#### 3. File Creation / Overwrite
-* **System Prompt:** `write`
-  * Parameters: `filePath` (string, required), `content` (string, required)
-* **Current Backend:** `create_file`
-  * Parameters: `path` (string, required), `content` (string, required), `overwrite` (boolean, optional)
-* **Gap Analysis:**
-  * **Naming Mismatch:** `write` vs `create_file`.
-  * **Parameter Mismatch:** `filePath` vs `path`.
+### 6. Interactive Clarification Dialog (`question`)
+* **Identifier:** `question`
+* **Features:** Clarification cards with interactive options pills and single/multi-selection support.
+* **Status:** ✅ **Fully Operational**.
 
----
+### 7. Autonomous Subagent Delegation (`task`)
+* **Identifier:** `task`
+* **Features:** Subagent pipeline execution with project exploration intelligence and structured reports.
+* **Status:** ✅ **Fully Operational**.
 
-#### 4. File Editing (Exact Substring Replacement)
-* **System Prompt:** `edit`
-  * Parameters: `filePath` (string, required), `oldString` (string, required), `newString` (string, required), `replaceAll` (boolean, optional)
-* **Current Backend:** `edit_file`
-  * Parameters: `path` (string, required), `targetContent` (string, required), `replacementContent` (string, required)
-* **Gap Analysis:**
-  * **Naming Mismatch:** `edit` vs `edit_file`.
-  * **Parameter Mismatches:**
-    * `filePath` vs `path`
-    * `oldString` vs `targetContent`
-    * `newString` vs `replacementContent`
-  * **Missing Parameter:** `replaceAll` flag is not currently exposed in `server_tools.ts`.
+### 8. Web Search & Grounding (`google_search`, `web_search`, `webfetch`)
+* **Identifiers:** `search_web`, `google_search`, `web_search`, `webfetch`
+* **Features:** Query pills, live domain extraction, and citation link cards.
+* **Status:** ✅ **Fully Operational**.
 
 ---
 
-### B. Missing Search & Web Tools in Backend
+## 3. Remaining Tools to Implement & Roadmap
 
-#### 5. `glob` (File Pattern Matcher)
-* **System Prompt Specification:**
-  * Parameters: `pattern` (string, required, e.g. `src/**/*.tsx`), `path` (string, optional directory)
-* **Current Backend Status:** ❌ Not implemented.
-* **Impact:** The LLM cannot perform direct glob searches without falling back to `run_command` (`find` / `ls`).
-
----
-
-#### 6. `grep` (Regex Content Search)
-* **System Prompt Specification:**
-  * Parameters: `pattern` (string, required regex), `path` (string, optional directory), `include` (string, optional file pattern)
-* **Current Backend Status:** ❌ Not implemented.
-* **Impact:** The LLM cannot perform fast in-memory regex searches across files without shelling out to terminal commands.
+| Tool Name | Type | Target Scope & Features | Priority | Status |
+| :--- | :--- | :--- | :---: | :---: |
+| **Browser Sandbox & Live Browser** (`browser_action`, `browser_screenshot`, `browser_navigate`) | Interactive View | Live screenshot rendering, URL bar, interactive DOM element click / type visualization, and multi-tab viewer. | **High** | ⏳ Pending |
+| **Artifacts & Canvas Visualizer** (`render_artifact`, `generate_image`, `render_canvas`) | Split-Pane View | Slide-out or split-screen canvas for viewing live HTML/SVG components, generated diagrams, charts, and image artifacts. | **High** | ⏳ Pending |
+| **Python / Jupyter REPL Execution** (`python_eval`, `execute_code`) | Backend / View | Python script execution environment with structured output cards for pandas DataFrames, matplotlib charts, and tables. | **Medium** | ⏳ Pending |
+| **File Tree & Workspace Explorer** (`list_dir`, `workspace_tree`) | UI Component | Interactive directory file tree showing file sizes, modified status badges, and quick-open buttons. | **Medium** | ⏳ Pending |
+| **Background Task / Scheduler Manager** (`schedule`, `manage_task`) | Utility View | Real-time status cards for background cron tasks, polling intervals, and cancel/kill task controls. | **Low** | ⏳ Pending |
 
 ---
 
-#### 7. `webfetch` (URL Content Scraper)
-* **System Prompt Specification:**
-  * Parameters: `url` (string, required), `format` (enum: `markdown` | `text` | `html`), `timeout` (number, optional)
-* **Current Backend Status:** ❌ Not implemented.
-* **Impact:** The LLM cannot fetch external URLs or read documentation pages directly.
+## 4. Next Implementation Actions
 
----
-
-### C. Missing Coordination & Interactive Tools in Backend
-
-#### 8. `todowrite` (Session Task Tracker)
-* **System Prompt Specification:**
-  * Parameters: `todos` (array of `{content: string, status: string, priority: string}`)
-* **Current Backend Status:** ❌ Not implemented.
-
-#### 9. `task` (Autonomous Subagent Delegator)
-* **System Prompt Specification:**
-  * Parameters: `description`, `prompt`, `subagent_type` (`explore` | `general`), `task_id`, `command`
-* **Current Backend Status:** ❌ Not implemented.
-
-#### 10. `skill` (Specialized Skill Loader)
-* **System Prompt Specification:**
-  * Parameters: `name` (string)
-* **Current Backend Status:** ❌ Not implemented.
-
-#### 11. `question` (Interactive User Prompt)
-* **System Prompt Specification:**
-  * Parameters: `questions` (array of objects with options)
-* **Current Backend Status:** ❌ Not implemented.
-
----
-
-### D. Extra Tools in Current Backend
-
-1. **`list_directory`**:
-   * Inspects folders and subdirectories with optional recursive flag.
-   * *Status:* Functional in backend and UI, but not declared in `SYSTEM.md`.
-2. **`generate_architecture_plan`**:
-   * Formats structured project milestones and roadmap constraints.
-   * *Status:* Functional in backend and UI, but not declared in `SYSTEM.md`.
-
----
-
-## 3. Recommendations & Action Matrix
-
-To achieve 100% fidelity between `SYSTEM.md` and the runtime execution engine:
-
-1. **Implement Aliasing / Dual-Registration:**
-   * Support both opencode canonical names (`bash`, `read`, `write`, `edit`) and current names (`run_command`, `view_file`, `create_file`, `edit_file`) in `server_tools.ts`.
-   * Accept both parameter conventions (e.g. `workdir` and `cwd`, `filePath` and `path`, `oldString`/`targetContent`, `newString`/`replacementContent`).
-2. **Implement Native Search Tools:**
-   * Add `glob` (using fast globbing or `picomatch`) and `grep` (fast file regex search) to avoid expensive subshells.
-3. **Add `webfetch`:**
-   * Provide a server-side fetch endpoint converting web pages to markdown/text.
-4. **Add Interactive State Handlers:**
-   * Wire `todowrite` to the frontend task state.
+1. **Browser Sandbox Tool Component**: Build `src/components/tool-views/BrowserSandboxCard.tsx` for visual browser preview with navigation controls.
+2. **Artifacts Preview Sidebar**: Integrate a split-view toggle for viewing live rendered HTML/SVG components and visual design artifacts.
+3. **Python REPL Output Card**: Add support for rendering rich table outputs and chart images from Python execution.

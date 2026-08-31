@@ -12,6 +12,11 @@ import {
   ChevronUp,
   Wrench,
   Terminal,
+  Search,
+  FileSearch,
+  ListTodo,
+  Bot,
+  HelpCircle,
 } from 'lucide-react';
 import { ToolInvocation } from '../types';
 import { DiffViewer } from './tool-views/DiffViewer';
@@ -19,6 +24,11 @@ import { DirectoryExplorer } from './tool-views/DirectoryExplorer';
 import { FileContentViewer } from './tool-views/FileContentViewer';
 import { ArchitecturePlanViewer } from './tool-views/ArchitecturePlanViewer';
 import { TerminalOutputViewer } from './tool-views/TerminalOutputViewer';
+import { GlobResultsViewer } from './tool-views/GlobResultsViewer';
+import { GrepResultsViewer } from './tool-views/GrepResultsViewer';
+import { TodoListTracker } from './tool-views/TodoListTracker';
+import { SubagentTaskViewer } from './tool-views/SubagentTaskViewer';
+import { QuestionInteractiveViewer } from './tool-views/QuestionInteractiveViewer';
 
 interface ToolInvocationsListProps {
   tools: ToolInvocation[];
@@ -31,6 +41,7 @@ export const ToolInvocationsList: React.FC<ToolInvocationsListProps> = ({ tools 
 
   const getToolMeta = (tool: ToolInvocation) => {
     switch (tool.name) {
+      case 'bash':
       case 'run_command': {
         const cmd = tool.args?.command || 'command';
         const execTime = tool.result?.executionTimeMs ? `${tool.result.executionTimeMs}ms` : '';
@@ -42,10 +53,13 @@ export const ToolInvocationsList: React.FC<ToolInvocationsListProps> = ({ tools 
           color: 'border-sky-500/20 bg-sky-500/5',
         };
       }
+      case 'read':
       case 'view_file': {
-        const filePath = tool.args?.path || 'file';
+        const filePath = tool.args?.path || tool.args?.filePath || 'file';
         const rangeText = tool.args?.startLine
           ? `Lines ${tool.args.startLine}–${tool.args.endLine || 'end'}`
+          : tool.args?.offset
+          ? `Offset ${tool.args.offset}`
           : '';
         return {
           icon: <FileCode className="w-3.5 h-3.5 text-blue-400" />,
@@ -55,8 +69,9 @@ export const ToolInvocationsList: React.FC<ToolInvocationsListProps> = ({ tools 
           color: 'border-blue-500/20 bg-blue-500/5',
         };
       }
+      case 'write':
       case 'create_file': {
-        const filePath = tool.args?.path || 'new file';
+        const filePath = tool.args?.path || tool.args?.filePath || 'new file';
         const linesCount = (tool.args?.content || '').split('\n').length;
         return {
           icon: <FilePlus className="w-3.5 h-3.5 text-emerald-400" />,
@@ -66,15 +81,71 @@ export const ToolInvocationsList: React.FC<ToolInvocationsListProps> = ({ tools 
           color: 'border-emerald-500/20 bg-emerald-500/5',
         };
       }
+      case 'edit':
       case 'edit_file': {
-        const filePath = tool.args?.path || 'file';
-        const added = (tool.args?.replacementContent || '').split('\n').length;
-        const removed = (tool.args?.targetContent || '').split('\n').length;
+        const filePath = tool.args?.path || tool.args?.filePath || 'file';
+        const added = (tool.args?.replacementContent || tool.args?.newString || '').split('\n').length;
+        const removed = (tool.args?.targetContent || tool.args?.oldString || '').split('\n').length;
         return {
           icon: <FileEdit className="w-3.5 h-3.5 text-amber-400" />,
           action: 'Updated',
           target: filePath,
           badge: `+${added} -${removed}`,
+          color: 'border-amber-500/20 bg-amber-500/5',
+        };
+      }
+      case 'glob': {
+        const pattern = tool.args?.pattern || '*';
+        const count = tool.result?.totalMatches ?? tool.result?.matches?.length;
+        return {
+          icon: <Search className="w-3.5 h-3.5 text-cyan-400" />,
+          action: 'Glob',
+          target: pattern,
+          badge: count !== undefined ? `${count} files` : 'search',
+          color: 'border-cyan-500/20 bg-cyan-500/5',
+        };
+      }
+      case 'grep': {
+        const pattern = tool.args?.pattern || 'pattern';
+        const count = tool.result?.totalMatches ?? tool.result?.matches?.length;
+        return {
+          icon: <FileSearch className="w-3.5 h-3.5 text-teal-400" />,
+          action: 'Grep',
+          target: pattern,
+          badge: count !== undefined ? `${count} matches` : 'regex',
+          color: 'border-teal-500/20 bg-teal-500/5',
+        };
+      }
+      case 'todowrite': {
+        const todosCount = tool.args?.todos?.length || 0;
+        const completed = tool.result?.summary?.completed;
+        const badge = completed !== undefined ? `${completed}/${todosCount} done` : `${todosCount} tasks`;
+        return {
+          icon: <ListTodo className="w-3.5 h-3.5 text-[#d97757]" />,
+          action: 'Tasklist',
+          target: 'Session Todos',
+          badge,
+          color: 'border-[#d97757]/20 bg-[#d97757]/5',
+        };
+      }
+      case 'task': {
+        const subagent = tool.args?.subagent_type || 'agent';
+        const desc = tool.args?.description || 'Autonomous subtask';
+        return {
+          icon: <Bot className="w-3.5 h-3.5 text-indigo-400" />,
+          action: `Subagent [${subagent}]`,
+          target: desc,
+          badge: 'Autonomous',
+          color: 'border-indigo-500/20 bg-indigo-500/5',
+        };
+      }
+      case 'question': {
+        const qCount = tool.args?.questions?.length || 1;
+        return {
+          icon: <HelpCircle className="w-3.5 h-3.5 text-amber-400" />,
+          action: 'Ask User',
+          target: `${qCount} clarification${qCount > 1 ? 's' : ''}`,
+          badge: 'Decision',
           color: 'border-amber-500/20 bg-amber-500/5',
         };
       }
@@ -132,11 +203,12 @@ export const ToolInvocationsList: React.FC<ToolInvocationsListProps> = ({ tools 
 
     // 2. Specific visual renders by tool type
     switch (tool.name) {
+      case 'bash':
       case 'run_command':
         return (
           <TerminalOutputViewer
             command={tool.args?.command || ''}
-            cwd={tool.args?.cwd || '.'}
+            cwd={tool.args?.cwd || tool.args?.workdir || '.'}
             stdout={tool.result?.stdout}
             stderr={tool.result?.stderr}
             exitCode={tool.result?.exitCode}
@@ -145,13 +217,64 @@ export const ToolInvocationsList: React.FC<ToolInvocationsListProps> = ({ tools 
           />
         );
 
+      case 'edit':
       case 'edit_file':
         return (
           <DiffViewer
-            filePath={tool.args?.path || ''}
-            targetContent={tool.args?.targetContent || ''}
-            replacementContent={tool.args?.replacementContent || ''}
+            filePath={tool.args?.path || tool.args?.filePath || ''}
+            targetContent={tool.args?.targetContent || tool.args?.oldString || ''}
+            replacementContent={tool.args?.replacementContent || tool.args?.newString || ''}
             action={tool.result?.action}
+          />
+        );
+
+      case 'glob':
+        return (
+          <GlobResultsViewer
+            pattern={tool.args?.pattern || ''}
+            path={tool.args?.path}
+            matches={tool.result?.matches}
+            totalMatches={tool.result?.totalMatches}
+          />
+        );
+
+      case 'grep':
+        return (
+          <GrepResultsViewer
+            pattern={tool.args?.pattern || ''}
+            path={tool.args?.path}
+            include={tool.args?.include}
+            matches={tool.result?.matches}
+            totalMatches={tool.result?.totalMatches}
+            formatted={tool.result?.formatted}
+          />
+        );
+
+      case 'todowrite':
+        return (
+          <TodoListTracker
+            todos={tool.result?.todos || tool.args?.todos || []}
+            summary={tool.result?.summary}
+          />
+        );
+
+      case 'task':
+        return (
+          <SubagentTaskViewer
+            taskId={tool.result?.task_id || tool.args?.task_id}
+            subagentType={tool.args?.subagent_type}
+            description={tool.args?.description}
+            prompt={tool.args?.prompt}
+            status={tool.result?.status}
+            summary={tool.result?.summary}
+            result={tool.result?.result}
+          />
+        );
+
+      case 'question':
+        return (
+          <QuestionInteractiveViewer
+            questions={tool.result?.questions || tool.args?.questions || []}
           />
         );
 
@@ -166,11 +289,12 @@ export const ToolInvocationsList: React.FC<ToolInvocationsListProps> = ({ tools 
         );
       }
 
+      case 'write':
       case 'create_file': {
         const content = tool.args?.content || '';
         return (
           <FileContentViewer
-            filePath={tool.args?.path || ''}
+            filePath={tool.args?.path || tool.args?.filePath || ''}
             content={content}
             isCreation={true}
             byteSize={tool.result?.byteSize}
@@ -179,14 +303,15 @@ export const ToolInvocationsList: React.FC<ToolInvocationsListProps> = ({ tools 
         );
       }
 
+      case 'read':
       case 'view_file': {
         const content = tool.result?.content || '';
         return (
           <FileContentViewer
-            filePath={tool.args?.path || ''}
+            filePath={tool.args?.path || tool.args?.filePath || ''}
             content={content}
             isCreation={false}
-            startLine={tool.result?.startLine || tool.args?.startLine || 1}
+            startLine={tool.result?.startLine || tool.args?.startLine || tool.args?.offset || 1}
             totalLines={tool.result?.totalLines}
             byteSize={tool.result?.byteSize}
             actionLabel="Inspected"
@@ -217,9 +342,12 @@ export const ToolInvocationsList: React.FC<ToolInvocationsListProps> = ({ tools 
     }
   };
 
+  const visibleTools = tools.filter((tool) => tool.name !== 'todowrite');
+  if (visibleTools.length === 0) return null;
+
   return (
     <div className="w-full mb-3 space-y-1.5">
-      {tools.map((tool) => {
+      {visibleTools.map((tool) => {
         const meta = getToolMeta(tool);
         const isExpanded = expandedId === tool.id;
 

@@ -20,6 +20,7 @@ import {
   Code2,
 } from 'lucide-react';
 import { Attachment, ModelOption, ActionMode } from '../types';
+import { TodoListTracker, TodoItem } from './tool-views/TodoListTracker';
 
 interface ChatInputProps {
   onSendMessage: (text: string, attachments: Attachment[], mode?: ActionMode) => void;
@@ -31,6 +32,10 @@ interface ChatInputProps {
   onToggleThinking?: () => void;
   actionMode?: ActionMode;
   onSelectActionMode?: (mode: ActionMode) => void;
+  activeTodos?: {
+    todos: TodoItem[];
+    summary?: any;
+  } | null;
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
@@ -43,6 +48,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   onToggleThinking,
   actionMode: controlledActionMode,
   onSelectActionMode,
+  activeTodos,
 }) => {
   const [internalMode, setInternalMode] = useState<ActionMode>('planning');
   const [modeDropdownOpen, setModeDropdownOpen] = useState(false);
@@ -215,6 +221,17 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
+      {/* Active Manus-style Task Progress Bar / Card */}
+      {activeTodos && activeTodos.todos && activeTodos.todos.length > 0 && (
+        <div className="mb-2 w-full animate-fadeIn">
+          <TodoListTracker
+            todos={activeTodos.todos}
+            summary={activeTodos.summary}
+            initialExpanded={true}
+          />
+        </div>
+      )}
+
       {/* Hidden file input */}
       <input
         ref={fileInputRef}

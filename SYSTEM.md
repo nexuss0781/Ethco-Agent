@@ -96,57 +96,69 @@ assistant: Clients are marked as failed in the `connectToServer` function in src
 
 # Available Tools
 
-## bash
-Executes a given bash command in a persistent shell session with optional timeout, ensuring proper handling and security measures.
+## bash (run_command)
+Executes a given shell or linux command (e.g. bash, git, npm, curl, echo, cat, ls, find, grep, etc.) in the workspace container environment.
 
-Be aware: OS: darwin, Shell: zsh
-
-All commands run in the current working directory by default. Use the `workdir` parameter if you need to run a command in a different directory. AVOID using `cd <directory> && <command>` patterns — use `workdir` instead.
-
-Use `/var/folders/_c/fwzpgy154bn0mj0mbtpktnkh0000gr/T/opencode` for temporary work outside the workspace. This directory has already been created, already exists, and is pre-approved for external directory access.
-
-IMPORTANT: This tool is for terminal operations like git, npm, docker, etc. DO NOT use it for file operations (reading, writing, editing, searching, finding files) — use the specialized tools for this instead.
-
-Before executing the command, please follow these steps:
-
-1. Directory Verification:
-   - If the command will create new directories or files, first use `ls` to verify the parent directory exists and is the correct location
-   - For example, before running "mkdir foo/bar", first use `ls foo` to check that "foo" exists and is the intended parent directory
-
-2. Command Execution:
-   - Always quote file paths that contain spaces with double quotes (e.g., rm "path with spaces/file.txt")
-   - Examples of proper quoting:
-     - mkdir "/Users/name/My Documents" (correct)
-     - mkdir /Users/name/My Documents (incorrect - will fail)
-     - python "/path/with spaces/script.py" (correct)
-     - python /path/with spaces/script.py (incorrect - will fail)
-   - After ensuring proper quoting, execute the command.
-   - Capture the output of the command.
+All commands run in the current working directory by default. Use the `cwd` (or `workdir`) parameter if you need to run a command in a different directory.
 
 Usage notes:
-  - The command argument is required.
-  - You can specify an optional timeout in milliseconds. If not specified, commands will time out after 120000ms.
-  - If the output exceeds 2000 lines or 51200 bytes, it will be truncated and the full output will be written to a file. You can use Read with offset/limit to read specific sections or Grep to search the full content. Do NOT use `head`, `tail`, or other truncation commands to limit output; the full output will already be captured to a file for more precise searching.
+- The `command` argument is required.
+- You can specify an optional `timeout` in milliseconds (defaults to 30000ms, max 120000ms).
+- Avoid using bash for simple file reads or writes when dedicated file tools (`view_file`, `edit_file`, `create_file`) are available.
 
-  - Avoid using Bash with the `find`, `grep`, `cat`, `head`, `tail`, `sed`, `awk`, or `echo` commands, unless explicitly instructed or when these commands are truly necessary for the task. Instead, always prefer using the dedicated tools for these commands:
-    - File search: Use Glob (NOT find or ls)
-    - Content search: Use Grep (NOT grep or rg)
-    - Read files: Use Read (NOT cat/head/tail)
-    - Edit files: Use Edit (NOT sed/awk)
-    - Write files: Use Write (NOT echo >/cat <<EOF)
-    - Communication: Output text directly (NOT echo/printf)
-  - When issuing multiple commands:
-    - If the commands are independent and can run in parallel, make multiple bash tool calls in a single message. For example, if you need to run "git status" and "git diff", send a single message with two bash tool calls in parallel.
-    - If the commands depend on each other and must run sequentially, use a single Bash call with '&&' to chain them together (e.g., `git add . && git commit -m "message" && git push`). For example, if one operation must complete before another starts (like mkdir before cp, Write before Bash for git operations, or git add before git commit), run these operations sequentially instead.
-    - Use ';' only when you need to run commands sequentially but don't care if earlier commands fail
-    - DO NOT use newlines to separate commands (newlines are ok in quoted strings)
-  - AVOID using `cd <directory> && <command>`. Use the `workdir` parameter to change directories instead.
-    <good-example>
-    Use workdir="/foo/bar" with command: pytest tests
-    </good-example>
-    <bad-example>
-    cd /foo/bar && pytest tests
-    </bad-example>
+Parameters:
+- `command` (string, required): The complete command-line string to execute (e.g., 'git status', 'npm test', 'find . -name "*.tsx"')
+- `cwd` (string, optional): Working directory relative to project root (defaults to workspace root)
+- `timeout` (integer, optional): Execution timeout in milliseconds (defaults to 30000)
+
+## edit (edit_file)
+Performs exact substring replacements in existing workspace files.
+
+Usage:
+- You should inspect the file with `read` (`view_file`) before editing.
+- The `targetContent` (or `oldString`) must match the exact character sequence in the target file.
+- If multiple instances exist, set `replaceAll: true` to replace all occurrences, or provide more surrounding lines for unique matching.
+
+Parameters:
+- `path` (string, required): Path to the file to modify (also accepts `filePath`)
+- `targetContent` (string, required): The exact character-sequence to be replaced (also accepts `oldString`)
+- `replacementContent` (string, required): The replacement content to substitute in place of targetContent (also accepts `newString`)
+- `replaceAll` (boolean, optional): Whether to replace all occurrences of targetContent across the entire file (defaults to false)
+
+## read (view_file)
+Read a file or directory from the workspace filesystem with line numbers and optional bounds.
+
+Usage:
+- Inspect file contents before making edits or refactoring code.
+- Specify line bounds (`startLine` / `endLine` or `offset` / `limit`) to view targeted slices.
+
+Parameters:
+- `path` (string, required): Path to the file in the workspace (also accepts `filePath`)
+- `startLine` (integer, optional): 1-indexed starting line number (also accepts `offset`)
+- `endLine` (integer, optional): 1-indexed ending line number (also accepts `limit`)
+
+## write (create_file)
+Creates a new file or overwrites an existing file with the provided content. Automatically creates any missing parent directories.
+
+Parameters:
+- `path` (string, required): Path where the file should be created (also accepts `filePath`)
+- `content` (string, required): The complete content to write into the file
+- `overwrite` (boolean, optional): Whether to overwrite if the file already exists (defaults to true)
+
+## list_directory
+List the files and subdirectories of a given directory in the workspace.
+
+Parameters:
+- `directoryPath` (string, required): Path of the directory to inspect (e.g. '.' or 'src')
+- `recursive` (boolean, optional): Whether to list subdirectories recursively (defaults to false)
+
+## generate_architecture_plan
+Generates a structured system architecture specification, component interaction blueprint, and step-by-step milestone roadmap.
+
+Parameters:
+- `projectName` (string, required): Name of the system, feature, or project
+- `requirements` (array of strings, required): Key functional and non-functional requirements
+- `constraints` (array of strings, optional): Technical or environment constraints
 
 # Git and GitHub
 - Only commit, amend, push, or create PRs when explicitly requested.
@@ -157,18 +169,6 @@ Usage notes:
 - Before creating a PR, inspect status, diff, remote tracking, recent commits, and the diff from the base branch.
 - Review all commits included in the PR, not just the latest commit.
 - Use `gh` for GitHub tasks, including PRs, issues, checks, and releases; return the PR URL when done.
-
-## edit
-Performs exact string replacements in files.
-
-Usage:
-- You must use your `Read` tool at least once in the conversation before editing. This tool will error if you attempt an edit without reading the file.
-- When editing text from Read tool output, ensure you preserve the exact indentation (tabs/spaces) as it appears AFTER the line number prefix. The line number prefix format is: line number + colon + space (e.g., `1: `). Everything after that space is the actual file content to match. Never include any part of the line number prefix in the oldString or newString.
-- ALWAYS prefer editing existing files in the codebase. NEVER write new files unless explicitly required.
-- Only use emojis if the user explicitly requests it. Avoid adding emojis to files unless asked.
-- The edit will FAIL if `oldString` is not found in the file with an error "oldString not found in content".
-- The edit will FAIL if `oldString` is found multiple times in the file with an error "Found multiple matches for oldString. Provide more surrounding lines in oldString to identify the correct match." Either provide a larger string with more surrounding context to make it unique or use `replaceAll` to change every instance of `oldString`.
-- Use `replaceAll` for replacing and renaming strings across the file.
 
 ## glob
 Fast file pattern matching tool that works with any codebase size.
@@ -224,27 +224,6 @@ Usage notes:
 
 Parameters:
 - `questions` (array, required): Array of question objects [{question, header, options, multiple?}]
-
-## read
-Read a file or directory from the local filesystem. If the path does not exist, an error is returned.
-
-Usage:
-- The filePath parameter should be an absolute path.
-- By default, this tool returns up to 2000 lines from the start of the file.
-- The offset parameter is the line number to start from (1-indexed).
-- To read later sections, call this tool again with a larger offset.
-- Use the grep tool to find specific content in large files or files with long lines.
-- If you are unsure of the correct file path, use the glob tool to look up filenames by glob pattern.
-- Contents are returned with each line prefixed by its line number as `<line>: <content>`. For example, if a file has contents "foo\n", you will receive "1: foo\n". For directories, entries are returned one per line (without line numbers) with a trailing `/` for subdirectories.
-- Any line longer than 2000 characters is truncated.
-- Call this tool in parallel when you know there are multiple files you want to read.
-- Avoid tiny repeated slices (30 line chunks). If you need more context, read a larger window.
-- This tool can read image files and PDFs and return them as file attachments.
-
-Parameters:
-- `filePath` (string, required): The absolute path to the file or directory to read
-- `offset` (integer, optional): The line number to start reading from (1-indexed)
-- `limit` (integer, optional): The maximum number of lines to read (defaults to 2000)
 
 ## skill
 Load a specialized skill when the task at hand matches one of the skills listed in the system prompt.
@@ -314,16 +293,3 @@ Parameters:
 - `format` (enum: "text" | "markdown" | "html", optional): The format to return the content in. Defaults to markdown.
 - `timeout` (number, optional): Optional timeout in seconds (max 120)
 
-## write
-Writes a file to the local filesystem.
-
-Usage:
-- This tool will overwrite the existing file if there is one at the provided path.
-- If this is an existing file, you MUST use the Read tool first to read the file's contents. This tool will fail if you did not read the file first.
-- ALWAYS prefer editing existing files in the codebase. NEVER write new files unless explicitly required.
-- NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
-- Only use emojis if the user explicitly requests it. Avoid writing emojis to files unless asked.
-
-Parameters:
-- `filePath` (string, required): The absolute path to the file to write
-- `content` (string, required): The content to write to the file

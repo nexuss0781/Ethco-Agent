@@ -375,6 +375,29 @@ export default function App() {
 
   const hasMessages = Boolean(activeConversation && activeConversation.messages.length > 0);
 
+  // Extract active plan / todos if agent planned tasks in this conversation
+  const activeTodos = React.useMemo(() => {
+    if (!activeConversation || !activeConversation.messages) return null;
+    for (let i = activeConversation.messages.length - 1; i >= 0; i--) {
+      const msg = activeConversation.messages[i];
+      if (msg.toolInvocations) {
+        for (let j = msg.toolInvocations.length - 1; j >= 0; j--) {
+          const tool = msg.toolInvocations[j];
+          if (tool.name === 'todowrite' && (tool.result?.todos || tool.args?.todos)) {
+            const list = tool.result?.todos || tool.args?.todos;
+            if (Array.isArray(list) && list.length > 0) {
+              return {
+                todos: list,
+                summary: tool.result?.summary,
+              };
+            }
+          }
+        }
+      }
+    }
+    return null;
+  }, [activeConversation]);
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#181816] text-[#ecece7]">
       {/* Responsive Collapsible Sidebar */}
@@ -428,6 +451,7 @@ export default function App() {
             thinkingEnabled={thinkingEnabled}
             actionMode={actionMode}
             onSelectActionMode={setActionMode}
+            activeTodos={activeTodos}
           />
         </div>
       </main>
