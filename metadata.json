@@ -1,0 +1,6 @@
+{
+  "name": "Claude AI Chatbot Clone",
+  "description": "A high-fidelity Claude chat experience with mobile-optimized layout, persistent multi-session histories, voice dictation, thinking mode, and persona backend integration from SYSTEM.md.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
