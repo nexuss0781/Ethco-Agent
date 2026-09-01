@@ -6,7 +6,7 @@ import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
-import * as jwt from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 import { WORKSPACE_TOOL_DECLARATIONS, executeWorkspaceTool } from "./server_tools";
 
 dotenv.config();
@@ -223,18 +223,18 @@ app.get("/api/auth/callback", async (req, res) => {
       };
     }
 
-    steps.push("Retrieving JWT sign function");
-    const signFn = (jwt && (jwt.sign || (jwt as any).default?.sign)) || null;
-    if (!signFn) {
-      steps.push("Error: JWT sign function is not accessible on imported jsonwebtoken module");
-      console.error("JWT sign function is not accessible on the imported module.");
-      return res.status(500).send("JWT sign function is not configured properly");
-    }
+    steps.push("Sanitizing user payload");
+    const sanitizedUser = {
+      id: resolvedUser.id || resolvedUser.userId || "nexuss-temp-user",
+      email: resolvedUser.email || "",
+      name: resolvedUser.name || "",
+      avatarUrl: resolvedUser.avatarUrl || null,
+    };
 
     steps.push("Signing JWT token");
     const secret = process.env.JWT_SECRET || "YOUR_RANDOM_SECRET_KEY";
     steps.push(`JWT_SECRET present: ${!!process.env.JWT_SECRET}`);
-    const token = signFn(resolvedUser, secret, { expiresIn: "7d" });
+    const token = jwt.sign(sanitizedUser, secret, { expiresIn: "7d" });
     steps.push("JWT token signed successfully");
 
     steps.push("Setting cookie");
@@ -259,11 +259,7 @@ app.get("/api/auth/me", (req, res) => {
 
   try {
     const secret = process.env.JWT_SECRET || "YOUR_RANDOM_SECRET_KEY";
-    const verifyFn = (jwt && (jwt.verify || (jwt as any).default?.verify)) || null;
-    if (!verifyFn) {
-      return res.json({ user: null });
-    }
-    const user = verifyFn(token, secret);
+    const user = jwt.verify(token, secret);
     res.json({ user });
   } catch (err) {
     res.json({ user: null });
