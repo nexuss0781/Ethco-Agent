@@ -83,7 +83,7 @@ export const GitHubService = {
     if (!targetUrl) {
       const projectId = import.meta.env.VITE_NEXUSS_AUTH_PROJECT_ID || 'ethco-agents';
       const authUrl = import.meta.env.VITE_NEXUSS_AUTH_URL || 'https://nexuss-auth.vercel.app';
-      const redirectUri = `${window.location.origin}/api/github/callback`;
+      const redirectUri = `${window.location.origin}/api/auth/callback`;
       targetUrl = `${authUrl}/oauth/start/github?project_id=${encodeURIComponent(projectId)}&redirect_uri=${encodeURIComponent(redirectUri)}&handoff=1&purpose=github_authorization`;
     }
 
