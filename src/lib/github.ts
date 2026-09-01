@@ -46,6 +46,20 @@ export interface GitHubStatus {
   error?: string;
 }
 
+export function fixMojibake(str?: string | null): string {
+  if (!str) return '';
+  if (/[\u00C0-\u00FF]{2,}/.test(str)) {
+    try {
+      const bytes = new Uint8Array(Array.from(str).map(c => c.charCodeAt(0) & 0xFF));
+      const decoded = new TextDecoder('utf-8').decode(bytes);
+      if (decoded && !decoded.includes('\uFFFD')) {
+        return decoded;
+      }
+    } catch {}
+  }
+  return str;
+}
+
 export const GitHubService = {
   // 1. Authorize via OAuth (Direct GitHub OAuth or Nexuss Auth)
   async authorizeOAuth(): Promise<GitHubUser | null> {
@@ -177,6 +191,8 @@ export const GitHubService = {
       if (res.ok) {
         const data: GitHubStatus = await res.json();
         if (data.connected && data.user) {
+          data.user.name = fixMojibake(data.user.name);
+          data.user.login = fixMojibake(data.user.login);
           try {
             localStorage.setItem('ethco_github_user', JSON.stringify(data.user));
           } catch {}
@@ -189,10 +205,16 @@ export const GitHubService = {
             });
           }
           return data;
+        } else {
+          // Explicitly not connected on server backend
+          try {
+            localStorage.removeItem('ethco_github_user');
+          } catch {}
+          return { connected: false, user: null };
         }
       }
     } catch {
-      // Server check failed, fallback to cloud/local state
+      // Server check failed, fallback to cloud/local state if offline
     }
 
     // Check Supabase cloud persistence fallback

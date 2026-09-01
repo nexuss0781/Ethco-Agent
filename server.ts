@@ -335,29 +335,7 @@ app.get("/api/auth/callback", async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
-    // Automatically sync authenticated user to GitHub tokens profile
-    try {
-      const tokens = loadGitHubTokens();
-      const loginName = sanitizedUser.name?.replace(/\s+/g, '-').toLowerCase() || sanitizedUser.email.split('@')[0] || 'developer';
-      tokens[sanitizedUser.id] = {
-        token: rawData?.providerToken || rawData?.accessToken || rawData?.token || "",
-        githubGrantToken: rawData?.githubGrantToken || "",
-        user: {
-          id: sanitizedUser.id,
-          login: loginName,
-          name: sanitizedUser.name || sanitizedUser.email.split('@')[0] || 'Developer',
-          email: sanitizedUser.email,
-          avatar_url: sanitizedUser.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces',
-          html_url: `https://github.com/${loginName}`,
-        },
-        authProvider: "nexuss-auth",
-        updatedAt: new Date().toISOString(),
-      };
-      saveGitHubTokens(tokens);
-    } catch (saveErr) {
-      console.warn("Failed to sync Nexuss Auth user to github profile:", saveErr);
-    }
-
+    // Keep Google/Nexuss session auth separate from GitHub OAuth
     logStep("Authentication callback completed successfully", {
       totalDurationMs: Date.now() - startTime,
     });
@@ -706,55 +684,24 @@ app.post("/api/github/connect-token", async (req, res) => {
   }
 });
 
-// 4. GitHub Connection Status (supports Nexuss Auth & OAuth)
+// 4. GitHub Connection Status (checks actual GitHub OAuth token & profile)
 app.get("/api/github/status", async (req, res) => {
   const userId = getActiveUserIdentifier(req);
   const tokenInfo = getStoredGitHubToken(userId);
 
-  // Check active Nexuss Auth session token
-  const sessionToken = req.cookies?.session_token;
-  let sessionUser: any = null;
-  if (sessionToken) {
-    try {
-      const secret = process.env.JWT_SECRET || "YOUR_RANDOM_SECRET_KEY";
-      sessionUser = jwt.verify(sessionToken, secret) as any;
-    } catch {}
-  }
-
-  const tokens = loadGitHubTokens();
-  const stored = tokens[userId] || (sessionUser ? tokens[sessionUser.id || sessionUser.email] : null);
-
-  if (stored?.user || sessionUser) {
-    const user = stored?.user || {
-      id: sessionUser.id,
-      login: sessionUser.name?.replace(/\s+/g, '-').toLowerCase() || sessionUser.email?.split('@')[0] || 'developer',
-      name: sessionUser.name || sessionUser.email?.split('@')[0] || 'Developer',
-      email: sessionUser.email,
-      avatar_url: sessionUser.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces',
-      html_url: `https://github.com/${sessionUser.name?.replace(/\s+/g, '-').toLowerCase() || sessionUser.email?.split('@')[0] || 'developer'}`,
-    };
-
-    return res.json({
-      connected: true,
-      user,
-      authProvider: 'nexuss-auth',
-      source: 'nexuss-auth',
-    });
-  }
-
-  if (tokenInfo?.token && tokenInfo.user) {
+  if (tokenInfo?.token && tokenInfo.user && tokenInfo.user.login) {
     return res.json({
       connected: true,
       user: tokenInfo.user,
-      source: tokenInfo.source,
-      authProvider: 'nexuss-auth',
+      source: tokenInfo.source || "oauth",
+      authProvider: "github",
     });
   }
 
   return res.json({
     connected: false,
     user: null,
-    authProvider: 'nexuss-auth',
+    authProvider: "github",
   });
 });
 

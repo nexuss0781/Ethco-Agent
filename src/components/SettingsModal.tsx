@@ -8,7 +8,7 @@ import {
   LogOut,
   ExternalLink,
 } from 'lucide-react';
-import { GitHubService, GitHubUser } from '../lib/github';
+import { GitHubService, GitHubUser, fixMojibake } from '../lib/github';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -31,17 +31,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }, [isOpen]);
 
-  // Listen to postMessage when OAuth completes
+  // Listen to postMessage when GitHub OAuth completes
   useEffect(() => {
     const handleGlobalMessage = async (event: MessageEvent) => {
       if (
-        event.data?.type === 'OAUTH_AUTH_SUCCESS' ||
-        event.data?.type === 'NEXUSS_AUTH_SUCCESS'
+        event.data?.type === 'OAUTH_AUTH_SUCCESS' &&
+        (event.data?.provider === 'github' || !event.data?.provider)
       ) {
         if (event.data?.user) {
-          setGhUser(event.data.user);
+          const u = event.data.user;
+          u.name = fixMojibake(u.name);
+          u.login = fixMojibake(u.login);
+          setGhUser(u);
           try {
-            localStorage.setItem('ethco_github_user', JSON.stringify(event.data.user));
+            localStorage.setItem('ethco_github_user', JSON.stringify(u));
           } catch {}
         }
         await loadGitHubData();
@@ -134,17 +137,27 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <X className="w-4 h-4" />
         </button>
 
-        {/* Big Centered Bold Orange GitHub Logo or User Avatar */}
+        {/* Top Centered Icon or Authenticated Avatar */}
         <div className="flex justify-center mb-5 mt-2">
-          {ghUser?.avatar_url ? (
-            <div className="relative">
-              <img
-                src={ghUser.avatar_url}
-                alt={ghUser.name || ghUser.login}
-                className="w-20 h-20 rounded-2xl border-2 border-[#d97757]/40 object-cover shadow-lg shadow-[#d97757]/10"
-              />
-              <div className="absolute -bottom-1.5 -right-1.5 p-1 rounded-lg bg-[#171717] border border-[#d97757]/50 text-[#d97757]">
-                <Github className="w-4 h-4 stroke-[2.5]" />
+          {ghUser ? (
+            <div className="relative inline-block">
+              {ghUser.avatar_url ? (
+                <img
+                  src={ghUser.avatar_url}
+                  alt={fixMojibake(ghUser.name || ghUser.login)}
+                  className="w-20 h-20 rounded-full border-2 border-[#d97757] object-cover shadow-xl shadow-[#d97757]/15 ring-4 ring-[#d97757]/10"
+                  onError={(e) => {
+                    // Fallback if avatar fails to load
+                    (e.target as HTMLElement).style.display = 'none';
+                  }}
+                />
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-[#1c1c1a] border-2 border-[#d97757] flex items-center justify-center shadow-xl text-[#d97757] font-semibold text-xl">
+                  {fixMojibake(ghUser.name || ghUser.login).charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div className="absolute bottom-0 right-0 p-1.5 rounded-full bg-[#121210] border border-[#d97757]/60 text-[#d97757] shadow-md">
+                <Github className="w-3.5 h-3.5 stroke-[2.5]" />
               </div>
             </div>
           ) : (
@@ -171,12 +184,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <h2
                 className="text-lg font-semibold text-white tracking-tight leading-snug px-2"
                 dir="auto"
-                title={ghUser.name || ghUser.login}
+                title={fixMojibake(ghUser.name || ghUser.login)}
               >
-                {ghUser.name || ghUser.login}
+                {fixMojibake(ghUser.name || ghUser.login)}
               </h2>
               <div className="flex items-center justify-center gap-1.5 mt-1 text-xs text-[#a3a3a3] font-mono">
-                <span>@{ghUser.login}</span>
+                <span>@{fixMojibake(ghUser.login)}</span>
                 {ghUser.html_url && (
                   <a
                     href={ghUser.html_url}
