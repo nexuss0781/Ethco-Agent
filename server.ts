@@ -266,6 +266,72 @@ app.get("/api/auth/callback", async (req, res) => {
       throw jsonErr;
     }
 
+    const isGithubAuth = req.query.purpose === 'github_authorization' || rawData.accessToken || rawData.token || rawData.githubToken;
+    if (isGithubAuth) {
+      const accessToken = rawData.accessToken || rawData.token || rawData.githubToken;
+      const githubUser = rawData.user || rawData.githubUser || rawData.data?.user || { login: "github_user", id: 1 };
+      if (accessToken) {
+        const userId = getActiveUserIdentifier(req);
+        const tokens = loadGitHubTokens();
+        const tokenRecord = {
+          token: accessToken,
+          user: {
+            id: githubUser.id || 1,
+            login: githubUser.login || "user",
+            name: githubUser.name || githubUser.login || "GitHub User",
+            avatar_url: githubUser.avatar_url || "",
+            html_url: githubUser.html_url || "",
+            public_repos: githubUser.public_repos || 0,
+            total_private_repos: githubUser.total_private_repos || 0,
+          },
+          authProvider: "github-oauth",
+          updatedAt: new Date().toISOString(),
+        };
+
+        tokens[userId] = tokenRecord;
+        tokens["default_user"] = tokenRecord;
+        tokens["latest"] = tokenRecord;
+        if (githubUser.login) {
+          tokens[githubUser.login] = tokenRecord;
+        }
+        saveGitHubTokens(tokens);
+
+        res.setHeader("Content-Type", "text/html; charset=utf-8");
+        return res.send(`
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <meta charset="utf-8">
+              <title>GitHub Repository Authorization Successful</title>
+              <style>
+                body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #121210; color: #ecece7; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+                .card { background: #1c1c19; padding: 24px 32px; border-radius: 12px; border: 1px solid #33332e; text-align: center; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+                h2 { color: #d97757; margin-top: 0; }
+              </style>
+            </head>
+            <body>
+              <div class="card">
+                <h2>GitHub Authorized</h2>
+                <p>Connected repository access as <strong dir="auto">@${githubUser.login || "user"}</strong>. This popup will close automatically.</p>
+              </div>
+              <script>
+                try {
+                  if (window.opener) {
+                    window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS', provider: 'github', user: ${JSON.stringify(githubUser)} }, '*');
+                    setTimeout(() => window.close(), 600);
+                  } else {
+                    window.location.href = '/app';
+                  }
+                } catch (e) {
+                  window.location.href = '/app';
+                }
+              </script>
+            </body>
+          </html>
+        `);
+      }
+    }
+
     let resolvedUser = rawData.user || (rawData.data && rawData.data.user) || rawData.data || rawData;
     logStep("User identity resolved from response", {
       resolvedUserSummary: resolvedUser && typeof resolvedUser === "object"
@@ -577,8 +643,9 @@ app.get("/api/github/auth-url", (req, res) => {
 
   const host = req.headers["x-forwarded-host"] || req.headers.host || "localhost:3000";
   const proto = req.headers["x-forwarded-proto"] || "https";
-  const origin = process.env.APP_URL || `${proto}://${host}`;
-  const redirectUri = `${origin}/api/github/callback`;
+  const defaultAppUrl = process.env.NODE_ENV === "production" ? "https://ethco-agent.vercel.app" : `${proto}://${host}`;
+  const origin = process.env.APP_URL || defaultAppUrl;
+  const redirectUri = `${origin}/api/auth/callback?purpose=github_authorization`;
 
   const targetUrl = `${authUrl}/oauth/start/github?project_id=${encodeURIComponent(projectId)}&redirect_uri=${encodeURIComponent(redirectUri)}&handoff=1&purpose=github_authorization`;
 

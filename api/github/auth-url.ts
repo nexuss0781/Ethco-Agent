@@ -6,8 +6,9 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
 
   const host = req.headers["x-forwarded-host"] || req.headers.host || "localhost:3000";
   const proto = req.headers["x-forwarded-proto"] || "https";
-  const origin = process.env.APP_URL || `${proto}://${host}`;
-  const redirectUri = `${origin}/api/github/callback`;
+  const defaultAppUrl = process.env.NODE_ENV === "production" ? "https://ethco-agent.vercel.app" : `${proto}://${host}`;
+  const origin = process.env.APP_URL || defaultAppUrl;
+  const redirectUri = `${origin}/api/auth/callback?purpose=github_authorization`;
 
   // Central GitHub repository authorization flow via Nexuss Auth (Section 12 of INTEGRATION.md)
   const targetUrl = `${authUrl}/oauth/start/github?project_id=${encodeURIComponent(projectId)}&redirect_uri=${encodeURIComponent(redirectUri)}&handoff=1&purpose=github_authorization`;
