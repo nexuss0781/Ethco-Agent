@@ -82,18 +82,18 @@ export const GitHubService = {
     }
 
     if (!targetUrl) {
-      const redirectUri = `${window.location.origin}/api/auth/callback?purpose=github_auth`;
+      const redirectUri = `${window.location.origin}/api/auth/callback`;
       try {
         const loginUrl = new URL(auth.getLoginUrl('github', { redirectUri }));
         loginUrl.searchParams.set('handoff', '1');
         loginUrl.searchParams.set('prompt', 'consent');
         loginUrl.searchParams.set('scope', 'repo,read:user,user:email');
-        loginUrl.searchParams.set('purpose', 'github_auth');
+        loginUrl.searchParams.set('purpose', 'github_authorization');
         targetUrl = loginUrl.toString();
       } catch {
         const projectId = import.meta.env.VITE_NEXUSS_AUTH_PROJECT_ID || 'ethco-agents';
         const authUrl = import.meta.env.VITE_NEXUSS_AUTH_URL || 'https://nexuss-auth.vercel.app';
-        targetUrl = `${authUrl}/oauth/start/github?project_id=${encodeURIComponent(projectId)}&redirect_uri=${encodeURIComponent(redirectUri)}&handoff=1&prompt=consent&scope=${encodeURIComponent('repo,read:user,user:email')}&purpose=github_auth`;
+        targetUrl = `${authUrl}/oauth/start/github?project_id=${encodeURIComponent(projectId)}&redirect_uri=${encodeURIComponent(redirectUri)}&handoff=1&prompt=consent&scope=${encodeURIComponent('repo,read:user,user:email')}&purpose=github_authorization`;
       }
     }
 
