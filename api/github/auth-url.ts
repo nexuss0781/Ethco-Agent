@@ -1,23 +1,21 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 export default function handler(req: VercelRequest, res: VercelResponse) {
-  const clientId = process.env.GITHUB_CLIENT_ID;
-  const configured = Boolean(clientId && process.env.GITHUB_CLIENT_SECRET);
-  
+  const projectId = process.env.NEXUSS_AUTH_PROJECT_ID || "ethco-agents";
+  const authUrl = process.env.NEXUSS_AUTH_URL || "https://nexuss-auth.vercel.app";
+
   const host = req.headers["x-forwarded-host"] || req.headers.host || "localhost:3000";
   const proto = req.headers["x-forwarded-proto"] || "https";
   const origin = process.env.APP_URL || `${proto}://${host}`;
   const redirectUri = `${origin}/api/github/callback`;
-  const state = Math.random().toString(36).substring(2, 15);
 
-  const authUrl = clientId
-    ? `https://github.com/login/oauth/authorize?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent("repo,read:user,user:email")}&state=${state}`
-    : "";
+  // Central GitHub repository authorization flow via Nexuss Auth (Section 12 of INTEGRATION.md)
+  const targetUrl = `${authUrl}/oauth/start/github?project_id=${encodeURIComponent(projectId)}&redirect_uri=${encodeURIComponent(redirectUri)}&handoff=1&purpose=github_authorization`;
 
   res.json({
-    url: authUrl,
-    configured,
+    url: targetUrl,
+    configured: true,
     redirectUri,
-    hasTokenConfigured: Boolean(process.env.GITHUB_TOKEN || process.env.GIT_GH),
   });
 }
+

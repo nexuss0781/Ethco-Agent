@@ -570,94 +570,72 @@ function getStoredGitHubToken(userId: string): { token: string; githubGrantToken
   return null;
 }
 
-// 1. Get GitHub OAuth Authorization URL
+// 1. Get GitHub Repository Authorization URL via Nexuss Auth (Section 12 of INTEGRATION.md)
 app.get("/api/github/auth-url", (req, res) => {
-  const clientId = process.env.GITHUB_CLIENT_ID;
-  const configured = Boolean(clientId && process.env.GITHUB_CLIENT_SECRET);
-  const promptParam = req.query.prompt ? String(req.query.prompt) : "consent";
-  
-  // Construct redirect URI using APP_URL or request origin
-  const origin = process.env.APP_URL || `${req.protocol}://${req.get("host")}`;
-  const redirectUri = `${origin}/api/github/callback`;
-  const state = Math.random().toString(36).substring(2, 15);
+  const projectId = process.env.NEXUSS_AUTH_PROJECT_ID || "ethco-agents";
+  const authUrl = process.env.NEXUSS_AUTH_URL || "https://nexuss-auth.vercel.app";
 
-  const authUrl = clientId
-    ? `https://github.com/login/oauth/authorize?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent("repo,read:user,user:email")}&state=${state}&prompt=${encodeURIComponent(promptParam)}`
-    : "";
+  const host = req.headers["x-forwarded-host"] || req.headers.host || "localhost:3000";
+  const proto = req.headers["x-forwarded-proto"] || "https";
+  const origin = process.env.APP_URL || `${proto}://${host}`;
+  const redirectUri = `${origin}/api/github/callback`;
+
+  const targetUrl = `${authUrl}/oauth/start/github?project_id=${encodeURIComponent(projectId)}&redirect_uri=${encodeURIComponent(redirectUri)}&handoff=1&purpose=github_authorization`;
 
   res.json({
-    url: authUrl,
-    configured,
+    url: targetUrl,
+    configured: true,
     redirectUri,
-    hasTokenConfigured: Boolean(process.env.GITHUB_TOKEN || process.env.GIT_GH),
   });
 });
 
-// 2. GitHub OAuth Callback (both /callback and /callback/)
+// 2. GitHub Repository Authorization Callback via Handoff Exchange (Section 12 of INTEGRATION.md)
 const githubCallbackHandler = async (req: express.Request, res: express.Response) => {
-  const { code } = req.query;
-  if (!code || typeof code !== "string") {
-    return res.status(400).send("Missing OAuth code parameter from GitHub.");
-  }
-
-  const clientId = process.env.GITHUB_CLIENT_ID;
-  const clientSecret = process.env.GITHUB_CLIENT_SECRET;
-
-  if (!clientId || !clientSecret) {
-    return res.status(500).send("GITHUB_CLIENT_ID or GITHUB_CLIENT_SECRET is not configured on the server.");
+  const handoffToken = (req.query.handoff_token || req.query.handoffToken) as string;
+  if (!handoffToken) {
+    return res.status(400).send("Missing handoff token parameter for GitHub authorization.");
   }
 
   try {
-    // Exchange code for access token
-    const tokenRes = await fetch("https://github.com/login/oauth/access_token", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        "User-Agent": "Ethco-AI-Agent",
-      },
-      body: JSON.stringify({
-        client_id: clientId,
-        client_secret: clientSecret,
-        code,
-      }),
+    const authUrl = process.env.NEXUSS_AUTH_URL || "https://nexuss-auth.vercel.app";
+    const projectId = process.env.NEXUSS_AUTH_PROJECT_ID || "ethco-agents";
+
+    const exchangeRes = await robustPost(`${authUrl}/v1/handoff/exchange`, {
+      projectId,
+      handoffToken,
+      handoff_token: handoffToken,
     });
 
-    const tokenData = await tokenRes.json();
-    if (tokenData.error || !tokenData.access_token) {
-      console.error("GitHub token exchange failed:", tokenData);
-      return res.status(401).send(`GitHub OAuth exchange error: ${tokenData.error_description || tokenData.error}`);
+    if (!exchangeRes.ok) {
+      const errText = await exchangeRes.text();
+      return res.status(401).send(`Nexuss Auth GitHub authorization exchange failed: ${errText}`);
     }
 
-    const accessToken = tokenData.access_token;
+    const data = await exchangeRes.json();
+    const accessToken = data.accessToken || data.token || data.githubToken;
+    const githubUser = data.user || data.githubUser || { login: "github_user", id: 1 };
 
-    // Fetch user profile from GitHub API
-    const userRes = await fetch("https://api.github.com/user", {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "User-Agent": "Ethco-AI-Agent",
-      },
-    });
+    if (!accessToken) {
+      return res.status(400).send("GitHub access token not received from authorization handoff.");
+    }
 
-    const githubUser = await userRes.json();
     const userId = getActiveUserIdentifier(req);
-
-    // Save token mapping across userId, default_user, and latest keys
     const tokens = loadGitHubTokens();
     const tokenRecord = {
       token: accessToken,
       user: {
-        id: githubUser.id,
-        login: githubUser.login,
-        name: githubUser.name,
-        avatar_url: githubUser.avatar_url,
-        html_url: githubUser.html_url,
-        public_repos: githubUser.public_repos,
-        total_private_repos: githubUser.total_private_repos,
+        id: githubUser.id || 1,
+        login: githubUser.login || "user",
+        name: githubUser.name || githubUser.login || "GitHub User",
+        avatar_url: githubUser.avatar_url || "",
+        html_url: githubUser.html_url || "",
+        public_repos: githubUser.public_repos || 0,
+        total_private_repos: githubUser.total_private_repos || 0,
       },
       authProvider: "github-oauth",
       updatedAt: new Date().toISOString(),
     };
+
     tokens[userId] = tokenRecord;
     tokens["default_user"] = tokenRecord;
     tokens["latest"] = tokenRecord;
@@ -672,17 +650,17 @@ const githubCallbackHandler = async (req: express.Request, res: express.Response
       <html>
         <head>
           <meta charset="utf-8">
-          <title>GitHub Authorization Successful</title>
+          <title>GitHub Repository Authorization Successful</title>
           <style>
-            body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans Ethiopic', sans-serif; background: #121210; color: #ecece7; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+            body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #121210; color: #ecece7; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
             .card { background: #1c1c19; padding: 24px 32px; border-radius: 12px; border: 1px solid #33332e; text-align: center; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
             h2 { color: #d97757; margin-top: 0; }
           </style>
         </head>
         <body>
           <div class="card">
-            <h2>Authorized with GitHub</h2>
-            <p>Connected as <strong dir="auto">${githubUser.name || githubUser.login}</strong> (@${githubUser.login}). This popup will close automatically.</p>
+            <h2>GitHub Authorized</h2>
+            <p>Connected repository access as <strong dir="auto">@${githubUser.login || "user"}</strong>. This popup will close automatically.</p>
           </div>
           <script>
             try {
@@ -700,61 +678,12 @@ const githubCallbackHandler = async (req: express.Request, res: express.Response
       </html>
     `);
   } catch (err: any) {
-    console.error("GitHub callback exception:", err);
-    res.status(500).send(`Error during GitHub callback: ${err.message || err}`);
+    console.error("GitHub callback exchange error:", err);
+    res.status(500).send(`Error during GitHub callback exchange: ${err.message || err}`);
   }
 };
 
 app.get(["/api/github/callback", "/api/github/callback/"], githubCallbackHandler);
-
-// 3. Connect via Personal Access Token (PAT)
-app.post("/api/github/connect-token", async (req, res) => {
-  const token = (req.body?.token || "").trim();
-  if (!token) {
-    return res.status(400).json({ error: "Access token is required." });
-  }
-
-  try {
-    const userRes = await fetch("https://api.github.com/user", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "User-Agent": "Ethco-AI-Agent",
-      },
-    });
-
-    if (!userRes.ok) {
-      const errBody = await userRes.text();
-      return res.status(401).json({ error: "Invalid GitHub token or insufficient permissions.", details: errBody });
-    }
-
-    const githubUser = await userRes.json();
-    const userId = getActiveUserIdentifier(req);
-
-    const tokens = loadGitHubTokens();
-    tokens[userId] = {
-      token,
-      user: {
-        id: githubUser.id,
-        login: githubUser.login,
-        name: githubUser.name,
-        avatar_url: githubUser.avatar_url,
-        html_url: githubUser.html_url,
-        public_repos: githubUser.public_repos,
-        total_private_repos: githubUser.total_private_repos,
-      },
-      updatedAt: new Date().toISOString(),
-      source: "pat",
-    };
-    saveGitHubTokens(tokens);
-
-    res.json({
-      success: true,
-      user: tokens[userId].user,
-    });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message || "Failed to verify token with GitHub" });
-  }
-});
 
 // 4. GitHub Connection Status (checks actual GitHub OAuth token & profile)
 app.get("/api/github/status", async (req, res) => {

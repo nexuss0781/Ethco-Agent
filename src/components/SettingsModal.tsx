@@ -24,7 +24,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [ghUser, setGhUser] = useState<GitHubUser | null>(null);
   const [authorizing, setAuthorizing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [patInput, setPatInput] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -102,27 +101,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       }
     } catch (err: any) {
       setErrorMessage(err.message || 'Authorization failed. Please try again.');
-    } finally {
-      setAuthorizing(false);
-    }
-  };
-
-  const handleConnectPat = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!patInput.trim()) return;
-    setAuthorizing(true);
-    setErrorMessage(null);
-    try {
-      const user = await GitHubService.connectWithToken(patInput.trim());
-      if (user) {
-        setGhUser(user);
-        try {
-          localStorage.setItem('ethco_github_user', JSON.stringify(user));
-        } catch {}
-        setPatInput('');
-      }
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Failed to connect token');
     } finally {
       setAuthorizing(false);
     }
@@ -292,47 +270,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 ) : (
                   <>
                     <Github className="w-4 h-4 text-white stroke-[2.5]" />
-                    <span>Authorize GitHub (OAuth)</span>
+                    <span>Authorize GitHub</span>
                   </>
                 )}
               </button>
-
-              <div className="relative flex py-0.5 items-center">
-                <div className="flex-grow border-t border-[#262626]"></div>
-                <span className="flex-shrink mx-3 text-[11px] text-[#737373]">or use Personal Access Token</span>
-                <div className="flex-grow border-t border-[#262626]"></div>
-              </div>
-
-              <form onSubmit={handleConnectPat} className="space-y-2 text-left">
-                <div>
-                  <input
-                    type="password"
-                    value={patInput}
-                    onChange={(e) => setPatInput(e.target.value)}
-                    placeholder="ghp_... or github_pat_..."
-                    className="w-full bg-[#161614] border border-[#2b2b27] rounded-xl px-3 py-2 text-xs text-white placeholder:text-[#555] focus:outline-none focus:border-[#d97757]"
-                  />
-                  <div className="flex justify-between items-center mt-1 text-[10px] text-[#737373]">
-                    <span>Requires <code className="text-[#d97757]">repo</code> scope</span>
-                    <a
-                      href="https://github.com/settings/tokens/new?scopes=repo,read:user,user:email&description=AI+Studio+Workspace"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-[#d97757] hover:underline inline-flex items-center gap-0.5"
-                    >
-                      Generate token <ExternalLink className="w-2.5 h-2.5" />
-                    </a>
-                  </div>
-                </div>
-                <button
-                  type="submit"
-                  disabled={authorizing || !patInput.trim()}
-                  className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold bg-[#1c1c1a] hover:bg-[#262624] text-white border border-[#2b2b27] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  {authorizing ? <Loader2 className="w-3.5 h-3.5 animate-spin text-[#d97757]" /> : <Github className="w-3.5 h-3.5" />}
-                  <span>Connect Token</span>
-                </button>
-              </form>
             </div>
           </div>
         )}

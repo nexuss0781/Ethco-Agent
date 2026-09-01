@@ -61,16 +61,15 @@ export function fixMojibake(str?: string | null): string {
 }
 
 export const GitHubService = {
-  // 1. Authorize via OAuth (Direct GitHub OAuth or Nexuss Auth)
+  // 1. Authorize via Nexuss Auth GitHub repository authorization flow (Section 12 of INTEGRATION.md)
   async authorizeOAuth(): Promise<GitHubUser | null> {
     return this.authorizeWithNexussAuth();
   },
 
   async authorizeWithNexussAuth(mode: 'popup' | 'redirect' = 'popup'): Promise<GitHubUser | null> {
-    // Check if direct GitHub OAuth URL is available from server (forcing prompt=consent)
     let targetUrl = '';
     try {
-      const res = await fetch('/api/github/auth-url?prompt=consent');
+      const res = await fetch('/api/github/auth-url');
       if (res.ok) {
         const data = await res.json();
         if (data.url) {
@@ -82,7 +81,10 @@ export const GitHubService = {
     }
 
     if (!targetUrl) {
-      throw new Error("GitHub OAuth is not configured on the server (missing GITHUB_CLIENT_ID). Please connect using a GitHub Personal Access Token (PAT) below.");
+      const projectId = import.meta.env.VITE_NEXUSS_AUTH_PROJECT_ID || 'ethco-agents';
+      const authUrl = import.meta.env.VITE_NEXUSS_AUTH_URL || 'https://nexuss-auth.vercel.app';
+      const redirectUri = `${window.location.origin}/api/github/callback`;
+      targetUrl = `${authUrl}/oauth/start/github?project_id=${encodeURIComponent(projectId)}&redirect_uri=${encodeURIComponent(redirectUri)}&handoff=1&purpose=github_authorization`;
     }
 
     return new Promise((resolve, reject) => {
@@ -99,7 +101,6 @@ export const GitHubService = {
         );
 
         if (!authWindow) {
-          // Fallback redirect if popup blocked
           window.location.href = targetUrl;
           return;
         }
@@ -133,7 +134,6 @@ export const GitHubService = {
           }
         }, 1000);
 
-        // Safety timeout of 20 seconds to prevent getting stuck
         safetyTimeout = setTimeout(async () => {
           cleanup();
           const status = await GitHubService.getStatus();
@@ -143,36 +143,6 @@ export const GitHubService = {
         reject(err);
       }
     });
-  },
-
-  // 2. Connect directly via Personal Access Token (PAT)
-  async connectWithToken(token: string): Promise<GitHubUser> {
-    const res = await fetch('/api/github/connect-token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token.trim() }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.error || 'Failed to authenticate token with GitHub');
-    }
-    const user = data.user;
-    if (user) {
-      try {
-        localStorage.setItem('ethco_github_user', JSON.stringify(user));
-        localStorage.setItem('ethco_github_token', token.trim());
-      } catch {}
-      if (isSupabaseConfigured) {
-        saveToSupabase('github_auth', {
-          id: 'current_github_status',
-          user,
-          connected: true,
-          token: token.trim(),
-          updated_at: new Date().toISOString()
-        });
-      }
-    }
-    return user;
   },
 
   // 3. Get Status (reads active token & user info with Supabase fallback)
