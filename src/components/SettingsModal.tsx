@@ -6,7 +6,7 @@ import {
   CheckCircle2,
   RefreshCw,
   LogOut,
-  ExternalLink
+  ExternalLink,
 } from 'lucide-react';
 import { GitHubService, GitHubUser } from '../lib/github';
 
@@ -31,7 +31,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }, [isOpen]);
 
-  // Listen to postMessage in case OAuth popup completes while modal is open
+  // Listen to postMessage when OAuth completes
   useEffect(() => {
     const handleGlobalMessage = async (event: MessageEvent) => {
       if (
@@ -40,7 +40,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       ) {
         if (event.data?.user) {
           setGhUser(event.data.user);
-          // Persist in localStorage for instant local access
           try {
             localStorage.setItem('ethco_github_user', JSON.stringify(event.data.user));
           } catch {}
@@ -64,7 +63,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           localStorage.setItem('ethco_github_user', JSON.stringify(status.user));
         } catch {}
       } else {
-        // Check localStorage fallback
         const saved = localStorage.getItem('ethco_github_user');
         if (saved) {
           try {
@@ -81,21 +79,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   };
 
-  const handleAuthorizeGitHub = async () => {
+  const handleAuthorizeOAuth = async () => {
     setAuthorizing(true);
     setErrorMessage(null);
     try {
-      const resUser = await GitHubService.authorizeWithNexussAuth('popup');
+      const resUser = await GitHubService.authorizeOAuth();
       if (resUser) {
         setGhUser(resUser);
         try {
           localStorage.setItem('ethco_github_user', JSON.stringify(resUser));
         } catch {}
-      }
-      // Re-verify immediately to ensure backend state synchronization
-      const freshStatus = await GitHubService.getStatus();
-      if (freshStatus.user) {
-        setGhUser(freshStatus.user);
+      } else {
+        const status = await GitHubService.getStatus();
+        if (status.connected && status.user) {
+          setGhUser(status.user);
+          try {
+            localStorage.setItem('ethco_github_user', JSON.stringify(status.user));
+          } catch {}
+        }
       }
     } catch (err: any) {
       setErrorMessage(err.message || 'Authorization failed. Please try again.');
@@ -147,7 +148,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <span className="text-xs">Checking authorization...</span>
           </div>
         ) : ghUser ? (
-          /* State: Connected & Persisted (Immediate Authorized State) */
+          /* State: Connected & Persisted */
           <div className="space-y-5 animate-in fade-in duration-200">
             <div>
               <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium mb-2">
@@ -181,14 +182,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <div className="space-y-2 pt-1">
               <button
                 id="btn-reconfigure-github"
-                onClick={handleAuthorizeGitHub}
+                onClick={handleAuthorizeOAuth}
                 disabled={authorizing}
                 className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold bg-[#d97757] hover:bg-[#c66647] active:bg-[#b5583b] text-white transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm disabled:opacity-50"
               >
                 {authorizing ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin text-white" />
-                    <span>Reconnecting...</span>
+                    <span>Authorizing...</span>
                   </>
                 ) : (
                   <>
@@ -209,14 +210,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </div>
         ) : (
-          /* State: Not Connected (Single Button Auth) */
+          /* State: Not Connected (Single Button Auth Only) */
           <div className="space-y-5">
             <div>
               <h2 className="text-lg font-semibold text-white tracking-tight">
                 GitHub Authorization
               </h2>
               <p className="text-xs text-[#737373] mt-1.5 leading-relaxed">
-                Authorize your GitHub account to connect your developer identity and repositories.
+                Authorize your GitHub account to connect your developer identity.
               </p>
             </div>
 
@@ -228,7 +229,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
             <button
               id="btn-settings-authorize-github"
-              onClick={handleAuthorizeGitHub}
+              onClick={handleAuthorizeOAuth}
               disabled={authorizing}
               className="w-full py-3 px-4 rounded-xl text-xs font-semibold bg-[#d97757] hover:bg-[#c66647] active:bg-[#b5583b] text-white transition-all flex items-center justify-center gap-2.5 shadow-md hover:scale-[1.01] active:scale-[0.99] cursor-pointer disabled:opacity-50"
             >

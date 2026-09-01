@@ -761,10 +761,9 @@ app.get("/api/github/status", async (req, res) => {
 app.post("/api/github/disconnect", (req, res) => {
   const userId = getActiveUserIdentifier(req);
   const tokens = loadGitHubTokens();
-  if (tokens[userId]) {
-    delete tokens[userId];
-    saveGitHubTokens(tokens);
-  }
+  delete tokens[userId];
+  delete tokens["default_user"];
+  saveGitHubTokens(tokens);
   res.json({ success: true });
 });
 

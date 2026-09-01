@@ -46,21 +46,39 @@ export interface GitHubStatus {
 }
 
 export const GitHubService = {
-  // 1. Authorize via Central Nexuss Auth (Skill Section 12)
-  async authorizeWithNexussAuth(mode: 'popup' | 'redirect' = 'popup'): Promise<GitHubUser | null> {
-    const projectId = import.meta.env.VITE_NEXUSS_AUTH_PROJECT_ID || 'ethco-agents';
-    const authUrl = import.meta.env.VITE_NEXUSS_AUTH_URL || 'https://nexuss-auth.vercel.app';
-    const redirectUri = `${window.location.origin}/api/auth/callback`;
-    
-    // Central flow URL matching Section 12 of SKILL/INTEGRATION.md
-    const centralStartUrl = `${authUrl}/oauth/start/github?project_id=${encodeURIComponent(projectId)}&redirect_uri=${encodeURIComponent(redirectUri)}&handoff=1&purpose=github_authorization`;
+  // 1. Authorize via OAuth (Direct GitHub OAuth or Nexuss Auth)
+  async authorizeOAuth(): Promise<GitHubUser | null> {
+    return this.authorizeWithNexussAuth();
+  },
 
-    if (mode === 'redirect') {
-      window.location.href = centralStartUrl;
-      return null;
+  async authorizeWithNexussAuth(mode: 'popup' | 'redirect' = 'popup'): Promise<GitHubUser | null> {
+    // Check if direct GitHub OAuth URL is available from server
+    let targetUrl = '';
+    try {
+      const res = await fetch('/api/github/auth-url');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.url) {
+          targetUrl = data.url;
+        }
+      }
+    } catch {
+      // Fallback
     }
 
-    // Popup flow
+    if (!targetUrl) {
+      const redirectUri = `${window.location.origin}/api/auth/callback`;
+      try {
+        const loginUrl = new URL(auth.getLoginUrl('github', { redirectUri }));
+        loginUrl.searchParams.set('handoff', '1');
+        targetUrl = loginUrl.toString();
+      } catch {
+        const projectId = import.meta.env.VITE_NEXUSS_AUTH_PROJECT_ID || 'ethco-agents';
+        const authUrl = import.meta.env.VITE_NEXUSS_AUTH_URL || 'https://nexuss-auth.vercel.app';
+        targetUrl = `${authUrl}/oauth/start/github?project_id=${encodeURIComponent(projectId)}&redirect_uri=${encodeURIComponent(redirectUri)}&handoff=1`;
+      }
+    }
+
     return new Promise((resolve, reject) => {
       try {
         const width = 600;
@@ -69,52 +87,73 @@ export const GitHubService = {
         const top = window.screen.height / 2 - height / 2;
 
         const authWindow = window.open(
-          centralStartUrl,
-          'nexuss_auth_popup',
+          targetUrl,
+          'github_auth_popup',
           `width=${width},height=${height},top=${top},left=${left},scrollbars=yes`
         );
 
         if (!authWindow) {
-          // Fallback to redirect if popup is blocked
-          window.location.href = centralStartUrl;
+          // Fallback redirect if popup blocked
+          window.location.href = targetUrl;
           return;
         }
 
         let cleanupTimer: any = null;
+        let safetyTimeout: any = null;
 
         const handleMessage = (event: MessageEvent) => {
-          const origin = event.origin;
-          if (!origin.endsWith('.run.app') && !origin.includes('localhost') && !origin.includes('vercel.app')) {
-            return;
-          }
-
           if (
             (event.data?.type === 'OAUTH_AUTH_SUCCESS' || event.data?.type === 'NEXUSS_AUTH_SUCCESS') &&
             event.data?.user
           ) {
-            window.removeEventListener('message', handleMessage);
-            if (cleanupTimer) clearInterval(cleanupTimer);
+            cleanup();
             resolve(event.data.user);
           }
+        };
+
+        const cleanup = () => {
+          window.removeEventListener('message', handleMessage);
+          if (cleanupTimer) clearInterval(cleanupTimer);
+          if (safetyTimeout) clearTimeout(safetyTimeout);
         };
 
         window.addEventListener('message', handleMessage);
 
         cleanupTimer = setInterval(async () => {
           if (authWindow.closed) {
-            clearInterval(cleanupTimer);
-            window.removeEventListener('message', handleMessage);
+            cleanup();
             const status = await GitHubService.getStatus();
             resolve(status.user || null);
           }
         }, 1000);
+
+        // Safety timeout of 20 seconds to prevent getting stuck
+        safetyTimeout = setTimeout(async () => {
+          cleanup();
+          const status = await GitHubService.getStatus();
+          resolve(status.user || null);
+        }, 20000);
       } catch (err) {
         reject(err);
       }
     });
   },
 
-  // 2. Get Status (reads active Nexuss Auth session & user info)
+  // 2. Connect directly via Personal Access Token (PAT)
+  async connectWithToken(token: string): Promise<GitHubUser> {
+    const res = await fetch('/api/github/connect-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token.trim() }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to authenticate token with GitHub');
+    }
+    return data.user;
+  },
+
+  // 3. Get Status (reads active token & user info)
   async getStatus(): Promise<GitHubStatus> {
     try {
       const res = await fetch('/api/github/status');
@@ -125,12 +164,12 @@ export const GitHubService = {
     }
   },
 
-  // 3. Disconnect
+  // 4. Disconnect
   async disconnect(): Promise<void> {
     await fetch('/api/github/disconnect', { method: 'POST' });
   },
 
-  // 4. Fetch Repositories
+  // 5. Fetch Repositories
   async fetchRepos(query?: string): Promise<GitHubRepo[]> {
     const url = query ? `/api/github/repos?q=${encodeURIComponent(query)}` : '/api/github/repos';
     const res = await fetch(url);
@@ -141,7 +180,7 @@ export const GitHubService = {
     return data.repos || [];
   },
 
-  // 5. Clone / Import Repo into workspace
+  // 6. Clone / Import Repo into workspace
   async cloneRepo(params: { repoUrl: string; branch?: string; depth?: number; folderName?: string }): Promise<ImportedRepo> {
     const res = await fetch('/api/github/clone', {
       method: 'POST',
@@ -155,7 +194,7 @@ export const GitHubService = {
     return data.repository;
   },
 
-  // 6. List Cloned Repos
+  // 7. List Cloned Repos
   async getImportedRepos(): Promise<ImportedRepo[]> {
     const res = await fetch('/api/github/imported');
     if (!res.ok) return [];
@@ -163,7 +202,7 @@ export const GitHubService = {
     return data.repos || [];
   },
 
-  // 7. Sync / Pull
+  // 8. Sync / Pull
   async syncRepo(repoName: string): Promise<{ success: boolean; message: string; lastCommit?: string }> {
     const res = await fetch('/api/github/sync', {
       method: 'POST',
@@ -175,7 +214,7 @@ export const GitHubService = {
     return data;
   },
 
-  // 8. Delete Cloned Repo
+  // 9. Delete Cloned Repo
   async deleteImportedRepo(repoName: string): Promise<void> {
     const res = await fetch('/api/github/delete-imported', {
       method: 'POST',
@@ -188,7 +227,7 @@ export const GitHubService = {
     }
   },
 
-  // 9. Inspect File Tree
+  // 10. Inspect File Tree
   async getRepoTree(repoName: string): Promise<any[]> {
     const res = await fetch(`/api/github/repo-tree?repoName=${encodeURIComponent(repoName)}`);
     if (!res.ok) return [];
