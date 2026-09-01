@@ -2,12 +2,11 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import https from "https";
-import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import jwt from "jsonwebtoken";
-import { WORKSPACE_TOOL_DECLARATIONS, executeWorkspaceTool } from "./server_tools";
+import { WORKSPACE_TOOL_DECLARATIONS, executeWorkspaceTool } from "./server_tools.ts";
 
 dotenv.config();
 
@@ -699,13 +698,14 @@ You are in Build Mode. Focus on concrete, production-ready implementation, compl
 
 // Vite / static file serving
 async function startServer() {
-  if (process.env.NODE_ENV !== "production") {
+  if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
-  } else {
+  } else if (!process.env.VERCEL) {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
     app.get("*", (req, res) => {
