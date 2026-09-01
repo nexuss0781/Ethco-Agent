@@ -216,7 +216,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
   return (
     <div
-      className={`relative w-full max-w-3xl mx-auto px-3 sm:px-4 pb-3 sm:pb-5 transition-all`}
+      className={`relative w-full max-w-3xl mx-auto px-3 sm:px-4 pb-4 sm:pb-6 transition-all`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -485,6 +485,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           {speechError}
         </div>
       )}
+      
+      {/* Disclaimer Text */}
+      <div className="mt-2 text-center text-[10px] text-[#85857a] opacity-80 px-2 leading-tight">
+        Ethco can make mistakes. Please double check important information.
+      </div>
     </div>
   );
 };

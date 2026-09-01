@@ -8,6 +8,7 @@ import { UpgradeModal } from './components/UpgradeModal';
 import { Conversation, Message, Attachment, ModelOption, ActionMode, ToolInvocation } from './types';
 import { StorageService } from './lib/storage';
 import { AVAILABLE_MODELS } from './data/models';
+import { getUser, signInWithGoogle, signInWithGithub, logout } from './lib/auth';
 
 export default function App() {
   const [conversations, setConversations] = useState<Conversation[]>(() =>
@@ -22,10 +23,12 @@ export default function App() {
   const [actionMode, setActionMode] = useState<ActionMode>('planning');
   const [isLoading, setIsLoading] = useState(false);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  
+  const [user, setUser] = useState<any>(null);
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Sync with server on initial mount for multi-session persistence
+  // Sync with server on initial mount for multi-session persistence and fetch user
   useEffect(() => {
     StorageService.syncFromServer().then((synced) => {
       if (synced && synced.length > 0) {
@@ -34,6 +37,10 @@ export default function App() {
           setActiveConversationId(synced[0].id);
         }
       }
+    });
+    
+    getUser().then(usr => {
+      if (usr) setUser(usr);
     });
   }, []);
 
@@ -412,6 +419,10 @@ export default function App() {
         onTogglePin={handleTogglePin}
         onRenameConversation={handleRenameConversation}
         onOpenUpgradeModal={() => setIsUpgradeModalOpen(true)}
+        user={user}
+        onLoginGoogle={signInWithGoogle}
+        onLoginGithub={signInWithGithub}
+        onLogout={logout}
       />
 
       {/* Main Conversation Stage */}

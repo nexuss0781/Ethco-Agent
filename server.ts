@@ -4,6 +4,8 @@ import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
+import cookieParser from "cookie-parser";
+import jwt from "jsonwebtoken";
 import { WORKSPACE_TOOL_DECLARATIONS, executeWorkspaceTool } from "./server_tools";
 
 dotenv.config();
@@ -12,6 +14,7 @@ const app = express();
 const PORT = 3000;
 
 app.use(express.json({ limit: "50mb" }));
+app.use(cookieParser());
 
 // Initialize Gemini SDK with telemetry header
 const ai = new GoogleGenAI({
@@ -25,7 +28,7 @@ const ai = new GoogleGenAI({
 
 // Path to SYSTEM.md
 const systemPromptPath = path.join(process.cwd(), "SYSTEM.md");
-const dataDir = path.join(process.cwd(), "data");
+const dataDir = process.env.VERCEL ? "/tmp/data" : path.join(process.cwd(), "data");
 const conversationsFile = path.join(dataDir, "conversations.json");
 
 // Ensure data directory exists
@@ -88,6 +91,70 @@ app.post("/api/tools/execute", async (req, res) => {
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Tool execution failed" });
   }
+});
+
+// Auth Routes (Nexuss Auth Server Handoff)
+app.get("/api/auth/callback", async (req, res) => {
+  const handoffToken = req.query.handoff_token as string;
+  if (!handoffToken) {
+    return res.status(400).send("Missing handoff token");
+  }
+
+  try {
+    const authUrl = process.env.VITE_NEXUSS_AUTH_URL || "https://nexuss-auth.vercel.app";
+    const projectId = process.env.VITE_NEXUSS_AUTH_PROJECT_ID || "ethco-agents";
+    
+    const response = await fetch(`${authUrl}/v1/handoff/exchange`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        projectId,
+        handoffToken,
+      }),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("Handoff exchange failed:", response.status, errText);
+      return res.status(401).send("Nexuss Auth handoff failed");
+    }
+
+    const { user } = await response.json();
+    
+    // Create the application's own secure, HTTP-only session here.
+    const secret = process.env.JWT_SECRET || "YOUR_RANDOM_SECRET_KEY";
+    const token = jwt.sign(user, secret, { expiresIn: "7d" });
+    
+    res.cookie("session_token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
+
+    res.redirect("/");
+  } catch (err) {
+    console.error("Auth callback error:", err);
+    res.status(500).send("Internal server error during auth");
+  }
+});
+
+app.get("/api/auth/me", (req, res) => {
+  const token = req.cookies.session_token;
+  if (!token) return res.json({ user: null });
+
+  try {
+    const secret = process.env.JWT_SECRET || "YOUR_RANDOM_SECRET_KEY";
+    const user = jwt.verify(token, secret);
+    res.json({ user });
+  } catch (err) {
+    res.json({ user: null });
+  }
+});
+
+app.post("/api/auth/logout", (req, res) => {
+  res.clearCookie("session_token");
+  res.json({ success: true });
 });
 
 // 4. Persistent Conversations API (Server-side multi-session storage)
@@ -406,9 +473,15 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Claude Chatbot server running at http://0.0.0.0:${PORT}`);
-  });
+  if (!process.env.VERCEL) {
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Claude Chatbot server running at http://0.0.0.0:${PORT}`);
+    });
+  }
 }
 
-startServer();
+if (!process.env.VERCEL) {
+  startServer();
+}
+
+export default app;
