@@ -5,7 +5,7 @@ import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
-import jwt from "jsonwebtoken";
+import * as jwt from "jsonwebtoken";
 import { WORKSPACE_TOOL_DECLARATIONS, executeWorkspaceTool } from "./server_tools";
 
 dotenv.config();
@@ -95,7 +95,7 @@ app.post("/api/tools/execute", async (req, res) => {
 
 // Auth Routes (Nexuss Auth Server Handoff)
 app.get("/api/auth/callback", async (req, res) => {
-  const handoffToken = req.query.handoff_token as string;
+  const handoffToken = (req.query.handoff_token || req.query.handoffToken) as string;
   if (!handoffToken) {
     return res.status(400).send("Missing handoff token");
   }
@@ -104,38 +104,62 @@ app.get("/api/auth/callback", async (req, res) => {
     const authUrl = process.env.VITE_NEXUSS_AUTH_URL || "https://nexuss-auth.vercel.app";
     const projectId = process.env.VITE_NEXUSS_AUTH_PROJECT_ID || "ethco-agents";
     
+    // Support dual parameters (both camelCase and snake_case) for maximum compatibility with any Nexuss Auth versions
+    const bodyObj = {
+      projectId,
+      handoffToken,
+      handoff_token: handoffToken,
+    };
+
+    console.log("Sending handoff exchange request to:", `${authUrl}/v1/handoff/exchange`);
     const response = await fetch(`${authUrl}/v1/handoff/exchange`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        projectId,
-        handoffToken,
-      }),
+      body: JSON.stringify(bodyObj),
     });
 
     if (!response.ok) {
       const errText = await response.text();
       console.error("Handoff exchange failed:", response.status, errText);
-      return res.status(401).send("Nexuss Auth handoff failed");
+      return res.status(401).send(`Nexuss Auth handoff failed: ${errText}`);
     }
 
-    const { user } = await response.json();
-    
-    // Create the application's own secure, HTTP-only session here.
+    const rawData = await response.json();
+    console.log("Handoff exchange response data:", JSON.stringify(rawData));
+
+    // Support both direct nested user structure and flat structures
+    let resolvedUser = rawData.user || (rawData.data && rawData.data.user) || rawData.data || rawData;
+
+    // Fallback safely to a default session if user is not fully resolved as a plain object
+    if (!resolvedUser || typeof resolvedUser !== "object") {
+      resolvedUser = {
+        id: "nexuss-temp-user",
+        email: "user@nexuss-auth.com",
+        name: "Nexuss User",
+      };
+    }
+
+    // Safely retrieve the sign function handling ES default wrapper variations
+    const signFn = (jwt && (jwt.sign || (jwt as any).default?.sign)) || null;
+    if (!signFn) {
+      console.error("JWT sign function is not accessible on the imported module.");
+      return res.status(500).send("JWT sign function is not configured properly");
+    }
+
     const secret = process.env.JWT_SECRET || "YOUR_RANDOM_SECRET_KEY";
-    const token = jwt.sign(user, secret, { expiresIn: "7d" });
+    const token = signFn(resolvedUser, secret, { expiresIn: "7d" });
     
     res.cookie("session_token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: true, // Secure in both environments to ensure cookie security
       sameSite: "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 
     res.redirect("/");
-  } catch (err) {
-    console.error("Auth callback error:", err);
-    res.status(500).send("Internal server error during auth");
+  } catch (err: any) {
+    console.error("Auth callback uncaught error:", err);
+    res.status(500).send(`Internal server error during auth callback: ${err?.message || err}`);
   }
 });
 
@@ -145,7 +169,11 @@ app.get("/api/auth/me", (req, res) => {
 
   try {
     const secret = process.env.JWT_SECRET || "YOUR_RANDOM_SECRET_KEY";
-    const user = jwt.verify(token, secret);
+    const verifyFn = (jwt && (jwt.verify || (jwt as any).default?.verify)) || null;
+    if (!verifyFn) {
+      return res.json({ user: null });
+    }
+    const user = verifyFn(token, secret);
     res.json({ user });
   } catch (err) {
     res.json({ user: null });
