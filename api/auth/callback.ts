@@ -191,9 +191,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Redirect to home
-    res.writeHead(302, { Location: "/" });
-    res.end();
+    // HTML response to gracefully notify popup openers and redirect
+    res.setHeader("Content-Type", "text/html");
+    res.end(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Nexuss Auth Successful</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0b0b0d; color: #ecece7; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+            .card { background: #141412; padding: 24px 32px; border-radius: 12px; border: 1px solid #2b2b27; text-align: center; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+            h2 { color: #d97757; margin-top: 0; }
+          </style>
+        </head>
+        <body>
+          <div class="card">
+            <h2>Authentication Successful</h2>
+            <p>Welcome, <strong>${sanitizedUser.name || sanitizedUser.email}</strong>. Returning to workspace...</p>
+          </div>
+          <script>
+            try {
+              if (window.opener) {
+                window.opener.postMessage({
+                  type: 'NEXUSS_AUTH_SUCCESS',
+                  user: ${JSON.stringify(sanitizedUser)}
+                }, '*');
+                setTimeout(() => window.close(), 600);
+              } else {
+                window.location.href = '/app';
+              }
+            } catch (e) {
+              window.location.href = '/app';
+            }
+          </script>
+        </body>
+      </html>
+    `);
   } catch (err: any) {
     const totalDurationMs = Date.now() - startTime;
     logStep("Fatal exception in callback handler", {

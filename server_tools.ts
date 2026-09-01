@@ -1,6 +1,14 @@
 import fs from "fs";
 import path from "path";
-import { exec } from "child_process";
+import { exec, execSync } from "child_process";
+
+function execSyncSafe(cmd: string, cwd?: string): string {
+  try {
+    return execSync(cmd, { cwd, encoding: "utf-8", stdio: ["ignore", "pipe", "ignore"], timeout: 5000 });
+  } catch {
+    return "";
+  }
+}
 
 export interface ToolDefinition {
   name: string;
@@ -372,6 +380,54 @@ export const WORKSPACE_TOOL_DECLARATIONS: ToolDefinition[] = [
         },
       },
       required: ["projectName", "requirements"],
+    },
+  },
+  {
+    name: "github_clone_repo",
+    description: "Clone a GitHub repository (public or private with authorized credentials) into the workspace 'repos/' directory.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        repoUrl: {
+          type: "STRING",
+          description: "The GitHub repository URL (e.g. 'https://github.com/owner/repo' or 'owner/repo')",
+        },
+        branch: {
+          type: "STRING",
+          description: "Optional specific branch or tag to checkout",
+        },
+        depth: {
+          type: "INTEGER",
+          description: "Optional shallow clone depth (e.g. 1 for latest commit only)",
+        },
+        folderName: {
+          type: "STRING",
+          description: "Optional destination folder name under repos/ (defaults to repository name)",
+        },
+      },
+      required: ["repoUrl"],
+    },
+  },
+  {
+    name: "github_list_imported_repos",
+    description: "List all imported/cloned GitHub repositories currently in the workspace repos directory, along with branch, commit, and file count information.",
+    parameters: {
+      type: "OBJECT",
+      properties: {},
+    },
+  },
+  {
+    name: "github_sync_repo",
+    description: "Pull/fetch latest changes from remote origin for an imported repository.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        repoName: {
+          type: "STRING",
+          description: "The name of the imported repository folder in repos/",
+        },
+      },
+      required: ["repoName"],
     },
   },
 ];
@@ -918,6 +974,185 @@ export async function executeWorkspaceTool(name: string, args: Record<string, an
           constraintsApplied: constraints,
           milestones,
           recommendation: "Proceed with Phase 1 data modeling followed by modular file creation.",
+        };
+      }
+
+      case "github_clone_repo": {
+        let repoUrl = (args.repoUrl || "").trim();
+        if (!repoUrl) {
+          return { error: "repoUrl is required." };
+        }
+
+        // Format short 'owner/repo' into full URL
+        if (!repoUrl.startsWith("http://") && !repoUrl.startsWith("https://") && !repoUrl.startsWith("git@")) {
+          repoUrl = `https://github.com/${repoUrl}`;
+        }
+
+        // Determine destination folder
+        const urlMatch = repoUrl.match(/[\/:]([^\/:]+?)(?:\.git)?$/);
+        const repoBaseName = urlMatch ? urlMatch[1] : "cloned_repo";
+        const folderName = (args.folderName || repoBaseName).replace(/[^a-zA-Z0-9_\-\.]/g, "_");
+        const reposDir = path.resolve(root, "repos");
+        
+        if (!fs.existsSync(reposDir)) {
+          fs.mkdirSync(reposDir, { recursive: true });
+        }
+
+        const targetPath = path.join(reposDir, folderName);
+        if (fs.existsSync(targetPath)) {
+          return {
+            error: `Target directory 'repos/${folderName}' already exists. Use another folderName or delete the existing clone.`,
+            existingPath: `repos/${folderName}`,
+          };
+        }
+
+        // Check for available token for private repos
+        let token = process.env.GITHUB_TOKEN || process.env.GIT_GH || "";
+        const tokenFile = path.resolve(root, "data/github_tokens.json");
+        if (!token && fs.existsSync(tokenFile)) {
+          try {
+            const data = JSON.parse(fs.readFileSync(tokenFile, "utf-8"));
+            const firstKey = Object.keys(data)[0];
+            if (firstKey && data[firstKey]?.token) {
+              token = data[firstKey].token;
+            }
+          } catch {}
+        }
+
+        // Inject token if https GitHub URL
+        let cloneUrl = repoUrl;
+        if (token && repoUrl.startsWith("https://github.com/")) {
+          const pathPart = repoUrl.replace("https://github.com/", "");
+          cloneUrl = `https://x-access-token:${token}@github.com/${pathPart}`;
+        }
+
+        const depthArg = args.depth ? `--depth ${Number(args.depth)}` : "";
+        const branchArg = args.branch ? `--branch ${args.branch}` : "";
+        const cloneCmd = `git clone ${depthArg} ${branchArg} "${cloneUrl}" "${targetPath}"`;
+
+        const cloneResult = await new Promise<{ success: boolean; output: string }>((resolve) => {
+          exec(cloneCmd, { timeout: 60000 }, (error, stdout, stderr) => {
+            const out = (stdout || "") + "\n" + (stderr || "");
+            // Sanitize token in output logs
+            const sanitized = token ? out.split(token).join("[REDACTED]") : out;
+            if (error) {
+              resolve({ success: false, output: sanitized });
+            } else {
+              resolve({ success: true, output: sanitized });
+            }
+          });
+        });
+
+        if (!cloneResult.success) {
+          // Cleanup partial directory if failed
+          if (fs.existsSync(targetPath)) {
+            try { fs.rmSync(targetPath, { recursive: true, force: true }); } catch {}
+          }
+          return {
+            error: `Failed to clone repository: ${cloneResult.output}`,
+            repoUrl,
+          };
+        }
+
+        // Gather repository metadata
+        let branch = "main";
+        let lastCommit = "";
+        try {
+          branch = execSyncSafe("git rev-parse --abbrev-ref HEAD", targetPath).trim();
+          lastCommit = execSyncSafe('git log -1 --format="%h - %s (%cr)"', targetPath).trim();
+        } catch {}
+
+        let fileCount = 0;
+        try {
+          const files = execSyncSafe("git ls-files", targetPath).split("\n").filter(Boolean);
+          fileCount = files.length;
+        } catch {}
+
+        return {
+          success: true,
+          message: `Successfully cloned ${repoUrl} into repos/${folderName}`,
+          repository: {
+            name: folderName,
+            path: `repos/${folderName}`,
+            remoteUrl: repoUrl,
+            branch,
+            lastCommit,
+            fileCount,
+          },
+        };
+      }
+
+      case "github_list_imported_repos": {
+        const reposDir = path.resolve(root, "repos");
+        if (!fs.existsSync(reposDir)) {
+          return { repos: [], count: 0 };
+        }
+
+        const entries = fs.readdirSync(reposDir, { withFileTypes: true });
+        const list: any[] = [];
+
+        for (const entry of entries) {
+          if (!entry.isDirectory()) continue;
+          const repoPath = path.join(reposDir, entry.name);
+          const gitDir = path.join(repoPath, ".git");
+          if (!fs.existsSync(gitDir)) continue;
+
+          let branch = "unknown";
+          let lastCommit = "";
+          let remoteUrl = "";
+          let fileCount = 0;
+
+          try {
+            branch = execSyncSafe("git rev-parse --abbrev-ref HEAD", repoPath).trim();
+            lastCommit = execSyncSafe('git log -1 --format="%h - %s (%cr)"', repoPath).trim();
+            remoteUrl = execSyncSafe("git config --get remote.origin.url", repoPath).trim();
+            // Sanitize credentials in remoteUrl
+            remoteUrl = remoteUrl.replace(/\/\/[^@]+@/, "//");
+            const files = execSyncSafe("git ls-files", repoPath).split("\n").filter(Boolean);
+            fileCount = files.length;
+          } catch {}
+
+          list.push({
+            name: entry.name,
+            path: `repos/${entry.name}`,
+            branch,
+            lastCommit,
+            remoteUrl,
+            fileCount,
+          });
+        }
+
+        return {
+          repos: list,
+          count: list.length,
+        };
+      }
+
+      case "github_sync_repo": {
+        const repoName = (args.repoName || "").trim();
+        if (!repoName) return { error: "repoName is required." };
+
+        const targetPath = path.resolve(root, "repos", repoName);
+        if (!fs.existsSync(targetPath)) {
+          return { error: `Repository 'repos/${repoName}' does not exist.` };
+        }
+
+        const pullResult = await new Promise<{ success: boolean; output: string }>((resolve) => {
+          exec("git pull", { cwd: targetPath, timeout: 30000 }, (error, stdout, stderr) => {
+            const out = (stdout || "") + "\n" + (stderr || "");
+            resolve({ success: !error, output: out.trim() });
+          });
+        });
+
+        let lastCommit = "";
+        try {
+          lastCommit = execSyncSafe('git log -1 --format="%h - %s (%cr)"', targetPath).trim();
+        } catch {}
+
+        return {
+          success: pullResult.success,
+          message: pullResult.output,
+          lastCommit,
         };
       }
 

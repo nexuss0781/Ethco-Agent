@@ -13,7 +13,9 @@ import {
   ChevronRight,
   Shield,
   LogOut,
-  LogIn
+  LogIn,
+  Github,
+  FolderGit2
 } from 'lucide-react';
 import { Conversation } from '../types';
 import { StorageService } from '../lib/storage';
@@ -29,6 +31,7 @@ interface SidebarProps {
   onTogglePin: (id: string) => void;
   onRenameConversation: (id: string, newTitle: string) => void;
   onOpenUpgradeModal: () => void;
+  onOpenGitHubModal?: () => void;
   user?: any;
   onLoginGoogle?: () => void;
   onLoginGithub?: () => void;
@@ -46,6 +49,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onTogglePin,
   onRenameConversation,
   onOpenUpgradeModal,
+  onOpenGitHubModal,
   user,
   onLoginGoogle,
   onLoginGithub,
@@ -262,6 +266,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
               ⌘K
             </span>
           </button>
+
+          {/* GitHub Import & Repositories Button */}
+          {onOpenGitHubModal && (
+            <button
+              id="btn-sidebar-github-repos"
+              onClick={() => {
+                onOpenGitHubModal();
+                if (window.innerWidth < 768) onClose();
+              }}
+              className="flex items-center justify-between w-full px-3.5 py-2 rounded-xl bg-[#1a1a17] hover:bg-[#22221e] border border-[#2c2c28] hover:border-[#d97757]/40 text-[#b4b4aa] hover:text-[#ecece7] text-xs font-medium transition-all shadow-xs group"
+            >
+              <div className="flex items-center gap-2">
+                <Github className="w-3.5 h-3.5 text-[#d97757] group-hover:scale-110 transition-transform" />
+                <span>GitHub Repositories</span>
+              </div>
+              <span className="text-[10px] text-[#85857a] group-hover:text-[#d97757] transition-colors">
+                Import ➔
+              </span>
+            </button>
+          )}
 
           {/* Search Box */}
           <div className="relative">

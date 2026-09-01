@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Menu, Plus, Brain, ChevronDown, Check } from 'lucide-react';
+import { Menu, Plus, Brain, ChevronDown, Check, Github } from 'lucide-react';
 import { ModelOption } from '../types';
 import { AVAILABLE_MODELS } from '../data/models';
 
@@ -11,6 +11,7 @@ interface ChatHeaderProps {
   thinkingEnabled: boolean;
   onToggleThinking: () => void;
   onOpenUpgradeModal: () => void;
+  onOpenGitHubModal?: () => void;
   hasUnread?: boolean;
 }
 
@@ -22,6 +23,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   thinkingEnabled,
   onToggleThinking,
   onOpenUpgradeModal,
+  onOpenGitHubModal,
   hasUnread = true,
 }) => {
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
@@ -50,6 +52,18 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           <Plus className="w-3.5 h-3.5" />
           <span>New Chat</span>
         </button>
+
+        {onOpenGitHubModal && (
+          <button
+            id="btn-header-github"
+            onClick={onOpenGitHubModal}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#ecece7] bg-[#222220] hover:bg-[#2a2a26] border border-[#33332e] hover:border-[#d97757]/50 transition-colors"
+            title="Import & Manage GitHub Repositories"
+          >
+            <Github className="w-3.5 h-3.5 text-[#d97757]" />
+            <span className="hidden md:inline">GitHub Repos</span>
+          </button>
+        )}
       </div>
 
       {/* Center: Free Plan / Upgrade Pill (As in screenshot) */}

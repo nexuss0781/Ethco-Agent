@@ -6,6 +6,8 @@ import { EmptyState } from '../components/EmptyState';
 import { ChatMessageList } from '../components/ChatMessageList';
 import { ChatInput } from '../components/ChatInput';
 import { UpgradeModal } from '../components/UpgradeModal';
+import { GitHubImportModal } from '../components/GitHubImportModal';
+import { ImportedRepo } from '../lib/github';
 import { Conversation, Message, Attachment, ModelOption, ActionMode, ToolInvocation } from '../types';
 import { StorageService } from '../lib/storage';
 import { AVAILABLE_MODELS } from '../data/models';
@@ -24,6 +26,7 @@ export default function App() {
   const [actionMode, setActionMode] = useState<ActionMode>('planning');
   const [isLoading, setIsLoading] = useState(false);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [isGitHubModalOpen, setIsGitHubModalOpen] = useState(false);
   
   const [user, setUser] = useState<any>(null);
   const navigate = useNavigate();
@@ -407,6 +410,11 @@ export default function App() {
     return null;
   }, [activeConversation]);
 
+  const handleSelectRepoForChat = (repo: ImportedRepo, initialPrompt?: string) => {
+    const prompt = initialPrompt || `I've imported repository \`${repo.name}\` at \`${repo.path}\` (branch: \`${repo.branch}\`). Please inspect its code structure and help me build features or debug it.`;
+    handleSendMessage(prompt, []);
+  };
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#181816] text-[#ecece7]">
       {/* Responsive Collapsible Sidebar */}
@@ -421,6 +429,7 @@ export default function App() {
         onTogglePin={handleTogglePin}
         onRenameConversation={handleRenameConversation}
         onOpenUpgradeModal={() => setIsUpgradeModalOpen(true)}
+        onOpenGitHubModal={() => setIsGitHubModalOpen(true)}
         user={user}
         onLoginGoogle={signInWithGoogle}
         onLoginGithub={signInWithGithub}
@@ -438,6 +447,7 @@ export default function App() {
           thinkingEnabled={thinkingEnabled}
           onToggleThinking={() => setThinkingEnabled(!thinkingEnabled)}
           onOpenUpgradeModal={() => setIsUpgradeModalOpen(true)}
+          onOpenGitHubModal={() => setIsGitHubModalOpen(true)}
         />
 
         {/* Center Area: Empty State OR Message Stream */}
@@ -473,6 +483,13 @@ export default function App() {
       <UpgradeModal
         isOpen={isUpgradeModalOpen}
         onClose={() => setIsUpgradeModalOpen(false)}
+      />
+
+      {/* GitHub Authorization & Repository Import Modal */}
+      <GitHubImportModal
+        isOpen={isGitHubModalOpen}
+        onClose={() => setIsGitHubModalOpen(false)}
+        onSelectRepoForChat={handleSelectRepoForChat}
       />
     </div>
   );
