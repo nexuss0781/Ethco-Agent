@@ -1,6 +1,7 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
+import https from "https";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
@@ -93,45 +94,128 @@ app.post("/api/tools/execute", async (req, res) => {
   }
 });
 
+// Helper to send a robust POST request across various runtime versions (using global fetch or fallback to native https module)
+async function robustPost(url: string, bodyObj: any): Promise<{ ok: boolean; status: number; text: () => Promise<string>; json: () => Promise<any> }> {
+  if (typeof fetch === "function") {
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(bodyObj),
+      });
+      return {
+        ok: response.ok,
+        status: response.status,
+        text: async () => response.text(),
+        json: async () => response.json(),
+      };
+    } catch (e: any) {
+      console.warn("Global fetch failed, falling back to native https request:", e.message || e);
+    }
+  }
+
+  return new Promise((resolve, reject) => {
+    try {
+      const urlObj = new URL(url);
+      const postData = JSON.stringify(bodyObj);
+      const options = {
+        hostname: urlObj.hostname,
+        port: urlObj.port || (urlObj.protocol === "https:" ? 443 : 80),
+        path: urlObj.pathname + urlObj.search,
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Length": Buffer.byteLength(postData),
+        },
+      };
+
+      const req = https.request(options, (res) => {
+        let data = "";
+        res.on("data", (chunk) => {
+          data += chunk;
+        });
+        res.on("end", () => {
+          resolve({
+            ok: !!(res.statusCode && res.statusCode >= 200 && res.statusCode < 300),
+            status: res.statusCode || 200,
+            text: async () => data,
+            json: async () => JSON.parse(data || "{}"),
+          });
+        });
+      });
+
+      req.on("error", (e) => {
+        reject(e);
+      });
+
+      // Timeout safety
+      req.setTimeout(10000, () => {
+        req.destroy(new Error("Request timeout after 10 seconds"));
+      });
+
+      req.write(postData);
+      req.end();
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
 // Auth Routes (Nexuss Auth Server Handoff)
 app.get("/api/auth/callback", async (req, res) => {
+  const steps: string[] = [];
+  steps.push("Started callback handler");
   const handoffToken = (req.query.handoff_token || req.query.handoffToken) as string;
   if (!handoffToken) {
+    steps.push("Error: Missing handoff token in query parameters");
     return res.status(400).send("Missing handoff token");
   }
 
   try {
     const authUrl = process.env.VITE_NEXUSS_AUTH_URL || "https://nexuss-auth.vercel.app";
     const projectId = process.env.VITE_NEXUSS_AUTH_PROJECT_ID || "ethco-agents";
-    
-    // Support dual parameters (both camelCase and snake_case) for maximum compatibility with any Nexuss Auth versions
+    steps.push(`VITE_NEXUSS_AUTH_URL: ${authUrl}`);
+    steps.push(`VITE_NEXUSS_AUTH_PROJECT_ID: ${projectId}`);
+    steps.push(`Handoff token found: ${handoffToken.substring(0, Math.min(10, handoffToken.length))}...`);
+
     const bodyObj = {
       projectId,
       handoffToken,
       handoff_token: handoffToken,
     };
 
-    console.log("Sending handoff exchange request to:", `${authUrl}/v1/handoff/exchange`);
-    const response = await fetch(`${authUrl}/v1/handoff/exchange`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(bodyObj),
-    });
+    steps.push("Sending POST exchange request via robustPost");
+    let response;
+    try {
+      response = await robustPost(`${authUrl}/v1/handoff/exchange`, bodyObj);
+      steps.push(`POST exchange completed with status: ${response.status}`);
+    } catch (fetchErr: any) {
+      steps.push(`POST exchange network/system error: ${fetchErr.message}`);
+      throw fetchErr;
+    }
 
     if (!response.ok) {
       const errText = await response.text();
+      steps.push(`Exchange response not OK. Status: ${response.status}, Body: ${errText}`);
       console.error("Handoff exchange failed:", response.status, errText);
-      return res.status(401).send(`Nexuss Auth handoff failed: ${errText}`);
+      return res.status(401).send(`Nexuss Auth handoff failed: ${errText}\n\nDiagnostic Steps:\n${steps.join("\n")}`);
     }
 
-    const rawData = await response.json();
-    console.log("Handoff exchange response data:", JSON.stringify(rawData));
+    steps.push("Parsing response JSON");
+    let rawData;
+    try {
+      rawData = await response.json();
+      steps.push(`Response JSON parsed successfully: ${JSON.stringify(rawData)}`);
+    } catch (jsonErr: any) {
+      steps.push(`JSON parse error: ${jsonErr.message}`);
+      throw jsonErr;
+    }
 
-    // Support both direct nested user structure and flat structures
     let resolvedUser = rawData.user || (rawData.data && rawData.data.user) || rawData.data || rawData;
+    steps.push(`Resolved user structure: ${JSON.stringify(resolvedUser)}`);
 
-    // Fallback safely to a default session if user is not fully resolved as a plain object
     if (!resolvedUser || typeof resolvedUser !== "object") {
+      steps.push("Fallback to default user object because resolved user was empty or not an object");
       resolvedUser = {
         id: "nexuss-temp-user",
         email: "user@nexuss-auth.com",
@@ -139,27 +223,33 @@ app.get("/api/auth/callback", async (req, res) => {
       };
     }
 
-    // Safely retrieve the sign function handling ES default wrapper variations
+    steps.push("Retrieving JWT sign function");
     const signFn = (jwt && (jwt.sign || (jwt as any).default?.sign)) || null;
     if (!signFn) {
+      steps.push("Error: JWT sign function is not accessible on imported jsonwebtoken module");
       console.error("JWT sign function is not accessible on the imported module.");
       return res.status(500).send("JWT sign function is not configured properly");
     }
 
+    steps.push("Signing JWT token");
     const secret = process.env.JWT_SECRET || "YOUR_RANDOM_SECRET_KEY";
+    steps.push(`JWT_SECRET present: ${!!process.env.JWT_SECRET}`);
     const token = signFn(resolvedUser, secret, { expiresIn: "7d" });
-    
+    steps.push("JWT token signed successfully");
+
+    steps.push("Setting cookie");
     res.cookie("session_token", token, {
       httpOnly: true,
       secure: true, // Secure in both environments to ensure cookie security
       sameSite: "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
+    steps.push("Cookie set successfully, redirecting");
 
     res.redirect("/");
   } catch (err: any) {
     console.error("Auth callback uncaught error:", err);
-    res.status(500).send(`Internal server error during auth callback: ${err?.message || err}`);
+    res.status(500).send(`Internal server error during auth callback: ${err?.message || err}\n\nStack:\n${err?.stack || ""}\n\nDiagnostic Steps:\n${steps.join("\n")}`);
   }
 });
 
