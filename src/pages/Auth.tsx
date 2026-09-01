@@ -1,6 +1,6 @@
 import { motion } from 'motion/react';
 import { Github } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { getUser, signInWithGoogle, signInWithGithub } from '../lib/auth';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -10,8 +10,8 @@ export default function Auth() {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
+    getUser().then((user) => {
+      if (user) {
         navigate('/app');
       } else {
         setChecking(false);
@@ -22,12 +22,11 @@ export default function Auth() {
   const handleProviderLogin = async (provider: 'github' | 'google') => {
     setLoading(true);
     try {
-      await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: `${window.location.origin}/app`,
-        },
-      });
+      if (provider === 'google') {
+        await signInWithGoogle();
+      } else {
+        await signInWithGithub();
+      }
     } catch (error) {
       console.error(error);
       setLoading(false);
