@@ -4,7 +4,9 @@ import {
   X,
   Loader2,
   CheckCircle2,
-  FolderGit2
+  RefreshCw,
+  LogOut,
+  ExternalLink
 } from 'lucide-react';
 import { GitHubService, GitHubUser } from '../lib/github';
 
@@ -12,13 +14,11 @@ interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   user?: any;
-  onOpenGitHubRepos?: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   onClose,
-  onOpenGitHubRepos,
 }) => {
   const [loadingStatus, setLoadingStatus] = useState(false);
   const [ghUser, setGhUser] = useState<GitHubUser | null>(null);
@@ -31,12 +31,49 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }, [isOpen]);
 
+  // Listen to postMessage in case OAuth popup completes while modal is open
+  useEffect(() => {
+    const handleGlobalMessage = async (event: MessageEvent) => {
+      if (
+        event.data?.type === 'OAUTH_AUTH_SUCCESS' ||
+        event.data?.type === 'NEXUSS_AUTH_SUCCESS'
+      ) {
+        if (event.data?.user) {
+          setGhUser(event.data.user);
+          // Persist in localStorage for instant local access
+          try {
+            localStorage.setItem('ethco_github_user', JSON.stringify(event.data.user));
+          } catch {}
+        }
+        await loadGitHubData();
+      }
+    };
+
+    window.addEventListener('message', handleGlobalMessage);
+    return () => window.removeEventListener('message', handleGlobalMessage);
+  }, []);
+
   const loadGitHubData = async () => {
     setLoadingStatus(true);
     setErrorMessage(null);
     try {
       const status = await GitHubService.getStatus();
-      setGhUser(status.user);
+      if (status.connected && status.user) {
+        setGhUser(status.user);
+        try {
+          localStorage.setItem('ethco_github_user', JSON.stringify(status.user));
+        } catch {}
+      } else {
+        // Check localStorage fallback
+        const saved = localStorage.getItem('ethco_github_user');
+        if (saved) {
+          try {
+            setGhUser(JSON.parse(saved));
+          } catch {}
+        } else {
+          setGhUser(null);
+        }
+      }
     } catch {
       // Ignore
     } finally {
@@ -51,6 +88,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       const resUser = await GitHubService.authorizeWithNexussAuth('popup');
       if (resUser) {
         setGhUser(resUser);
+        try {
+          localStorage.setItem('ethco_github_user', JSON.stringify(resUser));
+        } catch {}
+      }
+      // Re-verify immediately to ensure backend state synchronization
+      const freshStatus = await GitHubService.getStatus();
+      if (freshStatus.user) {
+        setGhUser(freshStatus.user);
       }
     } catch (err: any) {
       setErrorMessage(err.message || 'Authorization failed. Please try again.');
@@ -63,6 +108,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     try {
       await GitHubService.disconnect();
       setGhUser(null);
+      try {
+        localStorage.removeItem('ethco_github_user');
+      } catch {}
     } catch (err: any) {
       setErrorMessage(err.message || 'Failed to disconnect');
     }
@@ -93,46 +141,70 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         </div>
 
         {/* State: Loading */}
-        {loadingStatus ? (
+        {loadingStatus && !ghUser ? (
           <div className="py-6 flex flex-col items-center justify-center gap-2 text-[#737373]">
             <Loader2 className="w-5 h-5 animate-spin text-[#d97757]" />
             <span className="text-xs">Checking authorization...</span>
           </div>
         ) : ghUser ? (
-          /* State: Connected */
-          <div className="space-y-5">
+          /* State: Connected & Persisted (Immediate Authorized State) */
+          <div className="space-y-5 animate-in fade-in duration-200">
             <div>
-              <div className="flex items-center justify-center gap-1.5 text-emerald-400 text-xs font-medium mb-1">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium mb-2">
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Authorized</span>
+                <span>Connected &amp; Authorized</span>
               </div>
               <h2 className="text-lg font-semibold text-white tracking-tight">
                 {ghUser.name || ghUser.login}
               </h2>
-              <p className="text-xs text-[#a3a3a3] font-mono mt-0.5">
-                @{ghUser.login}
-              </p>
+              <div className="flex items-center justify-center gap-1.5 mt-0.5 text-xs text-[#a3a3a3] font-mono">
+                <span>@{ghUser.login}</span>
+                {ghUser.html_url && (
+                  <a
+                    href={ghUser.html_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[#737373] hover:text-[#d97757] transition-colors inline-flex items-center"
+                    title="View GitHub profile"
+                  >
+                    <ExternalLink className="w-3 h-3 ml-0.5" />
+                  </a>
+                )}
+              </div>
+              {ghUser.email && (
+                <p className="text-[11px] text-[#737373] mt-1 truncate">
+                  {ghUser.email}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2 pt-1">
-              {onOpenGitHubRepos && (
-                <button
-                  onClick={() => {
-                    onClose();
-                    onOpenGitHubRepos();
-                  }}
-                  className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold bg-[#d97757] hover:bg-[#c66647] active:bg-[#b5583b] text-white transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
-                >
-                  <FolderGit2 className="w-4 h-4 stroke-[2.2]" />
-                  <span>Import & Browse Git Repos</span>
-                </button>
-              )}
+              <button
+                id="btn-reconfigure-github"
+                onClick={handleAuthorizeGitHub}
+                disabled={authorizing}
+                className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold bg-[#d97757] hover:bg-[#c66647] active:bg-[#b5583b] text-white transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm disabled:opacity-50"
+              >
+                {authorizing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                    <span>Reconnecting...</span>
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 stroke-[2.2]" />
+                    <span>Reconfigure Connection</span>
+                  </>
+                )}
+              </button>
 
               <button
+                id="btn-disconnect-github"
                 onClick={handleDisconnect}
-                className="w-full py-2.5 px-4 rounded-xl text-xs font-medium text-[#a3a3a3] hover:text-red-400 hover:bg-[#1a1a1a] border border-[#262626] hover:border-red-500/30 transition-all cursor-pointer"
+                className="w-full py-2.5 px-4 rounded-xl text-xs font-medium text-[#a3a3a3] hover:text-red-400 hover:bg-[#1a1a1a] border border-[#262626] hover:border-red-500/30 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
-                Disconnect GitHub
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Disconnect</span>
               </button>
             </div>
           </div>
@@ -144,7 +216,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 GitHub Authorization
               </h2>
               <p className="text-xs text-[#737373] mt-1.5 leading-relaxed">
-                Authorize your GitHub account to import repositories directly into chats.
+                Authorize your GitHub account to connect your developer identity and repositories.
               </p>
             </div>
 
@@ -158,7 +230,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               id="btn-settings-authorize-github"
               onClick={handleAuthorizeGitHub}
               disabled={authorizing}
-              className="w-full py-3 px-4 rounded-xl text-xs font-semibold bg-[#d97757] hover:bg-[#c66647] active:bg-[#b5583b] text-white transition-all flex items-center justify-center gap-2.5 shadow-md hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
+              className="w-full py-3 px-4 rounded-xl text-xs font-semibold bg-[#d97757] hover:bg-[#c66647] active:bg-[#b5583b] text-white transition-all flex items-center justify-center gap-2.5 shadow-md hover:scale-[1.01] active:scale-[0.99] cursor-pointer disabled:opacity-50"
             >
               {authorizing ? (
                 <>

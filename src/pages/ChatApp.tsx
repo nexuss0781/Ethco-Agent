@@ -499,12 +499,11 @@ export default function App() {
         onSelectRepoForChat={handleSelectRepoForChat}
       />
 
-      {/* Settings Modal (GitHub Authorization & Preferences) */}
+      {/* Settings Modal (GitHub Authorization & Persistence) */}
       <SettingsModal
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
         user={user}
-        onOpenGitHubRepos={() => setIsGitHubModalOpen(true)}
       />
     </div>
   );
