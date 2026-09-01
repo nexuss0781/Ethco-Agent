@@ -4,7 +4,6 @@ import {
   X,
   Loader2,
   CheckCircle2,
-  ExternalLink,
   FolderGit2
 } from 'lucide-react';
 import { GitHubService, GitHubUser } from '../lib/github';
@@ -86,17 +85,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <X className="w-4 h-4" />
         </button>
 
-        {/* Big Centered GitHub Logo */}
+        {/* Big Centered Bold Orange GitHub Logo */}
         <div className="flex justify-center mb-5 mt-2">
-          <div className="w-20 h-20 rounded-2xl bg-[#171717] border border-[#333333] flex items-center justify-center shadow-inner">
-            <Github className="w-10 h-10 text-white" />
+          <div className="w-20 h-20 rounded-2xl bg-[#171717] border border-[#d97757]/30 flex items-center justify-center shadow-lg shadow-[#d97757]/5">
+            <Github className="w-11 h-11 text-[#d97757] stroke-[2.5]" />
           </div>
         </div>
 
         {/* State: Loading */}
         {loadingStatus ? (
           <div className="py-6 flex flex-col items-center justify-center gap-2 text-[#737373]">
-            <Loader2 className="w-5 h-5 animate-spin text-white" />
+            <Loader2 className="w-5 h-5 animate-spin text-[#d97757]" />
             <span className="text-xs">Checking authorization...</span>
           </div>
         ) : ghUser ? (
@@ -122,10 +121,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     onClose();
                     onOpenGitHubRepos();
                   }}
-                  className="w-full py-2.5 px-4 rounded-xl text-xs font-medium bg-white hover:bg-[#e5e5e5] text-black transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                  className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold bg-[#d97757] hover:bg-[#c66647] active:bg-[#b5583b] text-white transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
                 >
-                  <FolderGit2 className="w-4 h-4" />
-                  <span>Browse Repositories</span>
+                  <FolderGit2 className="w-4 h-4 stroke-[2.2]" />
+                  <span>Import & Browse Git Repos</span>
                 </button>
               )}
 
@@ -145,7 +144,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 GitHub Authorization
               </h2>
               <p className="text-xs text-[#737373] mt-1.5 leading-relaxed">
-                Connect your GitHub account to access repositories and codebase context.
+                Authorize your GitHub account to import repositories directly into chats.
               </p>
             </div>
 
@@ -159,16 +158,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               id="btn-settings-authorize-github"
               onClick={handleAuthorizeGitHub}
               disabled={authorizing}
-              className="w-full py-3 px-4 rounded-xl text-xs font-semibold bg-white hover:bg-[#e5e5e5] active:bg-[#cccccc] text-black transition-all flex items-center justify-center gap-2.5 shadow-md hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
+              className="w-full py-3 px-4 rounded-xl text-xs font-semibold bg-[#d97757] hover:bg-[#c66647] active:bg-[#b5583b] text-white transition-all flex items-center justify-center gap-2.5 shadow-md hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
             >
               {authorizing ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin text-black" />
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
                   <span>Authorizing...</span>
                 </>
               ) : (
                 <>
-                  <Github className="w-4 h-4 text-black" />
+                  <Github className="w-4 h-4 text-white stroke-[2.5]" />
                   <span>Authorize GitHub</span>
                 </>
               )}
