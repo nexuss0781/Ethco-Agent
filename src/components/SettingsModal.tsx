@@ -24,6 +24,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [ghUser, setGhUser] = useState<GitHubUser | null>(null);
   const [authorizing, setAuthorizing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [patInput, setPatInput] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -101,6 +102,27 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       }
     } catch (err: any) {
       setErrorMessage(err.message || 'Authorization failed. Please try again.');
+    } finally {
+      setAuthorizing(false);
+    }
+  };
+
+  const handleConnectPat = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!patInput.trim()) return;
+    setAuthorizing(true);
+    setErrorMessage(null);
+    try {
+      const user = await GitHubService.connectWithToken(patInput.trim());
+      if (user) {
+        setGhUser(user);
+        try {
+          localStorage.setItem('ethco_github_user', JSON.stringify(user));
+        } catch {}
+        setPatInput('');
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Failed to connect token');
     } finally {
       setAuthorizing(false);
     }
@@ -238,41 +260,80 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </div>
         ) : (
-          /* State: Not Connected (Single Button Auth Only) */
-          <div className="space-y-5">
+          /* State: Not Connected (OAuth or PAT) */
+          <div className="space-y-4">
             <div>
               <h2 className="text-lg font-semibold text-white tracking-tight">
                 GitHub Authorization
               </h2>
-              <p className="text-xs text-[#737373] mt-1.5 leading-relaxed">
-                Authorize your GitHub account to connect your developer identity.
+              <p className="text-xs text-[#737373] mt-1 leading-relaxed">
+                Authorize GitHub to import repositories and manage workspace code.
               </p>
             </div>
 
             {errorMessage && (
-              <p className="text-[11px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg p-2">
+              <p className="text-[11px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg p-2" dir="auto">
                 {errorMessage}
               </p>
             )}
 
-            <button
-              id="btn-settings-authorize-github"
-              onClick={handleAuthorizeOAuth}
-              disabled={authorizing}
-              className="w-full py-3 px-4 rounded-xl text-xs font-semibold bg-[#d97757] hover:bg-[#c66647] active:bg-[#b5583b] text-white transition-all flex items-center justify-center gap-2.5 shadow-md hover:scale-[1.01] active:scale-[0.99] cursor-pointer disabled:opacity-50"
-            >
-              {authorizing ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin text-white" />
-                  <span>Authorizing...</span>
-                </>
-              ) : (
-                <>
-                  <Github className="w-4 h-4 text-white stroke-[2.5]" />
-                  <span>Authorize GitHub</span>
-                </>
-              )}
-            </button>
+            <div className="space-y-3">
+              <button
+                id="btn-settings-authorize-github"
+                onClick={handleAuthorizeOAuth}
+                disabled={authorizing}
+                className="w-full py-3 px-4 rounded-xl text-xs font-semibold bg-[#d97757] hover:bg-[#c66647] active:bg-[#b5583b] text-white transition-all flex items-center justify-center gap-2.5 shadow-md hover:scale-[1.01] active:scale-[0.99] cursor-pointer disabled:opacity-50"
+              >
+                {authorizing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                    <span>Authorizing...</span>
+                  </>
+                ) : (
+                  <>
+                    <Github className="w-4 h-4 text-white stroke-[2.5]" />
+                    <span>Authorize GitHub (OAuth)</span>
+                  </>
+                )}
+              </button>
+
+              <div className="relative flex py-0.5 items-center">
+                <div className="flex-grow border-t border-[#262626]"></div>
+                <span className="flex-shrink mx-3 text-[11px] text-[#737373]">or use Personal Access Token</span>
+                <div className="flex-grow border-t border-[#262626]"></div>
+              </div>
+
+              <form onSubmit={handleConnectPat} className="space-y-2 text-left">
+                <div>
+                  <input
+                    type="password"
+                    value={patInput}
+                    onChange={(e) => setPatInput(e.target.value)}
+                    placeholder="ghp_... or github_pat_..."
+                    className="w-full bg-[#161614] border border-[#2b2b27] rounded-xl px-3 py-2 text-xs text-white placeholder:text-[#555] focus:outline-none focus:border-[#d97757]"
+                  />
+                  <div className="flex justify-between items-center mt-1 text-[10px] text-[#737373]">
+                    <span>Requires <code className="text-[#d97757]">repo</code> scope</span>
+                    <a
+                      href="https://github.com/settings/tokens/new?scopes=repo,read:user,user:email&description=AI+Studio+Workspace"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[#d97757] hover:underline inline-flex items-center gap-0.5"
+                    >
+                      Generate token <ExternalLink className="w-2.5 h-2.5" />
+                    </a>
+                  </div>
+                </div>
+                <button
+                  type="submit"
+                  disabled={authorizing || !patInput.trim()}
+                  className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold bg-[#1c1c1a] hover:bg-[#262624] text-white border border-[#2b2b27] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {authorizing ? <Loader2 className="w-3.5 h-3.5 animate-spin text-[#d97757]" /> : <Github className="w-3.5 h-3.5" />}
+                  <span>Connect Token</span>
+                </button>
+              </form>
+            </div>
           </div>
         )}
       </div>
