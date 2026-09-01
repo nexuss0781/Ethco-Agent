@@ -103,8 +103,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
             onClick={() => setModelDropdownOpen(!modelDropdownOpen)}
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-[#222220] hover:bg-[#2a2a26] border border-[#33332e] text-[#ecece7] transition-colors"
           >
-            <span className="text-[#d97757] font-serif font-bold text-sm leading-none">✳</span>
-            <span className="max-w-[80px] sm:max-w-none truncate">{selectedModel.name}</span>
+            <span className="max-w-[100px] sm:max-w-none truncate">{selectedModel.name}</span>
             <ChevronDown className="w-3.5 h-3.5 text-[#85857a]" />
           </button>
 

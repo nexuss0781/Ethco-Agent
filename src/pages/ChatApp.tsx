@@ -418,7 +418,7 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#181816] text-[#ecece7]">
+    <div className="fixed inset-0 flex h-[100dvh] w-full overflow-hidden bg-[#181816] text-[#ecece7]">
       {/* Responsive Collapsible Sidebar */}
       <Sidebar
         isOpen={isSidebarOpen}
@@ -454,10 +454,12 @@ export default function App() {
         />
 
         {/* Center Area: Empty State OR Message Stream */}
-        <div className="flex-1 overflow-hidden flex flex-col justify-between">
+        <div className="flex-1 overflow-hidden flex flex-col min-h-0 relative">
           {!hasMessages ? (
-            <div className="flex-1 overflow-y-auto flex items-center justify-center">
-              <EmptyState onSelectPrompt={(prompt) => handleSendMessage(prompt, [])} />
+            <div className="flex-1 flex flex-col justify-center items-center px-3 sm:px-4 min-h-0 overflow-y-auto">
+              <div className="w-full max-w-2xl flex flex-col items-center justify-center my-auto py-2">
+                <EmptyState onSelectPrompt={(prompt) => handleSendMessage(prompt, [])} />
+              </div>
             </div>
           ) : (
             <ChatMessageList
@@ -468,17 +470,19 @@ export default function App() {
           )}
 
           {/* Bottom Chat Input Card */}
-          <ChatInput
-            onSendMessage={handleSendMessage}
-            isLoading={isLoading}
-            onStopGeneration={handleStopGeneration}
-            selectedModel={selectedModel}
-            onOpenModelSelector={() => {}}
-            thinkingEnabled={thinkingEnabled}
-            actionMode={actionMode}
-            onSelectActionMode={setActionMode}
-            activeTodos={activeTodos}
-          />
+          <div className="shrink-0 w-full z-10">
+            <ChatInput
+              onSendMessage={handleSendMessage}
+              isLoading={isLoading}
+              onStopGeneration={handleStopGeneration}
+              selectedModel={selectedModel}
+              onOpenModelSelector={() => {}}
+              thinkingEnabled={thinkingEnabled}
+              actionMode={actionMode}
+              onSelectActionMode={setActionMode}
+              activeTodos={activeTodos}
+            />
+          </div>
         </div>
       </main>
 
