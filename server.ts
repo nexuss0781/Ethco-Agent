@@ -6,7 +6,7 @@ import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import jwt from "jsonwebtoken";
-import { WORKSPACE_TOOL_DECLARATIONS, executeWorkspaceTool } from "./server_tools.ts";
+import { WORKSPACE_TOOL_DECLARATIONS, executeWorkspaceTool } from "./server_tools";
 
 dotenv.config();
 
