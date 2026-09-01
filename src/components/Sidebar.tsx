@@ -15,7 +15,8 @@ import {
   LogOut,
   LogIn,
   Github,
-  FolderGit2
+  FolderGit2,
+  Settings
 } from 'lucide-react';
 import { Conversation } from '../types';
 import { StorageService } from '../lib/storage';
@@ -32,6 +33,7 @@ interface SidebarProps {
   onRenameConversation: (id: string, newTitle: string) => void;
   onOpenUpgradeModal: () => void;
   onOpenGitHubModal?: () => void;
+  onOpenSettings?: () => void;
   user?: any;
   onLoginGoogle?: () => void;
   onLoginGithub?: () => void;
@@ -50,6 +52,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onRenameConversation,
   onOpenUpgradeModal,
   onOpenGitHubModal,
+  onOpenSettings,
   user,
   onLoginGoogle,
   onLoginGithub,
@@ -368,7 +371,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </div>
 
-        {/* Footer: User Profile */}
+        {/* Footer: User Profile & Settings */}
         <div className="p-3 border-t border-[#22221f] bg-[#171714] space-y-2">
           {user && (
             <div className="flex items-center justify-between p-2.5 rounded-xl border border-[#33332e] bg-[#20201d]">
@@ -389,6 +392,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <LogOut className="w-3.5 h-3.5" />
               </button>
             </div>
+          )}
+
+          {/* Settings & Authorize GitHub Button */}
+          {onOpenSettings && (
+            <button
+              id="btn-sidebar-settings"
+              onClick={() => {
+                onOpenSettings();
+                if (window.innerWidth < 768) onClose();
+              }}
+              className="flex items-center justify-between w-full px-3 py-2 rounded-xl bg-[#1c1c19] hover:bg-[#252521] border border-[#2c2c28] hover:border-[#d97757]/40 text-[#b4b4aa] hover:text-[#ecece7] text-xs font-medium transition-all shadow-xs group cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <Settings className="w-3.5 h-3.5 text-[#85857a] group-hover:text-[#d97757] group-hover:rotate-45 transition-all" />
+                <span>Settings</span>
+              </div>
+              <span className="flex items-center gap-1.5 text-[10px] px-2 py-0.5 rounded-md bg-[#242420] text-[#d97757] border border-[#383832] group-hover:border-[#d97757]/40 transition-colors">
+                <Github className="w-3 h-3 text-[#d97757]" />
+                <span>Authorize GitHub</span>
+              </span>
+            </button>
           )}
         </div>
       </aside>

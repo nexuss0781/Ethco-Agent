@@ -7,6 +7,7 @@ import { ChatMessageList } from '../components/ChatMessageList';
 import { ChatInput } from '../components/ChatInput';
 import { UpgradeModal } from '../components/UpgradeModal';
 import { GitHubImportModal } from '../components/GitHubImportModal';
+import { SettingsModal } from '../components/SettingsModal';
 import { ImportedRepo } from '../lib/github';
 import { Conversation, Message, Attachment, ModelOption, ActionMode, ToolInvocation } from '../types';
 import { StorageService } from '../lib/storage';
@@ -27,6 +28,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [isGitHubModalOpen, setIsGitHubModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   
   const [user, setUser] = useState<any>(null);
   const navigate = useNavigate();
@@ -430,6 +432,7 @@ export default function App() {
         onRenameConversation={handleRenameConversation}
         onOpenUpgradeModal={() => setIsUpgradeModalOpen(true)}
         onOpenGitHubModal={() => setIsGitHubModalOpen(true)}
+        onOpenSettings={() => setIsSettingsModalOpen(true)}
         user={user}
         onLoginGoogle={signInWithGoogle}
         onLoginGithub={signInWithGithub}
@@ -490,6 +493,14 @@ export default function App() {
         isOpen={isGitHubModalOpen}
         onClose={() => setIsGitHubModalOpen(false)}
         onSelectRepoForChat={handleSelectRepoForChat}
+      />
+
+      {/* Settings Modal (GitHub Authorization & Preferences) */}
+      <SettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+        user={user}
+        onOpenGitHubRepos={() => setIsGitHubModalOpen(true)}
       />
     </div>
   );
