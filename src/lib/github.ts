@@ -82,16 +82,18 @@ export const GitHubService = {
     }
 
     if (!targetUrl) {
-      const redirectUri = `${window.location.origin}/api/auth/callback`;
+      const redirectUri = `${window.location.origin}/api/auth/callback?purpose=github_auth`;
       try {
         const loginUrl = new URL(auth.getLoginUrl('github', { redirectUri }));
         loginUrl.searchParams.set('handoff', '1');
         loginUrl.searchParams.set('prompt', 'consent');
+        loginUrl.searchParams.set('scope', 'repo,read:user,user:email');
+        loginUrl.searchParams.set('purpose', 'github_auth');
         targetUrl = loginUrl.toString();
       } catch {
         const projectId = import.meta.env.VITE_NEXUSS_AUTH_PROJECT_ID || 'ethco-agents';
         const authUrl = import.meta.env.VITE_NEXUSS_AUTH_URL || 'https://nexuss-auth.vercel.app';
-        targetUrl = `${authUrl}/oauth/start/github?project_id=${encodeURIComponent(projectId)}&redirect_uri=${encodeURIComponent(redirectUri)}&handoff=1&prompt=consent`;
+        targetUrl = `${authUrl}/oauth/start/github?project_id=${encodeURIComponent(projectId)}&redirect_uri=${encodeURIComponent(redirectUri)}&handoff=1&prompt=consent&scope=${encodeURIComponent('repo,read:user,user:email')}&purpose=github_auth`;
       }
     }
 
@@ -207,9 +209,17 @@ export const GitHubService = {
           }
           return data;
         } else {
-          // Explicitly not connected on server backend
+          // Check if local storage has an authenticated user before returning disconnected
           try {
-            localStorage.removeItem('ethco_github_user');
+            const localUserRaw = localStorage.getItem('ethco_github_user');
+            if (localUserRaw) {
+              const localUser = JSON.parse(localUserRaw);
+              if (localUser && (localUser.login || localUser.name)) {
+                localUser.name = fixMojibake(localUser.name);
+                localUser.login = fixMojibake(localUser.login);
+                return { connected: true, user: localUser, authProvider: 'github' };
+              }
+            }
           } catch {}
           return { connected: false, user: null };
         }

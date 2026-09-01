@@ -327,15 +327,77 @@ app.get("/api/auth/callback", async (req, res) => {
       throw jwtVerifyErr;
     }
 
-    logStep("Setting session_token cookie");
-    res.cookie("session_token", token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+    // Check if user is already authenticated or performing an integration callback
+    const existingSessionToken = req.cookies?.session_token;
+    let existingUser: any = null;
+    if (existingSessionToken) {
+      try {
+        existingUser = jwt.verify(existingSessionToken, secret);
+      } catch {}
+    }
 
-    // Keep Google/Nexuss session auth separate from GitHub OAuth
+    const isIntegrationAuth = 
+      req.query.purpose === "github_auth" || 
+      req.query.integration === "github" || 
+      req.query.mode === "connect" ||
+      Boolean(existingUser);
+
+    if (!isIntegrationAuth) {
+      logStep("Setting primary session_token cookie for main user login");
+      res.cookie("session_token", token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      });
+    } else {
+      logStep("Preserving existing primary user login session (e.g. Google user)", {
+        existingUser: existingUser ? (existingUser.email || existingUser.name || existingUser.id) : "Integration mode",
+      });
+    }
+
+    // Extract GitHub profile and access token from rawData or resolvedUser
+    const ghUserCandidate = rawData.githubUser || rawData.github_user || (resolvedUser && (resolvedUser.login || resolvedUser.html_url) ? resolvedUser : null);
+    const ghTokenCandidate = 
+      rawData.github_access_token || 
+      rawData.githubToken || 
+      rawData.github_token || 
+      rawData.providerToken || 
+      rawData.provider_access_token || 
+      rawData.accessToken || 
+      rawData.access_token || 
+      rawData.token || 
+      (rawData.tokens && (rawData.tokens.github?.access_token || rawData.tokens.github)) || 
+      (rawData.data && (rawData.data.github_access_token || rawData.data.accessToken || rawData.data.providerToken)) ||
+      "oauth_session";
+
+    if (ghUserCandidate && (ghUserCandidate.login || ghUserCandidate.name)) {
+      const tokens = loadGitHubTokens();
+      const tokenRecord = {
+        token: ghTokenCandidate,
+        user: {
+          id: ghUserCandidate.id || "gh_id",
+          login: ghUserCandidate.login || ghUserCandidate.name || "user",
+          name: ghUserCandidate.name || ghUserCandidate.login,
+          avatar_url: ghUserCandidate.avatar_url || ghUserCandidate.avatarUrl || sanitizedUser.avatarUrl,
+          html_url: ghUserCandidate.html_url || `https://github.com/${ghUserCandidate.login || 'user'}`,
+        },
+        authProvider: "github-oauth",
+        updatedAt: new Date().toISOString(),
+      };
+      // Bind to active logged in user ID if present, or fallback
+      const requestUserId = getActiveUserIdentifier(req);
+      const activeUserId = (existingUser && (existingUser.email || existingUser.id)) ? (existingUser.email || existingUser.id) : requestUserId;
+      tokens[activeUserId] = tokenRecord;
+      tokens[requestUserId] = tokenRecord;
+      tokens["default_user"] = tokenRecord;
+      tokens["latest"] = tokenRecord;
+      if (ghUserCandidate.login) {
+        tokens[ghUserCandidate.login] = tokenRecord;
+      }
+      saveGitHubTokens(tokens);
+    }
+
     logStep("Authentication callback completed successfully", {
       totalDurationMs: Date.now() - startTime,
     });
@@ -356,7 +418,7 @@ app.get("/api/auth/callback", async (req, res) => {
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Nexuss Auth Successful</title>
+          <title>Authentication Successful</title>
           <style>
             body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0b0b0d; color: #ecece7; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
             .card { background: #141412; padding: 24px 32px; border-radius: 12px; border: 1px solid #2b2b27; text-align: center; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
@@ -371,10 +433,9 @@ app.get("/api/auth/callback", async (req, res) => {
           <script>
             try {
               if (window.opener) {
-                window.opener.postMessage({
-                  type: 'NEXUSS_AUTH_SUCCESS',
-                  user: ${JSON.stringify(sanitizedUser)}
-                }, '*');
+                const payload = ${JSON.stringify(sanitizedUser)};
+                window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS', provider: 'github', user: payload }, '*');
+                window.opener.postMessage({ type: 'NEXUSS_AUTH_SUCCESS', user: payload }, '*');
                 setTimeout(() => window.close(), 600);
               } else {
                 window.location.href = '/app';

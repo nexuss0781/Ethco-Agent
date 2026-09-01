@@ -35,18 +35,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   useEffect(() => {
     const handleGlobalMessage = async (event: MessageEvent) => {
       if (
-        event.data?.type === 'OAUTH_AUTH_SUCCESS' &&
-        (event.data?.provider === 'github' || !event.data?.provider)
+        (event.data?.type === 'OAUTH_AUTH_SUCCESS' || event.data?.type === 'NEXUSS_AUTH_SUCCESS') &&
+        event.data?.user
       ) {
-        if (event.data?.user) {
-          const u = event.data.user;
-          u.name = fixMojibake(u.name);
-          u.login = fixMojibake(u.login);
-          setGhUser(u);
-          try {
-            localStorage.setItem('ethco_github_user', JSON.stringify(u));
-          } catch {}
-        }
+        const u = { ...event.data.user };
+        u.name = fixMojibake(u.name || u.login);
+        u.login = fixMojibake(u.login || u.name || u.email?.split('@')[0] || 'github_user');
+        setGhUser(u);
+        try {
+          localStorage.setItem('ethco_github_user', JSON.stringify(u));
+        } catch {}
         await loadGitHubData();
       }
     };
