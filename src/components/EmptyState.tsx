@@ -1,7 +1,7 @@
 import React from 'react';
 import { PenLine, GraduationCap, Code2, Coffee, Lightbulb } from 'lucide-react';
 import { PromptSuggestion } from '../types';
-import { PROMPT_SUGGESTIONS } from '../data/prompts';
+import { PROMPT_SUGGESTIONS } from '../constants/prompts';
 
 interface EmptyStateProps {
   onSelectPrompt: (promptText: string) => void;

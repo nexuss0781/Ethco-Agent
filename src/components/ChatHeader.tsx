@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Menu, Plus, Brain, ChevronDown, Check, Github } from 'lucide-react';
 import { ModelOption } from '../types';
-import { AVAILABLE_MODELS } from '../data/models';
+import { AVAILABLE_MODELS } from '../constants/models';
 
 interface ChatHeaderProps {
   onToggleSidebar: () => void;

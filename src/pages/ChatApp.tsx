@@ -11,7 +11,7 @@ import { SettingsModal } from '../components/SettingsModal';
 import { ImportedRepo } from '../lib/github';
 import { Conversation, Message, Attachment, ModelOption, ActionMode, ToolInvocation } from '../types';
 import { StorageService } from '../lib/storage';
-import { AVAILABLE_MODELS } from '../data/models';
+import { AVAILABLE_MODELS } from '../constants/models';
 import { getUser, signInWithGoogle, signInWithGithub, logout } from '../lib/auth';
 
 export default function App() {
