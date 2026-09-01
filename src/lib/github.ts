@@ -67,10 +67,10 @@ export const GitHubService = {
   },
 
   async authorizeWithNexussAuth(mode: 'popup' | 'redirect' = 'popup'): Promise<GitHubUser | null> {
-    // Check if direct GitHub OAuth URL is available from server
+    // Check if direct GitHub OAuth URL is available from server (forcing prompt=consent)
     let targetUrl = '';
     try {
-      const res = await fetch('/api/github/auth-url');
+      const res = await fetch('/api/github/auth-url?prompt=consent');
       if (res.ok) {
         const data = await res.json();
         if (data.url) {
@@ -86,11 +86,12 @@ export const GitHubService = {
       try {
         const loginUrl = new URL(auth.getLoginUrl('github', { redirectUri }));
         loginUrl.searchParams.set('handoff', '1');
+        loginUrl.searchParams.set('prompt', 'consent');
         targetUrl = loginUrl.toString();
       } catch {
         const projectId = import.meta.env.VITE_NEXUSS_AUTH_PROJECT_ID || 'ethco-agents';
         const authUrl = import.meta.env.VITE_NEXUSS_AUTH_URL || 'https://nexuss-auth.vercel.app';
-        targetUrl = `${authUrl}/oauth/start/github?project_id=${encodeURIComponent(projectId)}&redirect_uri=${encodeURIComponent(redirectUri)}&handoff=1`;
+        targetUrl = `${authUrl}/oauth/start/github?project_id=${encodeURIComponent(projectId)}&redirect_uri=${encodeURIComponent(redirectUri)}&handoff=1&prompt=consent`;
       }
     }
 

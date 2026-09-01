@@ -479,12 +479,12 @@ function getActiveUserIdentifier(req: express.Request): string {
 
 function getStoredGitHubToken(userId: string): { token: string; githubGrantToken?: string; user?: any; source?: string } | null {
   const tokens = loadGitHubTokens();
-  if (tokens[userId]) {
+  if (tokens[userId] && tokens[userId].token) {
     return {
       token: tokens[userId].token || "",
       githubGrantToken: tokens[userId].githubGrantToken,
       user: tokens[userId].user,
-      source: tokens[userId].authProvider || "nexuss-auth",
+      source: tokens[userId].authProvider || "oauth",
     };
   }
   // Check global / env fallback
@@ -492,15 +492,19 @@ function getStoredGitHubToken(userId: string): { token: string; githubGrantToken
   if (envToken) {
     return { token: envToken, source: "env" };
   }
-  // Fallback to first stored token if any exists
-  const firstKey = Object.keys(tokens)[0];
-  if (firstKey && tokens[firstKey]) {
-    return {
-      token: tokens[firstKey].token || "",
-      githubGrantToken: tokens[firstKey].githubGrantToken,
-      user: tokens[firstKey].user,
-      source: tokens[firstKey].authProvider || "stored",
-    };
+  // Fallback to most recently updated token
+  const keys = Object.keys(tokens).filter(k => tokens[k] && (tokens[k].token || tokens[k].user));
+  if (keys.length > 0) {
+    keys.sort((a, b) => new Date(tokens[b].updatedAt || 0).getTime() - new Date(tokens[a].updatedAt || 0).getTime());
+    const latestKey = keys[0];
+    if (latestKey && tokens[latestKey]) {
+      return {
+        token: tokens[latestKey].token || "",
+        githubGrantToken: tokens[latestKey].githubGrantToken,
+        user: tokens[latestKey].user,
+        source: tokens[latestKey].authProvider || "stored",
+      };
+    }
   }
   return null;
 }
@@ -509,6 +513,7 @@ function getStoredGitHubToken(userId: string): { token: string; githubGrantToken
 app.get("/api/github/auth-url", (req, res) => {
   const clientId = process.env.GITHUB_CLIENT_ID;
   const configured = Boolean(clientId && process.env.GITHUB_CLIENT_SECRET);
+  const promptParam = req.query.prompt ? String(req.query.prompt) : "consent";
   
   // Construct redirect URI using APP_URL or request origin
   const origin = process.env.APP_URL || `${req.protocol}://${req.get("host")}`;
@@ -516,7 +521,7 @@ app.get("/api/github/auth-url", (req, res) => {
   const state = Math.random().toString(36).substring(2, 15);
 
   const authUrl = clientId
-    ? `https://github.com/login/oauth/authorize?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent("repo,read:user,user:email")}&state=${state}`
+    ? `https://github.com/login/oauth/authorize?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent("repo,read:user,user:email")}&state=${state}&prompt=${encodeURIComponent(promptParam)}`
     : "";
 
   res.json({
@@ -576,9 +581,9 @@ const githubCallbackHandler = async (req: express.Request, res: express.Response
     const githubUser = await userRes.json();
     const userId = getActiveUserIdentifier(req);
 
-    // Save token mapping
+    // Save token mapping across userId, default_user, and latest keys
     const tokens = loadGitHubTokens();
-    tokens[userId] = {
+    const tokenRecord = {
       token: accessToken,
       user: {
         id: githubUser.id,
@@ -589,11 +594,17 @@ const githubCallbackHandler = async (req: express.Request, res: express.Response
         public_repos: githubUser.public_repos,
         total_private_repos: githubUser.total_private_repos,
       },
+      authProvider: "github-oauth",
       updatedAt: new Date().toISOString(),
     };
+    tokens[userId] = tokenRecord;
+    tokens["default_user"] = tokenRecord;
+    tokens["latest"] = tokenRecord;
+    if (githubUser.login) {
+      tokens[githubUser.login] = tokenRecord;
+    }
     saveGitHubTokens(tokens);
 
-    // Also set active cookie for GitHub auth if needed
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.send(`
       <!DOCTYPE html>
@@ -707,11 +718,9 @@ app.get("/api/github/status", async (req, res) => {
 
 // 5. Disconnect GitHub
 app.post("/api/github/disconnect", (req, res) => {
-  const userId = getActiveUserIdentifier(req);
-  const tokens = loadGitHubTokens();
-  delete tokens[userId];
-  delete tokens["default_user"];
-  saveGitHubTokens(tokens);
+  try {
+    saveGitHubTokens({});
+  } catch {}
   res.json({ success: true });
 });
 
