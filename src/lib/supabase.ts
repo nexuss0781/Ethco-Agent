@@ -7,3 +7,31 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIU
 export const isSupabaseConfigured = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+export async function saveToSupabase(table: string, data: any) {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const { data: result, error } = await supabase.from(table).upsert(data);
+    if (error) console.warn('Supabase upsert note:', error.message);
+    return result;
+  } catch (err) {
+    console.warn('Supabase sync deferred:', err);
+    return null;
+  }
+}
+
+export async function loadFromSupabase(table: string) {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const { data, error } = await supabase.from(table).select('*');
+    if (error) {
+      console.warn('Supabase fetch note:', error.message);
+      return null;
+    }
+    return data;
+  } catch (err) {
+    console.warn('Supabase load deferred:', err);
+    return null;
+  }
+}
+

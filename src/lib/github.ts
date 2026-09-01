@@ -1,4 +1,5 @@
 import { auth } from './auth';
+import { isSupabaseConfigured, saveToSupabase, loadFromSupabase } from './supabase';
 
 export interface GitHubUser {
   id: string | number;
@@ -150,23 +151,124 @@ export const GitHubService = {
     if (!res.ok) {
       throw new Error(data.error || 'Failed to authenticate token with GitHub');
     }
-    return data.user;
+    const user = data.user;
+    if (user) {
+      try {
+        localStorage.setItem('ethco_github_user', JSON.stringify(user));
+        localStorage.setItem('ethco_github_token', token.trim());
+      } catch {}
+      if (isSupabaseConfigured) {
+        saveToSupabase('github_auth', {
+          id: 'current_github_status',
+          user,
+          connected: true,
+          token: token.trim(),
+          updated_at: new Date().toISOString()
+        });
+      }
+    }
+    return user;
   },
 
-  // 3. Get Status (reads active token & user info)
+  // 3. Get Status (reads active token & user info with Supabase fallback)
   async getStatus(): Promise<GitHubStatus> {
     try {
       const res = await fetch('/api/github/status');
-      if (!res.ok) return { connected: false, user: null };
-      return res.json();
+      if (res.ok) {
+        const data: GitHubStatus = await res.json();
+        if (data.connected && data.user) {
+          try {
+            localStorage.setItem('ethco_github_user', JSON.stringify(data.user));
+          } catch {}
+          if (isSupabaseConfigured) {
+            saveToSupabase('github_auth', {
+              id: 'current_github_status',
+              user: data.user,
+              connected: true,
+              updated_at: new Date().toISOString()
+            });
+          }
+          return data;
+        }
+      }
     } catch {
-      return { connected: false, user: null };
+      // Server check failed, fallback to cloud/local state
     }
+
+    // Check Supabase cloud persistence fallback
+    if (isSupabaseConfigured) {
+      try {
+        const sbData = await loadFromSupabase('github_auth');
+        if (sbData && sbData.length > 0) {
+          const record = sbData.find((r: any) => r.id === 'current_github_status') || sbData[0];
+          if (record && record.connected && record.user) {
+            try {
+              localStorage.setItem('ethco_github_user', JSON.stringify(record.user));
+            } catch {}
+            // Sync saved token to server if present
+            if (record.token) {
+              fetch('/api/github/connect-token', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: record.token }),
+              }).catch(() => {});
+            }
+            return {
+              connected: true,
+              user: record.user,
+              authProvider: 'supabase-persisted',
+              source: 'supabase',
+            };
+          }
+        }
+      } catch (sbErr) {
+        console.warn('Supabase github_auth fallback note:', sbErr);
+      }
+    }
+
+    // Check LocalStorage fallback
+    try {
+      const savedUser = localStorage.getItem('ethco_github_user');
+      if (savedUser) {
+        const user = JSON.parse(savedUser);
+        const savedToken = localStorage.getItem('ethco_github_token');
+        if (savedToken) {
+          fetch('/api/github/connect-token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: savedToken }),
+          }).catch(() => {});
+        }
+        return {
+          connected: true,
+          user,
+          authProvider: 'local-persisted',
+          source: 'localstorage',
+        };
+      }
+    } catch {}
+
+    return { connected: false, user: null };
   },
 
-  // 4. Disconnect
+  // 4. Disconnect (clears backend, Supabase & local persistence)
   async disconnect(): Promise<void> {
-    await fetch('/api/github/disconnect', { method: 'POST' });
+    try {
+      await fetch('/api/github/disconnect', { method: 'POST' });
+    } catch {}
+    try {
+      localStorage.removeItem('ethco_github_user');
+      localStorage.removeItem('ethco_github_token');
+    } catch {}
+    if (isSupabaseConfigured) {
+      saveToSupabase('github_auth', {
+        id: 'current_github_status',
+        user: null,
+        connected: false,
+        token: null,
+        updated_at: new Date().toISOString()
+      });
+    }
   },
 
   // 5. Fetch Repositories

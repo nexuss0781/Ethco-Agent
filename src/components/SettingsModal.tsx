@@ -134,11 +134,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <X className="w-4 h-4" />
         </button>
 
-        {/* Big Centered Bold Orange GitHub Logo */}
+        {/* Big Centered Bold Orange GitHub Logo or User Avatar */}
         <div className="flex justify-center mb-5 mt-2">
-          <div className="w-20 h-20 rounded-2xl bg-[#171717] border border-[#d97757]/30 flex items-center justify-center shadow-lg shadow-[#d97757]/5">
-            <Github className="w-11 h-11 text-[#d97757] stroke-[2.5]" />
-          </div>
+          {ghUser?.avatar_url ? (
+            <div className="relative">
+              <img
+                src={ghUser.avatar_url}
+                alt={ghUser.name || ghUser.login}
+                className="w-20 h-20 rounded-2xl border-2 border-[#d97757]/40 object-cover shadow-lg shadow-[#d97757]/10"
+              />
+              <div className="absolute -bottom-1.5 -right-1.5 p-1 rounded-lg bg-[#171717] border border-[#d97757]/50 text-[#d97757]">
+                <Github className="w-4 h-4 stroke-[2.5]" />
+              </div>
+            </div>
+          ) : (
+            <div className="w-20 h-20 rounded-2xl bg-[#171717] border border-[#d97757]/30 flex items-center justify-center shadow-lg shadow-[#d97757]/5">
+              <Github className="w-11 h-11 text-[#d97757] stroke-[2.5]" />
+            </div>
+          )}
         </div>
 
         {/* State: Loading */}
@@ -155,10 +168,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 <span>Connected &amp; Authorized</span>
               </div>
-              <h2 className="text-lg font-semibold text-white tracking-tight">
+              <h2
+                className="text-lg font-semibold text-white tracking-tight leading-snug px-2"
+                dir="auto"
+                title={ghUser.name || ghUser.login}
+              >
                 {ghUser.name || ghUser.login}
               </h2>
-              <div className="flex items-center justify-center gap-1.5 mt-0.5 text-xs text-[#a3a3a3] font-mono">
+              <div className="flex items-center justify-center gap-1.5 mt-1 text-xs text-[#a3a3a3] font-mono">
                 <span>@{ghUser.login}</span>
                 {ghUser.html_url && (
                   <a

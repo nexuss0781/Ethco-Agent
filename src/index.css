@@ -2,7 +2,7 @@
 
 @theme {
   --font-serif: "Instrument Serif", Georgia, serif;
-  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  --font-sans: "Plus Jakarta Sans", "Noto Sans Ethiopic", system-ui, -apple-system, sans-serif;
   --font-mono: "JetBrains Mono", monospace;
   
   --color-claude-bg: #181816;

@@ -1,4 +1,5 @@
 import { Conversation } from '../types';
+import { isSupabaseConfigured, saveToSupabase, loadFromSupabase } from './supabase';
 
 const STORAGE_KEY = 'claude_chatbot_conversations_v1';
 const ACTIVE_CONVO_KEY = 'claude_chatbot_active_id_v1';
@@ -118,11 +119,31 @@ export const StorageService = {
       } catch (err) {
         console.warn('Server sync deferred:', err);
       }
+
+      if (isSupabaseConfigured) {
+        try {
+          await saveToSupabase('conversations', { id: 'user_conversations', data: conversations, updated_at: new Date().toISOString() });
+        } catch (sbErr) {
+          console.warn('Supabase sync deferred:', sbErr);
+        }
+      }
     }, 800);
   },
 
   // Fetch from server on app load to merge
   async syncFromServer(): Promise<Conversation[]> {
+    if (isSupabaseConfigured) {
+      try {
+        const sbData = await loadFromSupabase('conversations');
+        if (sbData && sbData.length > 0 && sbData[0].data) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(sbData[0].data));
+          return sbData[0].data;
+        }
+      } catch (sbErr) {
+        console.warn('Supabase load fallback:', sbErr);
+      }
+    }
+
     try {
       const res = await fetch('/api/conversations');
       if (res.ok) {

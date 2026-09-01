@@ -616,14 +616,15 @@ const githubCallbackHandler = async (req: express.Request, res: express.Response
     saveGitHubTokens(tokens);
 
     // Also set active cookie for GitHub auth if needed
-    res.setHeader("Content-Type", "text/html");
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.send(`
       <!DOCTYPE html>
       <html>
         <head>
+          <meta charset="utf-8">
           <title>GitHub Authorization Successful</title>
           <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #121210; color: #ecece7; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+            body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans Ethiopic', sans-serif; background: #121210; color: #ecece7; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
             .card { background: #1c1c19; padding: 24px 32px; border-radius: 12px; border: 1px solid #33332e; text-align: center; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
             h2 { color: #d97757; margin-top: 0; }
           </style>
@@ -631,7 +632,7 @@ const githubCallbackHandler = async (req: express.Request, res: express.Response
         <body>
           <div class="card">
             <h2>Authorized with GitHub</h2>
-            <p>Connected as <strong>@${githubUser.login}</strong>. This popup will close automatically.</p>
+            <p>Connected as <strong dir="auto">${githubUser.name || githubUser.login}</strong> (@${githubUser.login}). This popup will close automatically.</p>
           </div>
           <script>
             try {
