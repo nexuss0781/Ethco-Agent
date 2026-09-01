@@ -163,20 +163,50 @@ async function robustPost(url: string, bodyObj: any): Promise<{ ok: boolean; sta
 
 // Auth Routes (Nexuss Auth Server Handoff)
 app.get("/api/auth/callback", async (req, res) => {
-  const steps: string[] = [];
-  steps.push("Started callback handler");
+  const startTime = Date.now();
+  const diagnosticLogs: Array<{ step: string; timestamp: string; details?: any }> = [];
+
+  const logStep = (step: string, details?: any) => {
+    const entry = {
+      step,
+      timestamp: new Date().toISOString(),
+      ...(details !== undefined ? { details } : {}),
+    };
+    diagnosticLogs.push(entry);
+    console.log(`[AUTH-DIAGNOSTIC] ${entry.timestamp} - ${step}`, details ? JSON.stringify(details) : "");
+  };
+
+  logStep("Received callback request", {
+    query: req.query,
+    headers: {
+      host: req.headers.host,
+      "user-agent": req.headers["user-agent"],
+      referer: req.headers.referer,
+      cookie: req.headers.cookie ? "[REDACTED_COOKIE_PRESENT]" : "[NO_COOKIE]",
+    },
+    ip: req.ip,
+  });
+
   const handoffToken = (req.query.handoff_token || req.query.handoffToken) as string;
   if (!handoffToken) {
-    steps.push("Error: Missing handoff token in query parameters");
-    return res.status(400).send("Missing handoff token");
+    logStep("Validation failed: Missing handoff token");
+    return res.status(400).json({
+      error: "Missing handoff token in query parameters",
+      status: 400,
+      diagnostics: diagnosticLogs,
+    });
   }
 
   try {
     const authUrl = process.env.VITE_NEXUSS_AUTH_URL || "https://nexuss-auth.vercel.app";
     const projectId = process.env.VITE_NEXUSS_AUTH_PROJECT_ID || "ethco-agents";
-    steps.push(`VITE_NEXUSS_AUTH_URL: ${authUrl}`);
-    steps.push(`VITE_NEXUSS_AUTH_PROJECT_ID: ${projectId}`);
-    steps.push(`Handoff token found: ${handoffToken.substring(0, Math.min(10, handoffToken.length))}...`);
+    
+    logStep("Configuration loaded", {
+      authUrl,
+      projectId,
+      hasJwtSecret: !!process.env.JWT_SECRET,
+      tokenSnippet: `${handoffToken.substring(0, Math.min(8, handoffToken.length))}...`,
+    });
 
     const bodyObj = {
       projectId,
@@ -184,38 +214,67 @@ app.get("/api/auth/callback", async (req, res) => {
       handoff_token: handoffToken,
     };
 
-    steps.push("Sending POST exchange request via robustPost");
+    logStep("Initiating POST handoff exchange request", {
+      endpoint: `${authUrl}/v1/handoff/exchange`,
+    });
+
     let response;
     try {
       response = await robustPost(`${authUrl}/v1/handoff/exchange`, bodyObj);
-      steps.push(`POST exchange completed with status: ${response.status}`);
+      logStep("Handoff exchange HTTP response received", {
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers ? Object.fromEntries(Object.entries(response.headers)) : {},
+      });
     } catch (fetchErr: any) {
-      steps.push(`POST exchange network/system error: ${fetchErr.message}`);
+      logStep("Handoff exchange network failure", {
+        errorMessage: fetchErr?.message,
+        errorStack: fetchErr?.stack,
+        errorCode: fetchErr?.code,
+      });
       throw fetchErr;
     }
 
     if (!response.ok) {
       const errText = await response.text();
-      steps.push(`Exchange response not OK. Status: ${response.status}, Body: ${errText}`);
-      console.error("Handoff exchange failed:", response.status, errText);
-      return res.status(401).send(`Nexuss Auth handoff failed: ${errText}\n\nDiagnostic Steps:\n${steps.join("\n")}`);
+      logStep("Handoff exchange rejected by upstream auth service", {
+        upstreamStatus: response.status,
+        upstreamBody: errText,
+      });
+      console.error("[AUTH-DIAGNOSTIC] Handoff exchange failed:", response.status, errText);
+      return res.status(401).json({
+        error: "Nexuss Auth handoff failed",
+        upstreamStatus: response.status,
+        upstreamBody: errText,
+        diagnostics: diagnosticLogs,
+      });
     }
 
-    steps.push("Parsing response JSON");
-    let rawData;
+    logStep("Parsing upstream response JSON");
+    let rawData: any;
     try {
       rawData = await response.json();
-      steps.push(`Response JSON parsed successfully: ${JSON.stringify(rawData)}`);
+      logStep("Upstream JSON parsed successfully", {
+        hasUser: !!(rawData?.user || rawData?.data?.user || rawData?.data),
+        keys: rawData ? Object.keys(rawData) : [],
+      });
     } catch (jsonErr: any) {
-      steps.push(`JSON parse error: ${jsonErr.message}`);
+      logStep("JSON parse error from upstream response", {
+        errorMessage: jsonErr?.message,
+        errorStack: jsonErr?.stack,
+      });
       throw jsonErr;
     }
 
     let resolvedUser = rawData.user || (rawData.data && rawData.data.user) || rawData.data || rawData;
-    steps.push(`Resolved user structure: ${JSON.stringify(resolvedUser)}`);
+    logStep("User identity resolved from response", {
+      resolvedUserSummary: resolvedUser && typeof resolvedUser === "object"
+        ? { id: resolvedUser.id || resolvedUser.userId, email: resolvedUser.email, name: resolvedUser.name }
+        : typeof resolvedUser,
+    });
 
     if (!resolvedUser || typeof resolvedUser !== "object") {
-      steps.push("Fallback to default user object because resolved user was empty or not an object");
+      logStep("Fallback triggered: resolved user was non-object or empty", { rawData });
       resolvedUser = {
         id: "nexuss-temp-user",
         email: "user@nexuss-auth.com",
@@ -223,33 +282,100 @@ app.get("/api/auth/callback", async (req, res) => {
       };
     }
 
-    steps.push("Sanitizing user payload");
+    logStep("Sanitizing user payload for JWT");
     const sanitizedUser = {
-      id: resolvedUser.id || resolvedUser.userId || "nexuss-temp-user",
-      email: resolvedUser.email || "",
-      name: resolvedUser.name || "",
-      avatarUrl: resolvedUser.avatarUrl || null,
+      id: String(resolvedUser.id || resolvedUser.userId || "nexuss-temp-user"),
+      email: String(resolvedUser.email || ""),
+      name: String(resolvedUser.name || ""),
+      avatarUrl: resolvedUser.avatarUrl ? String(resolvedUser.avatarUrl) : null,
     };
+    logStep("Sanitized user payload created", sanitizedUser);
 
-    steps.push("Signing JWT token");
+    logStep("Inspecting JWT signing environment");
     const secret = process.env.JWT_SECRET || "YOUR_RANDOM_SECRET_KEY";
-    steps.push(`JWT_SECRET present: ${!!process.env.JWT_SECRET}`);
-    const token = jwt.sign(sanitizedUser, secret, { expiresIn: "7d" });
-    steps.push("JWT token signed successfully");
+    
+    // Diagnostic inspection of JWT signing
+    let token: string;
+    try {
+      token = jwt.sign(sanitizedUser, secret, { expiresIn: "7d" });
+      logStep("JWT signed successfully", {
+        tokenLength: token.length,
+        tokenPrefix: token.substring(0, 15) + "...",
+      });
+    } catch (jwtSignErr: any) {
+      logStep("JWT signing failure", {
+        errorMessage: jwtSignErr?.message,
+        errorStack: jwtSignErr?.stack,
+        jwtType: typeof jwt,
+      });
+      throw jwtSignErr;
+    }
 
-    steps.push("Setting cookie");
+    // Diagnostic self-verification of the created token
+    logStep("Running self-verification on generated JWT");
+    try {
+      const verifiedPayload = jwt.verify(token, secret);
+      logStep("JWT self-verification succeeded", {
+        verifiedId: (verifiedPayload as any)?.id,
+        expiresAt: (verifiedPayload as any)?.exp,
+      });
+    } catch (jwtVerifyErr: any) {
+      logStep("JWT self-verification failed immediately after signing", {
+        errorMessage: jwtVerifyErr?.message,
+        errorStack: jwtVerifyErr?.stack,
+      });
+      throw jwtVerifyErr;
+    }
+
+    logStep("Setting session_token cookie");
     res.cookie("session_token", token, {
       httpOnly: true,
-      secure: true, // Secure in both environments to ensure cookie security
+      secure: true,
       sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
-    steps.push("Cookie set successfully, redirecting");
+
+    logStep("Authentication callback completed successfully", {
+      totalDurationMs: Date.now() - startTime,
+    });
+
+    // Check if client requested JSON response for diagnostic inspection
+    if (req.query.format === "json" || req.headers.accept?.includes("application/json")) {
+      return res.json({
+        success: true,
+        user: sanitizedUser,
+        durationMs: Date.now() - startTime,
+        diagnostics: diagnosticLogs,
+      });
+    }
 
     res.redirect("/");
   } catch (err: any) {
-    console.error("Auth callback uncaught error:", err);
-    res.status(500).send(`Internal server error during auth callback: ${err?.message || err}\n\nStack:\n${err?.stack || ""}\n\nDiagnostic Steps:\n${steps.join("\n")}`);
+    const totalDurationMs = Date.now() - startTime;
+    logStep("Fatal exception in callback handler", {
+      errorMessage: err?.message,
+      errorStack: err?.stack,
+      errorCode: err?.code,
+      errorName: err?.name,
+      totalDurationMs,
+    });
+
+    console.error("[AUTH-DIAGNOSTIC] Auth callback uncaught error:", err);
+
+    // Return detailed diagnostic payload on error with 500 status
+    res.status(500).json({
+      error: "Internal server error during auth callback",
+      status: 500,
+      message: err?.message || String(err),
+      name: err?.name || "Error",
+      stack: err?.stack || null,
+      context: {
+        nodeVersion: process.version,
+        hasJwtSecret: !!process.env.JWT_SECRET,
+        totalDurationMs,
+      },
+      diagnostics: diagnosticLogs,
+    });
   }
 });
 
