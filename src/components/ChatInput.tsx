@@ -18,9 +18,12 @@ import {
   Check,
   Brain,
   Code2,
+  FolderGit2,
+  GitBranch,
 } from 'lucide-react';
 import { Attachment, ModelOption, ActionMode } from '../types';
 import { TodoListTracker, TodoItem } from './tool-views/TodoListTracker';
+import { SelectedRepoContext } from '../lib/github';
 
 interface ChatInputProps {
   onSendMessage: (text: string, attachments: Attachment[], mode?: ActionMode) => void;
@@ -36,6 +39,9 @@ interface ChatInputProps {
     todos: TodoItem[];
     summary?: any;
   } | null;
+  selectedRepos?: SelectedRepoContext[];
+  onRemoveSelectedRepo?: (repoName: string) => void;
+  onOpenGitHubModal?: () => void;
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
@@ -49,6 +55,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   actionMode: controlledActionMode,
   onSelectActionMode,
   activeTodos,
+  selectedRepos = [],
+  onRemoveSelectedRepo,
+  onOpenGitHubModal,
 }) => {
   const [internalMode, setInternalMode] = useState<ActionMode>('planning');
   const [modeDropdownOpen, setModeDropdownOpen] = useState(false);
@@ -250,6 +259,47 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             : 'border-[#33332e] hover:border-[#42423c] focus-within:border-[#52524a]'
         }`}
       >
+        {/* Selected Repositories Pills (multi-select context for AI agent) */}
+        {selectedRepos.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5 p-3 pb-0">
+            <div className="flex items-center gap-1 text-[10px] uppercase font-semibold text-[#85857a] mr-1">
+              <FolderGit2 className="w-3.5 h-3.5 text-[#d97757]" />
+              <span>Repos:</span>
+            </div>
+            {selectedRepos.map((repo) => (
+              <div
+                key={repo.fullName || repo.name}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#181816] border border-[#383832] text-xs text-[#ecece7]"
+              >
+                <span className="font-semibold text-[11px] text-[#ecece7] max-w-[130px] truncate">
+                  {repo.name}
+                </span>
+                <span className="inline-flex items-center gap-0.5 text-[10px] font-mono text-[#d97757] bg-[#22221f] px-1.5 py-0.2 rounded border border-[#2e2e2a]">
+                  <GitBranch className="w-2.5 h-2.5" />
+                  <span className="max-w-[80px] truncate">{repo.branch}</span>
+                </span>
+                {onRemoveSelectedRepo && (
+                  <button
+                    onClick={() => onRemoveSelectedRepo(repo.fullName || repo.name)}
+                    className="p-0.5 rounded-full hover:bg-[#2c2c28] text-[#85857a] hover:text-[#ecece7] transition-colors cursor-pointer"
+                    title="Remove from agent context"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            ))}
+            {onOpenGitHubModal && (
+              <button
+                onClick={onOpenGitHubModal}
+                className="text-[11px] text-[#85857a] hover:text-[#d97757] transition-colors ml-1 underline cursor-pointer"
+              >
+                + Select more
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Attachment Previews */}
         {attachments.length > 0 && (
           <div className="flex flex-wrap gap-2 p-3 pb-0">

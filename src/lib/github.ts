@@ -12,6 +12,17 @@ export interface GitHubUser {
   email?: string;
 }
 
+export interface SelectedRepoContext {
+  name: string;
+  fullName?: string;
+  branch: string;
+  cloneUrl?: string;
+  htmlUrl?: string;
+  isPrivate?: boolean;
+  description?: string;
+  language?: string;
+}
+
 export interface GitHubRepo {
   id: number;
   name: string;
@@ -297,5 +308,21 @@ export const GitHubService = {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to save GitHub client configuration');
+  },
+
+  // 13. Local Selected Repos for AI Agent
+  getSelectedRepos(): SelectedRepoContext[] {
+    try {
+      const raw = localStorage.getItem('claude_selected_repos');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  },
+
+  saveSelectedRepos(repos: SelectedRepoContext[]): void {
+    try {
+      localStorage.setItem('claude_selected_repos', JSON.stringify(repos));
+    } catch {}
   },
 };

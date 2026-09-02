@@ -8,7 +8,7 @@ import { ChatInput } from '../components/ChatInput';
 import { UpgradeModal } from '../components/UpgradeModal';
 import { GitHubImportModal } from '../components/GitHubImportModal';
 import { SettingsModal } from '../components/SettingsModal';
-import { ImportedRepo } from '../lib/github';
+import { ImportedRepo, GitHubService, SelectedRepoContext } from '../lib/github';
 import { Conversation, Message, Attachment, ModelOption, ActionMode, ToolInvocation } from '../types';
 import { StorageService } from '../lib/storage';
 import { AVAILABLE_MODELS } from '../constants/models';
@@ -30,10 +30,53 @@ export default function App() {
   const [isGitHubModalOpen, setIsGitHubModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   
+  // Multi-select repositories state for AI Agent
+  const [selectedRepos, setSelectedRepos] = useState<SelectedRepoContext[]>(() =>
+    GitHubService.getSelectedRepos()
+  );
+
   const [user, setUser] = useState<any>(null);
   const navigate = useNavigate();
 
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  const handleToggleSelectRepo = (repo: SelectedRepoContext) => {
+    setSelectedRepos((prev) => {
+      const exists = prev.some((r) => r.fullName === repo.fullName || r.name === repo.name);
+      let updated: SelectedRepoContext[];
+      if (exists) {
+        // If same branch, remove; if branch changed, update branch
+        const existing = prev.find((r) => r.fullName === repo.fullName || r.name === repo.name);
+        if (existing && existing.branch !== repo.branch) {
+          updated = prev.map((r) => (r.fullName === repo.fullName || r.name === repo.name ? repo : r));
+        } else {
+          updated = prev.filter((r) => r.fullName !== repo.fullName && r.name !== repo.name);
+        }
+      } else {
+        updated = [...prev, repo];
+      }
+      GitHubService.saveSelectedRepos(updated);
+      return updated;
+    });
+  };
+
+  const handleSelectAllRepos = (reposToSelect: SelectedRepoContext[]) => {
+    setSelectedRepos(reposToSelect);
+    GitHubService.saveSelectedRepos(reposToSelect);
+  };
+
+  const handleClearSelectedRepos = () => {
+    setSelectedRepos([]);
+    GitHubService.saveSelectedRepos([]);
+  };
+
+  const handleRemoveSelectedRepo = (repoName: string) => {
+    setSelectedRepos((prev) => {
+      const updated = prev.filter((r) => r.name !== repoName && r.fullName !== repoName);
+      GitHubService.saveSelectedRepos(updated);
+      return updated;
+    });
+  };
 
   // Sync with server on initial mount for multi-session persistence and fetch user
   useEffect(() => {
@@ -176,7 +219,7 @@ export default function App() {
     abortControllerRef.current = abortController;
 
     try {
-      // Send conversation context to streaming API
+      // Send conversation context to streaming API with selected repositories context
       const messagesForBackend = updatedMessages
         .slice(0, -1) // omit the empty placeholder
         .map((m) => ({
@@ -193,6 +236,14 @@ export default function App() {
           thinkingEnabled,
           model: selectedModel.geminiModel,
           actionMode: currentMode,
+          selectedRepos: selectedRepos.map((r) => ({
+            name: r.name,
+            fullName: r.fullName,
+            branch: r.branch,
+            cloneUrl: r.cloneUrl,
+            isPrivate: r.isPrivate,
+            language: r.language,
+          })),
         }),
         signal: abortController.signal,
       });
@@ -489,6 +540,9 @@ export default function App() {
               actionMode={actionMode}
               onSelectActionMode={setActionMode}
               activeTodos={activeTodos}
+              selectedRepos={selectedRepos}
+              onRemoveSelectedRepo={handleRemoveSelectedRepo}
+              onOpenGitHubModal={() => setIsGitHubModalOpen(true)}
             />
           </div>
         </div>
@@ -500,11 +554,15 @@ export default function App() {
         onClose={() => setIsUpgradeModalOpen(false)}
       />
 
-      {/* GitHub Authorization & Repository Import Modal */}
+      {/* GitHub Authorization & Repository Multi-Select Modal */}
       <GitHubImportModal
         isOpen={isGitHubModalOpen}
         onClose={() => setIsGitHubModalOpen(false)}
         onSelectRepoForChat={handleSelectRepoForChat}
+        selectedReposList={selectedRepos}
+        onToggleSelectRepo={handleToggleSelectRepo}
+        onSelectAllRepos={handleSelectAllRepos}
+        onClearSelectedRepos={handleClearSelectedRepos}
       />
 
       {/* Settings Modal (GitHub Authorization & Persistence) */}

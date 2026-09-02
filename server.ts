@@ -1137,24 +1137,68 @@ app.get("/api/github/repos", async (req, res) => {
 
     if (!rawRepos || rawRepos.length === 0) {
       if (tokenInfo?.token) {
-        // List user's repositories with token
-        const reposUrl = "https://api.github.com/user/repos?sort=updated&per_page=100&affiliation=owner,collaborator,organization_member";
-        const userReposRes = await fetch(reposUrl, { headers });
-        if (userReposRes.ok) {
-          rawRepos = await userReposRes.json();
+        // List user's repositories with token, fetching all pages if >100 repos
+        try {
+          let page = 1;
+          let keepFetching = true;
+          const collectedRepos: any[] = [];
+          while (keepFetching && page <= 5) {
+            const reposUrl = `https://api.github.com/user/repos?sort=updated&per_page=100&page=${page}&affiliation=owner,collaborator,organization_member`;
+            const pageRes = await fetch(reposUrl, { headers });
+            if (pageRes.ok) {
+              const batch = await pageRes.json();
+              if (Array.isArray(batch) && batch.length > 0) {
+                collectedRepos.push(...batch);
+                if (batch.length < 100) {
+                  keepFetching = false;
+                } else {
+                  page++;
+                }
+              } else {
+                keepFetching = false;
+              }
+            } else {
+              keepFetching = false;
+            }
+          }
+          rawRepos = collectedRepos;
+        } catch (fetchErr) {
+          console.warn("Error fetching multi-page user repos:", fetchErr);
         }
       } else if (effectiveUser) {
         // List user's public repositories by username without requiring API key
         const username = effectiveUser.login || effectiveUser.name?.replace(/\s+/g, '-').toLowerCase() || effectiveUser.email?.split('@')[0];
         if (username) {
-          const userReposRes = await fetch(`https://api.github.com/users/${encodeURIComponent(username)}/repos?sort=updated&per_page=30`, { headers });
-          if (userReposRes.ok) {
-            rawRepos = await userReposRes.json();
+          try {
+            let page = 1;
+            let keepFetching = true;
+            const collectedRepos: any[] = [];
+            while (keepFetching && page <= 5) {
+              const userReposRes = await fetch(`https://api.github.com/users/${encodeURIComponent(username)}/repos?sort=updated&per_page=100&page=${page}`, { headers });
+              if (userReposRes.ok) {
+                const batch = await userReposRes.json();
+                if (Array.isArray(batch) && batch.length > 0) {
+                  collectedRepos.push(...batch);
+                  if (batch.length < 100) {
+                    keepFetching = false;
+                  } else {
+                    page++;
+                  }
+                } else {
+                  keepFetching = false;
+                }
+              } else {
+                keepFetching = false;
+              }
+            }
+            rawRepos = collectedRepos;
+          } catch (pubErr) {
+            console.warn("Error fetching public repos:", pubErr);
           }
         }
         // If user has no public repos under that username, search popular repos for recommendations
         if (!rawRepos || rawRepos.length === 0) {
-          const popularRes = await fetch(`https://api.github.com/search/repositories?q=stars:>1000+sort:stars&per_page=15`, { headers });
+          const popularRes = await fetch(`https://api.github.com/search/repositories?q=stars:>1000+sort:stars&per_page=50`, { headers });
           if (popularRes.ok) {
             const data = await popularRes.json();
             rawRepos = data.items || [];
@@ -1162,7 +1206,7 @@ app.get("/api/github/repos", async (req, res) => {
         }
       } else {
         // Fallback to top repositories
-        const popularRes = await fetch(`https://api.github.com/search/repositories?q=stars:>5000+sort:stars&per_page=15`, { headers });
+        const popularRes = await fetch(`https://api.github.com/search/repositories?q=stars:>5000+sort:stars&per_page=50`, { headers });
         if (popularRes.ok) {
           const data = await popularRes.json();
           rawRepos = data.items || [];
@@ -1693,7 +1737,7 @@ app.post("/api/chat/stream", async (req, res) => {
   res.flushHeaders?.();
 
   try {
-    const { messages, thinkingEnabled = true, customSystemPrompt, model, actionMode = "planning" } = req.body;
+    const { messages, thinkingEnabled = true, customSystemPrompt, model, actionMode = "planning", selectedRepos } = req.body;
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       res.write(`data: ${JSON.stringify({ error: "Messages array is required" })}\n\n`);
@@ -1711,9 +1755,18 @@ You are in Planning Mode. Structure your analysis with deep architectural clarit
 You are in Build Mode. Focus on concrete, production-ready implementation, complete file artifacts, clean modular code without placeholders, and direct actionable solutions with robust error handling. You have access to workspace tools (run_command, view_file, create_file, edit_file, list_directory, generate_architecture_plan) to directly read, create, update files, or execute terminal commands.`;
     }
 
+    // Selected Repositories Context Directive for the AI Agent
+    let repoContextDirective = "";
+    if (Array.isArray(selectedRepos) && selectedRepos.length > 0) {
+      repoContextDirective = `\n\n## SELECTED REPOSITORIES CONTEXT (User Multi-Selected for AI Guidance):
+The user has specifically multi-selected the following repository contexts for your awareness:
+${selectedRepos.map((r: any, idx: number) => `${idx + 1}. **${r.name}** (${r.fullName || r.name}) on branch \`${r.branch || 'main'}\`${r.language ? ` [${r.language}]` : ''}${r.isPrivate ? ' (Private)' : ' (Public)'}`).join('\n')}
+You can inspect their structure, suggest imports, guide implementation, write code tailored to these repositories, or query files using your workspace tools.`;
+    }
+
     const activeSystemInstruction = (customSystemPrompt
       ? `${baseSystemPrompt}\n\nAdditional User Context/Preferences:\n${customSystemPrompt}`
-      : baseSystemPrompt) + modeDirective;
+      : baseSystemPrompt) + modeDirective + repoContextDirective;
 
     // Convert messages to Gemini format
     const contents: Array<{ role: "user" | "model"; parts: any[] }> = [];

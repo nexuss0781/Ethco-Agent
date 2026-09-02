@@ -25,19 +25,27 @@ import {
   ShieldCheck,
   Mail,
 } from 'lucide-react';
-import { GitHubService, GitHubUser, GitHubRepo, ImportedRepo, fixMojibake } from '../lib/github';
+import { GitHubService, GitHubUser, GitHubRepo, ImportedRepo, SelectedRepoContext, fixMojibake } from '../lib/github';
 import { getUser } from '../lib/auth';
 
 interface GitHubImportModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectRepoForChat?: (repo: ImportedRepo, initialPrompt?: string) => void;
+  selectedReposList?: SelectedRepoContext[];
+  onToggleSelectRepo?: (repo: SelectedRepoContext) => void;
+  onSelectAllRepos?: (repos: SelectedRepoContext[]) => void;
+  onClearSelectedRepos?: () => void;
 }
 
 export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
   isOpen,
   onClose,
   onSelectRepoForChat,
+  selectedReposList = [],
+  onToggleSelectRepo,
+  onSelectAllRepos,
+  onClearSelectedRepos,
 }) => {
   const [activeTab, setActiveTab] = useState<'my_repos' | 'url_clone' | 'imported'>('my_repos');
   const [statusLoading, setStatusLoading] = useState(true);
@@ -55,6 +63,10 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
   const [repoBranchesMap, setRepoBranchesMap] = useState<Record<string, string[]>>({});
   const [branchLoadingRepo, setBranchLoadingRepo] = useState<string | null>(null);
   const [activeBranchMenuRepo, setActiveBranchMenuRepo] = useState<string | null>(null);
+
+  // Local fallback selection state if parent props not provided
+  const [localSelectedRepos, setLocalSelectedRepos] = useState<SelectedRepoContext[]>(() => GitHubService.getSelectedRepos());
+  const effectiveSelectedRepos = onToggleSelectRepo ? selectedReposList : localSelectedRepos;
 
   // URL clone state
   const [cloneUrl, setCloneUrl] = useState('');
@@ -217,6 +229,83 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
     e.stopPropagation();
     setSelectedRepoBranches((prev) => ({ ...prev, [repoKey]: branchName }));
     setActiveBranchMenuRepo(null);
+
+    // If repo is already selected, update its branch in selected list
+    if (onToggleSelectRepo) {
+      const existing = selectedReposList.find((r) => r.name === repoKey || r.fullName === repoKey);
+      if (existing) {
+        onToggleSelectRepo({ ...existing, branch: branchName });
+      }
+    } else {
+      setLocalSelectedRepos((prev) => {
+        const next = prev.map((r) => (r.name === repoKey || r.fullName === repoKey ? { ...r, branch: branchName } : r));
+        GitHubService.saveSelectedRepos(next);
+        return next;
+      });
+    }
+  };
+
+  const handleToggleRepoSelect = (repo: GitHubRepo) => {
+    const repoKey = repo.full_name || repo.name;
+    const branch = selectedRepoBranches[repoKey] || repo.default_branch || 'main';
+    const repoContext: SelectedRepoContext = {
+      name: repo.name,
+      fullName: repo.full_name,
+      branch: branch,
+      cloneUrl: repo.clone_url,
+      htmlUrl: repo.html_url,
+      isPrivate: repo.private,
+      description: repo.description || undefined,
+      language: repo.language || undefined,
+    };
+
+    if (onToggleSelectRepo) {
+      onToggleSelectRepo(repoContext);
+    } else {
+      setLocalSelectedRepos((prev) => {
+        const exists = prev.some((r) => r.fullName === repoContext.fullName || r.name === repoContext.name);
+        const next = exists
+          ? prev.filter((r) => r.fullName !== repoContext.fullName && r.name !== repoContext.name)
+          : [...prev, repoContext];
+        GitHubService.saveSelectedRepos(next);
+        return next;
+      });
+    }
+  };
+
+  const handleSelectAllVisible = () => {
+    const listToSelect: SelectedRepoContext[] = filteredRepos.map((repo) => {
+      const repoKey = repo.full_name || repo.name;
+      const branch = selectedRepoBranches[repoKey] || repo.default_branch || 'main';
+      return {
+        name: repo.name,
+        fullName: repo.full_name,
+        branch: branch,
+        cloneUrl: repo.clone_url,
+        htmlUrl: repo.html_url,
+        isPrivate: repo.private,
+        description: repo.description || undefined,
+        language: repo.language || undefined,
+      };
+    });
+
+    if (onSelectAllRepos) {
+      onSelectAllRepos(listToSelect);
+    } else {
+      setLocalSelectedRepos(listToSelect);
+      GitHubService.saveSelectedRepos(listToSelect);
+    }
+    showToast('success', `Selected ${listToSelect.length} repositories for AI agent.`);
+  };
+
+  const handleClearAllSelected = () => {
+    if (onClearSelectedRepos) {
+      onClearSelectedRepos();
+    } else {
+      setLocalSelectedRepos([]);
+      GitHubService.saveSelectedRepos([]);
+    }
+    showToast('success', 'Cleared all selected repositories.');
   };
 
   // Handle GitHub Authorization
@@ -517,55 +606,81 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
           </button>
         </div>
 
-        {/* Tab 1: All Repositories List with Search at Top, Branches Dropdown to Right, Scrollable showing 5 at once */}
+        {/* Tab 1: All Repositories List with Multi-Select, Branches Dropdown to Right, Scrollable showing 5 at once */}
         {activeTab === 'my_repos' && (
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-            {/* Search & Filter Header at Top of Dropdown / List */}
-            <div className="p-3 bg-[#181815] border-b border-[#242421] flex flex-wrap items-center gap-2">
-              <div className="relative flex-1 min-w-[200px]">
-                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#85857a]" />
-                <input
-                  type="text"
-                  placeholder="Search repository name, branch or description..."
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    if (e.target.value.length > 2) {
-                      loadUserRepos(e.target.value);
-                    } else if (e.target.value === '') {
-                      loadUserRepos();
-                    }
-                  }}
-                  className="w-full pl-8.5 pr-3 py-1.5 bg-[#121210] border border-[#2b2b27] rounded-xl text-xs text-[#ecece7] placeholder-[#66665e] focus:outline-none focus:border-[#d97757]"
-                />
+            {/* Search & Filter Header with Multi-Select Actions at Top of Dropdown / List */}
+            <div className="p-3 bg-[#181815] border-b border-[#242421] flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-1 items-center gap-2 min-w-[220px]">
+                <div className="relative flex-1">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#85857a]" />
+                  <input
+                    type="text"
+                    placeholder="Search repository name, branch or description..."
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      if (e.target.value.length > 2) {
+                        loadUserRepos(e.target.value);
+                      } else if (e.target.value === '') {
+                        loadUserRepos();
+                      }
+                    }}
+                    className="w-full pl-8.5 pr-3 py-1.5 bg-[#121210] border border-[#2b2b27] rounded-xl text-xs text-[#ecece7] placeholder-[#66665e] focus:outline-none focus:border-[#d97757]"
+                  />
+                </div>
+
+                {languages.length > 0 && (
+                  <select
+                    value={languageFilter}
+                    onChange={(e) => setLanguageFilter(e.target.value)}
+                    className="px-2.5 py-1.5 bg-[#121210] border border-[#2b2b27] rounded-xl text-xs text-[#ecece7] focus:outline-none focus:border-[#d97757]"
+                  >
+                    <option value="all">All Languages</option>
+                    {languages.map((lang) => (
+                      <option key={lang} value={lang}>
+                        {lang}
+                      </option>
+                    ))}
+                  </select>
+                )}
+
+                <button
+                  onClick={() => loadUserRepos(searchQuery)}
+                  disabled={reposLoading}
+                  className="p-1.5 rounded-xl text-[#85857a] hover:text-[#ecece7] hover:bg-[#262622] border border-[#282824] transition-colors cursor-pointer"
+                  title="Refresh Repositories"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${reposLoading ? 'animate-spin' : ''}`} />
+                </button>
               </div>
 
-              {languages.length > 0 && (
-                <select
-                  value={languageFilter}
-                  onChange={(e) => setLanguageFilter(e.target.value)}
-                  className="px-2.5 py-1.5 bg-[#121210] border border-[#2b2b27] rounded-xl text-xs text-[#ecece7] focus:outline-none focus:border-[#d97757]"
-                >
-                  <option value="all">All Languages</option>
-                  {languages.map((lang) => (
-                    <option key={lang} value={lang}>
-                      {lang}
-                    </option>
-                  ))}
-                </select>
+              {/* Multi-Select Quick Action Bar */}
+              {filteredRepos.length > 0 && (
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="text-[11px] text-[#85857a] font-medium hidden sm:inline">
+                    Selected:{' '}
+                    <strong className="text-[#d97757] font-semibold">{effectiveSelectedRepos.length}</strong>
+                  </span>
+                  <button
+                    onClick={handleSelectAllVisible}
+                    className="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-[#22221e] hover:bg-[#2c2c27] text-[#ecece7] border border-[#33332e] transition-colors cursor-pointer"
+                  >
+                    Select All ({filteredRepos.length})
+                  </button>
+                  {effectiveSelectedRepos.length > 0 && (
+                    <button
+                      onClick={handleClearAllSelected}
+                      className="px-2 py-1 rounded-lg text-[11px] font-medium text-[#85857a] hover:text-red-400 hover:bg-[#262622] transition-colors cursor-pointer"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
               )}
-
-              <button
-                onClick={() => loadUserRepos(searchQuery)}
-                disabled={reposLoading}
-                className="p-1.5 rounded-xl text-[#85857a] hover:text-[#ecece7] hover:bg-[#262622] border border-[#282824] transition-colors cursor-pointer"
-                title="Refresh Repositories"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${reposLoading ? 'animate-spin' : ''}`} />
-              </button>
             </div>
 
-            {/* Repositories Scrollable Area - Renders ALL repos, sized to show ~5 cards at once */}
+            {/* Repositories Scrollable Area - Renders ALL repos (supports 100+), sized to show ~5 cards at once */}
             <div className="max-h-[390px] sm:max-h-[420px] overflow-y-auto p-3 space-y-2">
               {reposLoading ? (
                 <div className="py-14 flex flex-col items-center justify-center gap-2 text-[#85857a]">
@@ -578,12 +693,35 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
                   const currentBranch = selectedRepoBranches[repoKey] || repo.default_branch || 'main';
                   const isBranchMenuOpen = activeBranchMenuRepo === repoKey;
                   const availableBranches = repoBranchesMap[repoKey] || [currentBranch, 'main', 'master'];
+                  const isSelected = effectiveSelectedRepos.some(
+                    (r) => r.fullName === repo.full_name || r.name === repo.name
+                  );
 
                   return (
                     <div
                       key={repo.id}
-                      className="group p-3 rounded-xl bg-[#181815] hover:bg-[#1f1f1c] border border-[#242421] hover:border-[#383832] transition-all flex items-center justify-between gap-3 relative"
+                      onClick={() => handleToggleRepoSelect(repo)}
+                      className={`group p-3 rounded-xl border transition-all flex items-center justify-between gap-3 relative cursor-pointer ${
+                        isSelected
+                          ? 'bg-[#1e1b18] border-[#d97757]/50 shadow-xs'
+                          : 'bg-[#181815] hover:bg-[#1f1f1c] border-[#242421] hover:border-[#383832]'
+                      }`}
                     >
+                      {/* Checkbox Tick for Multi-Select */}
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleRepoSelect(repo);
+                        }}
+                        className={`w-4 h-4 rounded flex items-center justify-center shrink-0 transition-colors border ${
+                          isSelected
+                            ? 'bg-[#d97757] border-[#d97757] text-white'
+                            : 'bg-[#20201d] border-[#383832] group-hover:border-[#52524a]'
+                        }`}
+                      >
+                        {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                      </div>
+
                       {/* Left: Metadata */}
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -598,6 +736,7 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
                             href={repo.html_url}
                             target="_blank"
                             rel="noreferrer"
+                            onClick={(e) => e.stopPropagation()}
                             className="font-semibold text-xs text-[#ecece7] hover:text-[#d97757] transition-colors truncate flex items-center gap-1"
                           >
                             {repo.full_name || repo.name}
@@ -606,7 +745,7 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
 
                           {repo.is_imported && (
                             <span className="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-0.5">
-                              <Check className="w-2.5 h-2.5" /> Cloned
+                              <Check className="w-2.5 h-2.5" /> Workspace Cloned
                             </span>
                           )}
                         </div>
@@ -631,14 +770,14 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
                         </div>
                       </div>
 
-                      {/* Right: Branch Dropdown Selector + Import Action Button */}
-                      <div className="shrink-0 flex items-center gap-2">
+                      {/* Right: Branch Dropdown Selector + Select Toggle Action Button */}
+                      <div className="shrink-0 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                         {/* Branch Dropdown to the right */}
                         <div className="relative">
                           <button
                             onClick={(e) => handleToggleBranchDropdown(e, repoKey, repo.full_name || repo.name)}
                             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#20201d] hover:bg-[#2a2a26] border border-[#2e2e2a] text-[11px] font-mono text-[#ecece7] transition-colors cursor-pointer"
-                            title="Select branch to import"
+                            title="Select branch"
                           >
                             <GitBranch className="w-3 h-3 text-[#d97757]" />
                             <span className="max-w-[80px] sm:max-w-[110px] truncate">{currentBranch}</span>
@@ -680,22 +819,23 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
                           )}
                         </div>
 
-                        {/* Import / Re-import Button */}
+                        {/* Select / Selected Button (Tick / Multi-select) */}
                         <button
-                          onClick={() => handleCloneRepo(repo)}
-                          disabled={cloning}
+                          onClick={() => handleToggleRepoSelect(repo)}
                           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                            repo.is_imported
-                              ? 'bg-[#22221e] text-[#85857a] hover:text-[#ecece7] hover:bg-[#282824] border border-[#33332e]'
-                              : 'bg-[#d97757] hover:bg-[#e08668] text-white shadow-xs'
+                            isSelected
+                              ? 'bg-[#d97757] text-white shadow-xs'
+                              : 'bg-[#22221e] text-[#85857a] hover:text-[#ecece7] hover:bg-[#282824] border border-[#33332e]'
                           }`}
                         >
-                          {cloning ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          {isSelected ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                              <span>Selected</span>
+                            </>
                           ) : (
-                            <Download className="w-3.5 h-3.5" />
+                            <span>Select</span>
                           )}
-                          <span>{repo.is_imported ? 'Re-import' : 'Import Repo'}</span>
                         </button>
                       </div>
                     </div>
@@ -711,6 +851,26 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
                 </div>
               )}
             </div>
+
+            {/* Bottom Selection Footer Bar */}
+            {effectiveSelectedRepos.length > 0 && (
+              <div className="p-3 bg-[#181815] border-t border-[#242421] flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-xs text-[#ecece7]">
+                  <span className="w-2 h-2 rounded-full bg-[#d97757]" />
+                  <span>
+                    <strong>{effectiveSelectedRepos.length}</strong> {effectiveSelectedRepos.length === 1 ? 'repository' : 'repositories'} selected for AI agent
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={onClose}
+                    className="px-4 py-1.5 rounded-xl text-xs font-medium bg-[#d97757] hover:bg-[#e08668] text-white shadow-xs transition-colors cursor-pointer"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
