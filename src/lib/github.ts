@@ -145,100 +145,26 @@ export const GitHubService = {
     });
   },
 
-  // 3. Get Status (reads active token & user info with Supabase fallback)
+  // 3. Get Status (reads active token & user info from server)
   async getStatus(): Promise<GitHubStatus> {
     try {
       const res = await fetch('/api/github/status');
       if (res.ok) {
         const data: GitHubStatus = await res.json();
-        if (data.connected && data.user) {
+        if (data.connected && data.user && data.user.login) {
           data.user.name = fixMojibake(data.user.name);
           data.user.login = fixMojibake(data.user.login);
           try {
             localStorage.setItem('ethco_github_user', JSON.stringify(data.user));
           } catch {}
-          if (isSupabaseConfigured) {
-            saveToSupabase('github_auth', {
-              id: 'current_github_status',
-              user: data.user,
-              connected: true,
-              updated_at: new Date().toISOString()
-            });
-          }
           return data;
-        } else {
-          // Check if local storage has an authenticated user before returning disconnected
-          try {
-            const localUserRaw = localStorage.getItem('ethco_github_user');
-            if (localUserRaw) {
-              const localUser = JSON.parse(localUserRaw);
-              if (localUser && (localUser.login || localUser.name)) {
-                localUser.name = fixMojibake(localUser.name);
-                localUser.login = fixMojibake(localUser.login);
-                return { connected: true, user: localUser, authProvider: 'github' };
-              }
-            }
-          } catch {}
-          return { connected: false, user: null };
         }
-      }
-    } catch {
-      // Server check failed, fallback to cloud/local state if offline
-    }
-
-    // Check Supabase cloud persistence fallback
-    if (isSupabaseConfigured) {
-      try {
-        const sbData = await loadFromSupabase('github_auth');
-        if (sbData && sbData.length > 0) {
-          const record = sbData.find((r: any) => r.id === 'current_github_status') || sbData[0];
-          if (record && record.connected && record.user) {
-            try {
-              localStorage.setItem('ethco_github_user', JSON.stringify(record.user));
-            } catch {}
-            // Sync saved token to server if present
-            if (record.token) {
-              fetch('/api/github/connect-token', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token: record.token }),
-              }).catch(() => {});
-            }
-            return {
-              connected: true,
-              user: record.user,
-              authProvider: 'supabase-persisted',
-              source: 'supabase',
-            };
-          }
-        }
-      } catch (sbErr) {
-        console.warn('Supabase github_auth fallback note:', sbErr);
-      }
-    }
-
-    // Check LocalStorage fallback
-    try {
-      const savedUser = localStorage.getItem('ethco_github_user');
-      if (savedUser) {
-        const user = JSON.parse(savedUser);
-        const savedToken = localStorage.getItem('ethco_github_token');
-        if (savedToken) {
-          fetch('/api/github/connect-token', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token: savedToken }),
-          }).catch(() => {});
-        }
-        return {
-          connected: true,
-          user,
-          authProvider: 'local-persisted',
-          source: 'localstorage',
-        };
       }
     } catch {}
 
+    try {
+      localStorage.removeItem('ethco_github_user');
+    } catch {}
     return { connected: false, user: null };
   },
 

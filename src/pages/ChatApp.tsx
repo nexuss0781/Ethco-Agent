@@ -451,6 +451,7 @@ export default function App() {
           onToggleThinking={() => setThinkingEnabled(!thinkingEnabled)}
           onOpenUpgradeModal={() => setIsUpgradeModalOpen(true)}
           onOpenGitHubModal={() => setIsGitHubModalOpen(true)}
+          onSelectRepoForChat={handleSelectRepoForChat}
         />
 
         {/* Center Area: Empty State OR Message Stream */}

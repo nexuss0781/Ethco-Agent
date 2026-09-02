@@ -78,28 +78,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     setLoadingStatus(true);
     setErrorMessage(null);
     try {
-      const cached = localStorage.getItem('ethco_github_user');
-      if (cached) {
-        try {
-          const parsed = JSON.parse(cached);
-          if (parsed && (parsed.login || parsed.name)) {
-            setGhUser(parsed);
-          }
-        } catch {}
-      }
-
       const status = await GitHubService.getStatus();
-      if (status.connected && status.user) {
+      if (status.connected && status.user && status.user.login) {
         setGhUser(status.user);
         try {
           localStorage.setItem('ethco_github_user', JSON.stringify(status.user));
         } catch {}
-      } else if (!status.connected) {
+      } else {
         setGhUser(null);
-        localStorage.removeItem('ethco_github_user');
+        try {
+          localStorage.removeItem('ethco_github_user');
+        } catch {}
       }
     } catch (err: any) {
       console.error('Failed to load GitHub status:', err);
+      setGhUser(null);
     } finally {
       setLoadingStatus(false);
     }
