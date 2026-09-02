@@ -1788,7 +1788,7 @@ async function executeOmniRouteTurn(
     mappedModel = "auto";
   }
 
-  const response = await fetch("https://omniouter-vercel.vercel.app/api/v1/chat/completions", {
+  const response = await fetch("https://omnirouter-vercel.vercel.app/api/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
