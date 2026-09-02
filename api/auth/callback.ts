@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import jwt from "jsonwebtoken";
 import https from "https";
+import { saveGrant } from "../github/_grant";
 
 // Helper to send robust POST request
 async function robustPost(
@@ -170,6 +171,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       name: String(resolvedUser.name || ""),
       avatarUrl: resolvedUser.avatarUrl ? String(resolvedUser.avatarUrl) : null,
     };
+
+    const githubGrantToken = rawData.githubGrantToken || rawData.data?.githubGrantToken;
+    if (typeof githubGrantToken === "string" && githubGrantToken.trim()) {
+      saveGrant(req, githubGrantToken, {
+        id: sanitizedUser.id,
+        login: resolvedUser.login || resolvedUser.githubLogin || resolvedUser.name || sanitizedUser.name,
+        name: sanitizedUser.name,
+        avatar_url: sanitizedUser.avatarUrl || "",
+      });
+    }
 
     const secret = process.env.JWT_SECRET || "YOUR_RANDOM_SECRET_KEY";
     const token = jwt.sign(sanitizedUser, secret, { expiresIn: "7d" });

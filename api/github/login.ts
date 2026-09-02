@@ -12,7 +12,11 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
   const authUrl = (process.env.NEXUSS_AUTH_URL || process.env.VITE_NEXUSS_AUTH_URL || "https://nexuss-auth.vercel.app").trim().replace(/\/+$/, "");
   const projectId = (process.env.NEXUSS_AUTH_PROJECT_ID || process.env.VITE_NEXUSS_AUTH_PROJECT_ID || "ethco-agents").trim();
-  const redirectUri = (process.env.NEXUSS_AUTH_REDIRECT_URI || `${appOrigin(req)}/api/github/callback`).trim();
+  const configuredRedirect = (process.env.NEXUSS_AUTH_REDIRECT_URI || process.env.VITE_NEXUSS_AUTH_REDIRECT_URI || "").trim();
+  // Older deployments used /api/github/callback, which is not in the Nexuss Auth allowlist.
+  const redirectUri = (configuredRedirect && !configuredRedirect.endsWith("/api/github/callback"))
+    ? configuredRedirect
+    : `${appOrigin(req)}/api/auth/callback`;
   try { if (new URL(authUrl).protocol !== "https:" || new URL(redirectUri).protocol !== "https:") throw new Error("HTTPS is required"); } catch {
     return res.status(500).send("Nexuss Auth is not configured. Set NEXUSS_AUTH_URL, NEXUSS_AUTH_PROJECT_ID, and NEXUSS_AUTH_REDIRECT_URI.");
   }
