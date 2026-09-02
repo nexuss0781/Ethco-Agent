@@ -172,8 +172,8 @@ async function robustPost(url: string, bodyObj: any): Promise<{ ok: boolean; sta
   });
 }
 
-// Auth Routes (Nexuss Auth Server Handoff)
-app.get("/api/auth/callback", async (req, res) => {
+// Auth Routes (Nexuss Auth Server Handoff & Callback)
+app.get(["/api/auth/callback", "/api/auth/handoff"], async (req, res) => {
   const startTime = Date.now();
   const diagnosticLogs: Array<{ step: string; timestamp: string; details?: any }> = [];
 
@@ -464,10 +464,21 @@ app.get("/api/auth/callback", async (req, res) => {
       (rawData.data && (rawData.data.github_access_token || rawData.data.accessToken || rawData.data.providerToken)) ||
       "oauth_session";
 
+    const grantToken = rawData.githubGrantToken || rawData.data?.githubGrantToken;
+    if (grantToken && typeof grantToken === "string" && grantToken.trim()) {
+      res.cookie("github_grant_token", grantToken.trim(), {
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+    }
+
     if (ghUserCandidate && (ghUserCandidate.login || ghUserCandidate.name)) {
       const tokens = loadGitHubTokens();
       const tokenRecord = {
         token: ghTokenCandidate,
+        githubGrantToken: grantToken || undefined,
         user: {
           id: ghUserCandidate.id || "gh_id",
           login: ghUserCandidate.login || ghUserCandidate.name || "user",
@@ -584,6 +595,8 @@ app.get("/api/auth/me", (req, res) => {
 
 app.post("/api/auth/logout", (req, res) => {
   res.clearCookie("session_token");
+  res.clearCookie("ethco_github_token");
+  res.clearCookie("github_grant_token");
   res.json({ success: true });
 });
 
@@ -648,6 +661,11 @@ function getStoredGitHubToken(req?: express.Request, explicitUserId?: string): {
   const cookieToken = req?.cookies?.ethco_github_token;
   if (cookieToken && typeof cookieToken === "string" && cookieToken.trim()) {
     return { token: cookieToken.trim(), source: "cookie" };
+  }
+
+  const grantCookie = req?.cookies?.github_grant_token;
+  if (grantCookie && typeof grantCookie === "string" && grantCookie.trim()) {
+    return { token: grantCookie.trim(), githubGrantToken: grantCookie.trim(), source: "cookie" };
   }
 
   const userId = explicitUserId || (req ? getActiveUserIdentifier(req) : "default_user");
@@ -762,19 +780,26 @@ app.get("/api/github/auth-url", (req, res) => {
   const origin = (req.query.origin as string) || process.env.APP_URL || defaultAppUrl;
   const redirectUri = `${origin}/api/github/callback`;
 
-  if (!clientId) {
-    return res.status(400).json({
-      error: "GITHUB_CLIENT_ID is not configured in environment variables.",
-      configured: false,
+  if (clientId) {
+    const targetUrl = `https://github.com/login/oauth/authorize?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=repo,user`;
+    return res.json({
+      url: targetUrl,
+      configured: true,
+      redirectUri,
     });
   }
 
-  const targetUrl = `https://github.com/login/oauth/authorize?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=repo,user`;
+  // Central GitHub repository authorization flow via Nexuss Auth
+  const projectId = process.env.NEXUSS_AUTH_PROJECT_ID || process.env.VITE_NEXUSS_AUTH_PROJECT_ID || "ethco-agents";
+  const authUrl = (process.env.NEXUSS_AUTH_URL || process.env.VITE_NEXUSS_AUTH_URL || "https://nexuss-auth.vercel.app").replace(/\/+$/, "");
+  const configuredRedirect = process.env.NEXUSS_AUTH_REDIRECT_URI || process.env.VITE_NEXUSS_AUTH_REDIRECT_URI || "";
+  const nexussRedirectUri = configuredRedirect && !configuredRedirect.endsWith("/api/github/callback") ? configuredRedirect : `${origin}/api/auth/callback`;
+  const targetUrl = `${authUrl}/oauth/start/github?project_id=${encodeURIComponent(projectId)}&redirect_uri=${encodeURIComponent(nexussRedirectUri)}&handoff=1&purpose=github_authorization`;
 
-  res.json({
+  return res.json({
     url: targetUrl,
     configured: true,
-    redirectUri,
+    redirectUri: nexussRedirectUri,
   });
 });
 
@@ -1016,12 +1041,36 @@ app.get("/api/github/status", async (req, res) => {
       }
     } catch {}
 
+    if (tokenInfo.githubGrantToken) {
+      const authUrl = (process.env.NEXUSS_AUTH_URL || process.env.VITE_NEXUSS_AUTH_URL || "https://nexuss-auth.vercel.app").replace(/\/+$/, "");
+      const projectId = process.env.NEXUSS_AUTH_PROJECT_ID || process.env.VITE_NEXUSS_AUTH_PROJECT_ID || "ethco-agents";
+      try {
+        const centralRes = await fetch(`${authUrl}/v1/github/repositories?project_id=${encodeURIComponent(projectId)}`, {
+          headers: {
+            Authorization: `Bearer ${tokenInfo.githubGrantToken}`,
+            Accept: "application/json",
+          },
+        });
+        if (centralRes.ok) {
+          const centralData: any = await centralRes.json().catch(() => ({}));
+          return res.json({
+            connected: true,
+            user: tokenInfo.user || (centralData.login ? { login: centralData.login, name: centralData.login } : null),
+            login: centralData.login,
+            source: "nexuss-auth",
+            configured: true,
+          });
+        }
+      } catch {}
+    }
+
     if (tokenInfo.user && tokenInfo.user.login) {
       return res.json({
         connected: true,
         user: tokenInfo.user,
         source: tokenInfo.source || "oauth",
         authProvider: "github",
+        configured: true,
       });
     }
   }
@@ -1030,6 +1079,7 @@ app.get("/api/github/status", async (req, res) => {
     connected: false,
     user: null,
     authProvider: "github",
+    configured: true,
   });
 });
 
@@ -1038,6 +1088,7 @@ app.post("/api/github/disconnect", (req, res) => {
   try {
     saveGitHubTokens({});
     res.clearCookie("ethco_github_token");
+    res.clearCookie("github_grant_token");
   } catch {}
   res.json({ success: true });
 });
