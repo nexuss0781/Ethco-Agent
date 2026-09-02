@@ -26,6 +26,26 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [ghUser, setGhUser] = useState<GitHubUser | null>(null);
   const [authorizing, setAuthorizing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showTokenInput, setShowTokenInput] = useState(false);
+  const [tokenInput, setTokenInput] = useState('');
+  const [connectingToken, setConnectingToken] = useState(false);
+
+  const handleConnectToken = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!tokenInput.trim()) return;
+    setConnectingToken(true);
+    setErrorMessage(null);
+    try {
+      const u = await GitHubService.connectToken(tokenInput.trim());
+      setGhUser(u);
+      setShowTokenInput(false);
+      setTokenInput('');
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Invalid token');
+    } finally {
+      setConnectingToken(false);
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -186,54 +206,56 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
 
             {loadingStatus && !ghUser ? (
-              <div className="py-4 flex flex-col items-center justify-center gap-2 text-[#737373]">
-                <Loader2 className="w-4 h-4 animate-spin text-[#d97757]" />
+              <div className="py-6 flex flex-col items-center justify-center gap-2 text-[#737373]">
+                <Loader2 className="w-5 h-5 animate-spin text-[#d97757]" />
                 <span className="text-xs">Checking GitHub authorization...</span>
               </div>
             ) : ghUser ? (
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  {ghUser.avatar_url ? (
-                    <img
-                      src={ghUser.avatar_url}
-                      alt={fixMojibake(ghUser.name || ghUser.login)}
-                      className="w-12 h-12 rounded-full border-2 border-[#d97757]/60 object-cover shrink-0 shadow-md"
-                    />
-                  ) : (
-                    <div className="w-12 h-12 rounded-full bg-[#1c1c1a] border-2 border-[#d97757]/60 flex items-center justify-center text-[#d97757] font-semibold">
-                      {fixMojibake(ghUser.name || ghUser.login).charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <div
-                      className="text-sm font-semibold text-white truncate"
-                      title={fixMojibake(ghUser.name || ghUser.login)}
-                    >
-                      {fixMojibake(ghUser.name || ghUser.login)}
-                    </div>
-                    <div className="flex items-center gap-1 text-xs text-[#a3a3a3] font-mono">
-                      <span>@{fixMojibake(ghUser.login)}</span>
-                      {ghUser.html_url && (
-                        <a
-                          href={ghUser.html_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-[#737373] hover:text-[#d97757] transition-colors"
-                          title="View GitHub profile"
-                        >
-                          <ExternalLink className="w-3 h-3 ml-0.5" />
-                        </a>
-                      )}
-                    </div>
+              <div className="py-2 flex flex-col items-center text-center space-y-3">
+                {/* Avatar centered */}
+                {ghUser.avatar_url ? (
+                  <img
+                    src={ghUser.avatar_url}
+                    alt={fixMojibake(ghUser.name || ghUser.login)}
+                    className="w-16 h-16 rounded-full border-2 border-[#d97757]/70 object-cover shadow-lg"
+                  />
+                ) : (
+                  <div className="w-16 h-16 rounded-full bg-[#1c1c1a] border-2 border-[#d97757]/70 flex items-center justify-center text-[#d97757] text-lg font-bold">
+                    {fixMojibake(ghUser.name || ghUser.login).charAt(0).toUpperCase()}
+                  </div>
+                )}
+
+                {/* Name & Handle */}
+                <div className="space-y-0.5">
+                  <div
+                    className="text-base font-bold text-white tracking-tight"
+                    title={fixMojibake(ghUser.name || ghUser.login)}
+                  >
+                    {fixMojibake(ghUser.name || ghUser.login)}
+                  </div>
+                  <div className="flex items-center justify-center gap-1 text-xs text-[#a3a3a3] font-mono">
+                    <span>@{fixMojibake(ghUser.login)}</span>
+                    {ghUser.html_url && (
+                      <a
+                        href={ghUser.html_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[#737373] hover:text-[#d97757] transition-colors"
+                        title="View GitHub profile"
+                      >
+                        <ExternalLink className="w-3 h-3 ml-0.5 inline" />
+                      </a>
+                    )}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 pt-1">
+                {/* Reconfigure & Disconnect Actions */}
+                <div className="flex items-center justify-center gap-2 pt-2 w-full">
                   <button
                     id="btn-reconfigure-github"
                     onClick={handleAuthorizeOAuth}
                     disabled={authorizing}
-                    className="py-2 px-3 rounded-lg text-xs font-semibold bg-[#22221f] hover:bg-[#2c2c28] text-white transition-all flex items-center justify-center gap-1.5 cursor-pointer border border-[#33332e] disabled:opacity-50"
+                    className="flex-1 py-2 px-3 rounded-lg text-xs font-semibold bg-[#22221f] hover:bg-[#2c2c28] text-white transition-all flex items-center justify-center gap-1.5 cursor-pointer border border-[#33332e] disabled:opacity-50"
                   >
                     {authorizing ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin text-[#d97757]" />
@@ -255,7 +277,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             ) : (
               <div className="space-y-3">
                 <p className="text-xs text-[#737373] leading-relaxed">
-                  Authorize GitHub to display your GitHub profile name & avatar here and enable repository importing.
+                  Authorize GitHub to display your <strong className="text-white">@nexuss0781</strong> profile name & avatar here and enable repository importing.
                 </p>
                 {errorMessage && (
                   <p className="text-[11px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg p-2" dir="auto">
@@ -280,6 +302,47 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </>
                   )}
                 </button>
+
+                <div className="pt-2 border-t border-[#262626]">
+                  {!showTokenInput ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowTokenInput(true)}
+                      className="text-[11px] text-[#85857a] hover:text-[#d97757] transition-colors underline cursor-pointer w-full text-center"
+                    >
+                      Wrong account showing? Connect via Personal Access Token for @nexuss0781
+                    </button>
+                  ) : (
+                    <form onSubmit={handleConnectToken} className="space-y-2 pt-1">
+                      <div className="text-[11px] text-[#a3a3a3]">
+                        Enter GitHub Personal Access Token for <code className="text-white font-mono">nexuss0781</code>:
+                      </div>
+                      <input
+                        type="password"
+                        value={tokenInput}
+                        onChange={(e) => setTokenInput(e.target.value)}
+                        placeholder="ghp_xxxxxxxxxxxx"
+                        className="w-full px-3 py-2 bg-[#1a1a18] border border-[#33332e] rounded-lg text-xs text-white placeholder-[#737373] focus:outline-none focus:border-[#d97757]"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          type="submit"
+                          disabled={connectingToken || !tokenInput.trim()}
+                          className="flex-1 py-1.5 px-3 bg-[#d97757] hover:bg-[#c66647] text-white text-xs font-semibold rounded-lg disabled:opacity-50 cursor-pointer"
+                        >
+                          {connectingToken ? 'Connecting...' : 'Connect Token'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowTokenInput(false)}
+                          className="py-1.5 px-3 bg-[#22221f] text-[#a3a3a3] hover:text-white text-xs rounded-lg cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
               </div>
             )}
           </div>

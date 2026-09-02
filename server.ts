@@ -269,8 +269,24 @@ app.get("/api/auth/callback", async (req, res) => {
     const isGithubAuth = req.query.purpose === 'github_authorization' || rawData.accessToken || rawData.token || rawData.githubToken;
     if (isGithubAuth) {
       const accessToken = rawData.accessToken || rawData.token || rawData.githubToken;
-      const githubUser = rawData.user || rawData.githubUser || rawData.data?.user || { login: "github_user", id: 1 };
+      let githubUser = rawData.user || rawData.githubUser || rawData.data?.user || { login: "github_user", id: 1 };
       if (accessToken) {
+        try {
+          const ghRes = await fetch("https://api.github.com/user", {
+            headers: {
+              "User-Agent": "Ethco-Dev-Workspace",
+              "Authorization": `Bearer ${accessToken}`,
+              "Accept": "application/vnd.github.v3+json",
+            },
+          });
+          if (ghRes.ok) {
+            const fetchedUser = await ghRes.json();
+            if (fetchedUser && fetchedUser.login) {
+              githubUser = fetchedUser;
+            }
+          }
+        } catch {}
+
         const userId = getActiveUserIdentifier(req);
         const tokens = loadGitHubTokens();
         const tokenRecord = {
@@ -757,13 +773,44 @@ app.get("/api/github/status", async (req, res) => {
   const userId = getActiveUserIdentifier(req);
   const tokenInfo = getStoredGitHubToken(userId);
 
-  if (tokenInfo?.token && tokenInfo.user && tokenInfo.user.login) {
-    return res.json({
-      connected: true,
-      user: tokenInfo.user,
-      source: tokenInfo.source || "oauth",
-      authProvider: "github",
-    });
+  if (tokenInfo?.token) {
+    try {
+      const ghRes = await fetch("https://api.github.com/user", {
+        headers: {
+          "User-Agent": "Ethco-Dev-Workspace",
+          "Authorization": `Bearer ${tokenInfo.token}`,
+          "Accept": "application/vnd.github.v3+json",
+        },
+      });
+      if (ghRes.ok) {
+        const liveUser = await ghRes.json();
+        if (liveUser && liveUser.login) {
+          tokenInfo.user = {
+            id: liveUser.id,
+            login: liveUser.login,
+            name: liveUser.name || liveUser.login,
+            avatar_url: liveUser.avatar_url,
+            html_url: liveUser.html_url,
+            public_repos: liveUser.public_repos,
+            total_private_repos: liveUser.total_private_repos,
+          };
+          const tokens = loadGitHubTokens();
+          if (tokens[userId]) {
+            tokens[userId].user = tokenInfo.user;
+            saveGitHubTokens(tokens);
+          }
+        }
+      }
+    } catch {}
+
+    if (tokenInfo.user && tokenInfo.user.login) {
+      return res.json({
+        connected: true,
+        user: tokenInfo.user,
+        source: tokenInfo.source || "oauth",
+        authProvider: "github",
+      });
+    }
   }
 
   return res.json({
@@ -779,6 +826,49 @@ app.post("/api/github/disconnect", (req, res) => {
     saveGitHubTokens({});
   } catch {}
   res.json({ success: true });
+});
+
+// 5b. Connect GitHub via Personal Access Token
+app.post("/api/github/connect-token", async (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token) {
+      return res.status(400).json({ error: "Token is required" });
+    }
+    const ghRes = await fetch("https://api.github.com/user", {
+      headers: {
+        "User-Agent": "Ethco-Dev-Workspace",
+        "Authorization": `Bearer ${token}`,
+        "Accept": "application/vnd.github.v3+json",
+      },
+    });
+    if (!ghRes.ok) {
+      return res.status(400).json({ error: "Invalid GitHub Personal Access Token" });
+    }
+    const ghUser = await ghRes.json();
+    const userId = getActiveUserIdentifier(req);
+    const tokens = loadGitHubTokens();
+    const tokenRecord = {
+      token,
+      user: {
+        id: ghUser.id,
+        login: ghUser.login,
+        name: ghUser.name || ghUser.login,
+        avatar_url: ghUser.avatar_url,
+        html_url: ghUser.html_url,
+      },
+      authProvider: "pat",
+      updatedAt: new Date().toISOString(),
+    };
+    tokens[userId] = tokenRecord;
+    tokens["default_user"] = tokenRecord;
+    tokens["latest"] = tokenRecord;
+    tokens[ghUser.login] = tokenRecord;
+    saveGitHubTokens(tokens);
+    res.json({ success: true, user: tokenRecord.user });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to connect token" });
+  }
 });
 
 // 6. List Repositories (Authenticated User's Repos & Public Repos)
