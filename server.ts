@@ -1758,10 +1758,10 @@ You are in Build Mode. Focus on concrete, production-ready implementation, compl
     // Selected Repositories Context Directive for the AI Agent
     let repoContextDirective = "";
     if (Array.isArray(selectedRepos) && selectedRepos.length > 0) {
-      repoContextDirective = `\n\n## SELECTED REPOSITORIES CONTEXT (User Multi-Selected for AI Guidance):
-The user has specifically multi-selected the following repository contexts for your awareness:
+      repoContextDirective = `\n\n## SELECTED REPOSITORIES CONTEXT:
+The user selected ${selectedRepos.length} repository(s). This may be intentional or accidental:
 ${selectedRepos.map((r: any, idx: number) => `${idx + 1}. **${r.name}** (${r.fullName || r.name}) on branch \`${r.branch || 'main'}\`${r.language ? ` [${r.language}]` : ''}${r.isPrivate ? ' (Private)' : ' (Public)'}`).join('\n')}
-You can inspect their structure, suggest imports, guide implementation, write code tailored to these repositories, or query files using your workspace tools.`;
+Please take the correct action based purely on the context of the user's message. If their prompt clearly relates to these repositories, use your workspace tools to inspect them. If the message is unrelated, you may ignore this selection.`;
     }
 
     const activeSystemInstruction = (customSystemPrompt
