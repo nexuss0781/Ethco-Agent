@@ -118,18 +118,18 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
     }
   };
 
-  // Handle Nexuss Auth GitHub Authorization
-  const handleAuthorizeNexussAuth = async () => {
+  // Handle GitHub Authorization
+  const handleAuthorizeGitHub = async () => {
     try {
       setStatusLoading(true);
-      const user = await GitHubService.authorizeWithNexussAuth('popup');
+      const user = await GitHubService.authorizeOAuth();
       if (user) {
         setGhUser(user);
-        showToast('success', `Successfully authorized with Nexuss Auth as @${user.login || user.name}`);
+        showToast('success', `Successfully authorized as @${user.login || user.name}`);
         loadUserRepos();
       }
     } catch (err: any) {
-      showToast('error', err.message || 'Nexuss Auth GitHub authorization failed');
+      showToast('error', err.message || 'GitHub authorization failed');
     } finally {
       setStatusLoading(false);
     }
@@ -263,19 +263,16 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
             </div>
             <div>
               <h2 className="text-sm font-semibold text-[#ecece7] flex items-center gap-2">
-                GitHub Authorization & Repositories
-                <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-[#282824] text-[#d97757] border border-[#383832]">
-                  Nexuss Auth
-                </span>
+                GitHub Repositories
               </h2>
               <p className="text-[11px] text-[#85857a]">
-                Powered by Nexuss Auth — 1-click authorization without manual API keys.
+                Import and explore repositories directly in your workspace.
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-[#85857a] hover:text-[#ecece7] hover:bg-[#262622] transition-colors"
+            className="p-1.5 rounded-lg text-[#85857a] hover:text-[#ecece7] hover:bg-[#262622] transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -294,14 +291,14 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
                 <span className="font-medium text-[#ecece7]">{ghUser.name || ghUser.login}</span>
                 <span className="text-[#85857a]">(@{ghUser.login})</span>
                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-                  <ShieldCheck className="w-2.5 h-2.5" /> Nexuss Verified
+                  <ShieldCheck className="w-2.5 h-2.5" /> Authorized
                 </span>
               </div>
             </div>
           ) : (
             <div className="flex items-center gap-2 text-[#85857a]">
               <Lock className="w-3.5 h-3.5 text-[#d97757]" />
-              <span>Nexuss Auth: <strong className="text-[#ecece7]">Click Authorize below</strong></span>
+              <span>Connect GitHub to browse your private & public repositories</span>
             </div>
           )}
 
@@ -309,19 +306,19 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
             {ghUser ? (
               <button
                 onClick={handleDisconnect}
-                className="px-2.5 py-1 rounded-lg text-[11px] font-medium text-[#85857a] hover:text-red-400 hover:bg-[#262622] border border-[#2b2b27] transition-colors"
+                className="px-2.5 py-1 rounded-lg text-[11px] font-medium text-[#85857a] hover:text-red-400 hover:bg-[#262622] border border-[#2b2b27] transition-colors cursor-pointer"
               >
                 Disconnect
               </button>
             ) : (
               <button
-                id="btn-nexuss-auth-authorize"
-                onClick={handleAuthorizeNexussAuth}
+                id="btn-github-authorize"
+                onClick={handleAuthorizeGitHub}
                 disabled={statusLoading}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#d97757] hover:bg-[#e08668] text-white transition-all shadow-xs"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#d97757] hover:bg-[#e08668] text-white transition-all shadow-xs cursor-pointer"
               >
                 <Github className="w-3.5 h-3.5" />
-                <span>Authorize via Nexuss Auth</span>
+                <span>Authorize GitHub</span>
               </button>
             )}
           </div>
@@ -445,7 +442,7 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
               {reposLoading ? (
                 <div className="py-12 flex flex-col items-center justify-center gap-2 text-[#85857a]">
                   <Loader2 className="w-5 h-5 animate-spin text-[#d97757]" />
-                  <span className="text-xs">Fetching repositories via Nexuss Auth...</span>
+                  <span className="text-xs">Fetching repositories from GitHub...</span>
                 </div>
               ) : filteredRepos.length > 0 ? (
                 filteredRepos.map((repo) => (

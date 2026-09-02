@@ -61,31 +61,14 @@ export function fixMojibake(str?: string | null): string {
 }
 
 export const GitHubService = {
-  // 1. Authorize via Nexuss Auth GitHub repository authorization flow (Section 12 of INTEGRATION.md)
+  // 1. Authorize via direct GitHub OAuth
   async authorizeOAuth(): Promise<GitHubUser | null> {
-    return this.authorizeWithNexussAuth();
-  },
-
-  async authorizeWithNexussAuth(mode: 'popup' | 'redirect' = 'popup'): Promise<GitHubUser | null> {
-    let targetUrl = '';
-    try {
-      const res = await fetch('/api/github/auth-url');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.url) {
-          targetUrl = data.url;
-        }
-      }
-    } catch {
-      // Fallback
+    const res = await fetch('/api/github/auth-url');
+    const data = await res.json();
+    if (!res.ok || !data.url) {
+      throw new Error(data.error || 'GitHub Client ID not configured in server environment.');
     }
-
-    if (!targetUrl) {
-      const projectId = import.meta.env.VITE_NEXUSS_AUTH_PROJECT_ID || 'ethco-agents';
-      const authUrl = import.meta.env.VITE_NEXUSS_AUTH_URL || 'https://nexuss-auth.vercel.app';
-      const redirectUri = `${window.location.origin}/api/auth/callback`;
-      targetUrl = `${authUrl}/oauth/start/github?project_id=${encodeURIComponent(projectId)}&redirect_uri=${encodeURIComponent(redirectUri)}&handoff=1&purpose=github_authorization`;
-    }
+    const targetUrl = data.url;
 
     return new Promise((resolve, reject) => {
       try {
@@ -109,10 +92,7 @@ export const GitHubService = {
         let safetyTimeout: any = null;
 
         const handleMessage = (event: MessageEvent) => {
-          if (
-            (event.data?.type === 'OAUTH_AUTH_SUCCESS' || event.data?.type === 'NEXUSS_AUTH_SUCCESS') &&
-            event.data?.user
-          ) {
+          if (event.data?.type === 'OAUTH_AUTH_SUCCESS' && event.data?.user) {
             cleanup();
             resolve(event.data.user);
           }
@@ -138,7 +118,7 @@ export const GitHubService = {
           cleanup();
           const status = await GitHubService.getStatus();
           resolve(status.user || null);
-        }, 20000);
+        }, 30000);
       } catch (err) {
         reject(err);
       }
