@@ -3,8 +3,35 @@ import fs from "fs";
 import path from "path";
 import jwt from "jsonwebtoken";
 import https from "https";
+import { timingSafeEqual } from "crypto";
 
 const GITHUB_TOKENS_FILE = path.join(process.cwd(), "data", "github_tokens.json");
+const STATE_COOKIE = "ethco_github_oauth_state";
+
+function cookieValue(req: VercelRequest, name: string): string | null {
+  const part = (req.headers.cookie || "").split(";").map((item) => item.trim()).find((item) => item.startsWith(`${name}=`));
+  return part ? decodeURIComponent(part.slice(name.length + 1)) : null;
+}
+
+function appOrigin(req: VercelRequest): string {
+  if (process.env.APP_URL?.trim()) return process.env.APP_URL.trim().replace(/\/+$/, "");
+  const host = req.headers["x-forwarded-host"] || req.headers.host || "localhost:3000";
+  const proto = req.headers["x-forwarded-proto"] || (process.env.NODE_ENV === "production" ? "https" : "http");
+  return `${proto}://${host}`;
+}
+
+async function exchangeGithubCode(code: string, redirectUri: string): Promise<{ token: string; user: any }> {
+  const response = await fetch("https://github.com/login/oauth/access_token", {
+    method: "POST",
+    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    body: JSON.stringify({ client_id: process.env.GITHUB_CLIENT_ID, client_secret: process.env.GITHUB_CLIENT_SECRET, code, redirect_uri: redirectUri }),
+  });
+  const data: any = await response.json();
+  if (!response.ok || data.error || !data.access_token) throw new Error(data.error_description || "GitHub did not return an access token");
+  const userResponse = await fetch("https://api.github.com/user", { headers: { Authorization: `Bearer ${data.access_token}`, Accept: "application/vnd.github+json", "User-Agent": "Ethco-Agent" } });
+  if (!userResponse.ok) throw new Error("GitHub access token could not be validated");
+  return { token: data.access_token, user: await userResponse.json() };
+}
 
 async function robustPost(
   url: string,
@@ -84,6 +111,40 @@ function saveTokens(data: Record<string, any>) {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== "GET") return res.status(405).send("Method not allowed");
+  const code = typeof req.query.code === "string" ? req.query.code : "";
+  const state = typeof req.query.state === "string" ? req.query.state : "";
+  const oauthError = typeof req.query.error === "string" ? req.query.error : "";
+  if (oauthError) return res.status(400).send(`GitHub authorization was cancelled or denied (${oauthError}).`);
+  if (code || state) {
+    const expectedState = cookieValue(req, STATE_COOKIE);
+    res.setHeader("Set-Cookie", `${STATE_COOKIE}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax`);
+    if (!code || !state || !expectedState || state.length !== expectedState.length || !timingSafeEqual(Buffer.from(state), Buffer.from(expectedState))) {
+      return res.status(403).send("Invalid or expired GitHub OAuth state. Please try again.");
+    }
+    if (!process.env.GITHUB_CLIENT_ID?.trim() || !process.env.GITHUB_CLIENT_SECRET?.trim()) {
+      return res.status(500).send("GitHub OAuth is not configured on the server.");
+    }
+    try {
+      const { token, user: githubUser } = await exchangeGithubCode(code, `${appOrigin(req)}/api/github/callback`);
+      const user = { id: githubUser.id, login: githubUser.login, name: githubUser.name || githubUser.login || "GitHub User", avatar_url: githubUser.avatar_url || "", html_url: githubUser.html_url || "", public_repos: githubUser.public_repos || 0 };
+      let existing: Record<string, any> = {};
+      try { if (fs.existsSync(GITHUB_TOKENS_FILE)) existing = JSON.parse(fs.readFileSync(GITHUB_TOKENS_FILE, "utf8")); } catch {}
+      const record = { token, user, authProvider: "github-oauth", updatedAt: new Date().toISOString() };
+      let userId = "default_user";
+      const session = cookieValue(req, "session_token");
+      if (session) { try { const payload: any = jwt.verify(session, process.env.JWT_SECRET || "YOUR_RANDOM_SECRET_KEY"); userId = String(payload?.id || payload?.email || userId); } catch {} }
+      existing[userId] = record; existing.default_user = record; existing.latest = record;
+      fs.mkdirSync(path.dirname(GITHUB_TOKENS_FILE), { recursive: true });
+      fs.writeFileSync(GITHUB_TOKENS_FILE, JSON.stringify(existing, null, 2), "utf8");
+      const safeUser = JSON.stringify(user).replace(/</g, "\\u003c");
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      return res.status(200).send(`<!doctype html><html><body><p>GitHub authorized as <b>@${String(user.login).replace(/[<>&"']/g, "")}</b>. You can close this window.</p><script>const user=${safeUser};if(window.opener){window.opener.postMessage({type:"OAUTH_AUTH_SUCCESS",provider:"github",user},window.location.origin);setTimeout(()=>window.close(),700)}else{window.location.href="/app"}</script></body></html>`);
+    } catch (error: any) {
+      console.error("[GitHub OAuth] callback failed", error);
+      return res.status(502).send(`GitHub authorization failed: ${error?.message || "token exchange failed"}`);
+    }
+  }
   const handoffToken = (req.query.handoff_token || req.query.handoffToken) as string;
   if (!handoffToken) {
     return res.status(400).send("Missing handoff token parameter for GitHub authorization.");
