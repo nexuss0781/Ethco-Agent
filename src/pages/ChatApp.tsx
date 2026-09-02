@@ -285,7 +285,22 @@ export default function App() {
       });
 
       if (!response.ok) {
-        throw new Error(`Server returned status ${response.status}`);
+        let errorDetail = '';
+        try {
+          const errText = await response.text();
+          try {
+            const parsed = JSON.parse(errText);
+            errorDetail = parsed.error?.message || parsed.error || parsed.message || errText;
+          } catch {
+            errorDetail = errText;
+          }
+        } catch {}
+
+        throw new Error(
+          errorDetail
+            ? `Server returned status ${response.status}: ${errorDetail}`
+            : `Server returned status ${response.status}`
+        );
       }
 
       const reader = response.body?.getReader();

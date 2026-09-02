@@ -2060,6 +2060,13 @@ app.get("/api/chat/stream", (req, res) => {
   });
 });
 
+app.options("/api/chat/stream", (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-omniroute-key");
+  return res.status(204).end();
+});
+
 app.post("/api/chat/stream", async (req, res) => {
   console.log("Received POST /api/chat/stream");
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -2069,7 +2076,8 @@ app.post("/api/chat/stream", async (req, res) => {
   res.flushHeaders?.();
 
   try {
-    const { messages, thinkingEnabled = true, customSystemPrompt, model, actionMode = "planning", selectedRepos } = req.body;
+    const rawBody = typeof req.body === "string" ? JSON.parse(req.body) : (req.body || {});
+    const { messages, thinkingEnabled = true, customSystemPrompt, model, actionMode = "planning", selectedRepos } = rawBody;
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       res.write(`data: ${JSON.stringify({ error: "Messages array is required" })}\n\n`);
