@@ -510,6 +510,8 @@ export default function App() {
           onOpenUpgradeModal={() => setIsUpgradeModalOpen(true)}
           onOpenGitHubModal={() => setIsGitHubModalOpen(true)}
           onSelectRepoForChat={handleSelectRepoForChat}
+          selectedReposList={selectedRepos}
+          onToggleSelectRepo={handleToggleSelectRepo}
         />
 
         {/* Center Area: Empty State OR Message Stream */}
