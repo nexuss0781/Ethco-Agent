@@ -10,6 +10,7 @@ import {
   Shield,
 } from 'lucide-react';
 import { GitHubService, GitHubUser, fixMojibake } from '../lib/github';
+import { logout } from '../lib/auth';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -113,30 +114,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   };
 
-  const handleAuthorizeOAuth = async () => {
+  const handleAuthorizeOAuth = () => {
     setAuthorizing(true);
     setErrorMessage(null);
-    try {
-      const resUser = await GitHubService.authorizeOAuth();
-      if (resUser) {
-        setGhUser(resUser);
-        try {
-          localStorage.setItem('ethco_github_user', JSON.stringify(resUser));
-        } catch {}
-      } else {
-        const status = await GitHubService.getStatus();
-        if (status.connected && status.user) {
-          setGhUser(status.user);
-          try {
-            localStorage.setItem('ethco_github_user', JSON.stringify(status.user));
-          } catch {}
-        }
-      }
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Authorization failed. Please try again.');
-    } finally {
-      setAuthorizing(false);
-    }
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    window.location.href = `/api/github/login?origin=${encodeURIComponent(origin)}`;
   };
 
   const handleDisconnect = async () => {
@@ -169,58 +151,35 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         </button>
 
         {/* Header */}
-        <div className="mb-5">
-          <h2 className="text-lg font-semibold text-white tracking-tight">Account & Settings</h2>
-          <p className="text-xs text-[#737373] mt-0.5">Manage your session and GitHub repository integration.</p>
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-white tracking-tight">GitHub Connection</h2>
+          <p className="text-xs text-[#737373] mt-1">Connect your GitHub account to access and sync repositories.</p>
         </div>
 
         <div className="space-y-4 text-left">
-          {/* Google Account Section */}
-          <div className="p-3.5 rounded-xl bg-[#141412] border border-[#262626] flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#3b82f6]/15 border border-[#3b82f6]/30 flex items-center justify-center text-[#3b82f6] shrink-0">
-              {user?.avatar ? (
-                <img src={user.avatar} alt="Google" className="w-10 h-10 rounded-full object-cover" />
-              ) : (
-                <Shield className="w-5 h-5" />
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-[11px] font-semibold text-[#85857a] uppercase tracking-wider flex items-center gap-1">
-                <span>Google Account</span>
-                <span className="text-emerald-400 text-[10px] lowercase font-normal">(primary login)</span>
-              </div>
-              <div className="text-xs font-medium text-white truncate mt-0.5">
-                {user?.name || user?.email || 'Google User'}
-              </div>
-              <div className="text-[11px] text-[#737373] truncate">
-                {user?.email || 'Connected via Google'}
-              </div>
-            </div>
-          </div>
-
-          {/* GitHub Repository Authorization Section */}
-          <div className="p-5 rounded-xl bg-[#141412] border border-[#262626]">
+          {/* GitHub Authorization Card */}
+          <div className="p-6 rounded-2xl bg-[#141412] border border-[#262626]">
             {loadingStatus && !ghUser ? (
               <div className="py-8 flex flex-col items-center justify-center gap-2 text-[#737373]">
                 <Loader2 className="w-6 h-6 animate-spin text-[#d97757]" />
                 <span className="text-xs">Checking authorization status...</span>
               </div>
             ) : ghUser ? (
-              <div className="flex flex-col items-center text-center space-y-3">
-                <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-medium">
+              <div className="flex flex-col items-center text-center space-y-4">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Authorized</span>
+                  <span>GitHub Connected</span>
                 </div>
 
-                {/* Avatar centered */}
+                {/* Avatar */}
                 {ghUser.avatar_url ? (
                   <img
                     src={ghUser.avatar_url}
                     alt={fixMojibake(ghUser.name || ghUser.login)}
-                    className="w-16 h-16 rounded-full border-2 border-[#d97757]/70 object-cover shadow-lg"
+                    className="w-16 h-16 rounded-full border-2 border-[#d97757] object-cover shadow-lg"
                   />
                 ) : (
-                  <div className="w-16 h-16 rounded-full bg-[#1c1c1a] border-2 border-[#d97757]/70 flex items-center justify-center text-[#d97757] text-lg font-bold">
+                  <div className="w-16 h-16 rounded-full bg-[#1c1c1a] border-2 border-[#d97757] flex items-center justify-center text-[#d97757] text-lg font-bold">
                     {fixMojibake(ghUser.name || ghUser.login).charAt(0).toUpperCase()}
                   </div>
                 )}
@@ -251,19 +210,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                 {/* Re-authorize & Disconnect Actions */}
                 <div className="flex items-center justify-center gap-2 pt-2 w-full">
-                  <button
+                  <a
                     id="btn-reconfigure-github"
-                    onClick={handleAuthorizeOAuth}
-                    disabled={authorizing}
-                    className="flex-1 py-2.5 px-3 rounded-xl text-xs font-semibold bg-[#22221f] hover:bg-[#2c2c28] text-white transition-all flex items-center justify-center gap-1.5 cursor-pointer border border-[#33332e] disabled:opacity-50"
+                    href={GitHubService.getLoginUrl()}
+                    className="flex-1 py-2.5 px-3 rounded-xl text-xs font-semibold bg-[#22221f] hover:bg-[#2c2c28] text-white transition-all flex items-center justify-center gap-1.5 cursor-pointer border border-[#33332e]"
                   >
-                    {authorizing ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin text-[#d97757]" />
-                    ) : (
-                      <RefreshCw className="w-3.5 h-3.5 text-[#d97757]" />
-                    )}
+                    <RefreshCw className="w-3.5 h-3.5 text-[#d97757]" />
                     <span>Re-authorize</span>
-                  </button>
+                  </a>
                   <button
                     id="btn-disconnect-github"
                     onClick={handleDisconnect}
@@ -282,9 +236,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
 
                 <div className="space-y-1">
-                  <h3 className="text-sm font-semibold text-white">GitHub Integration</h3>
+                  <h3 className="text-sm font-semibold text-white">GitHub Account</h3>
                   <p className="text-xs text-[#737373] max-w-[280px]">
-                    Authorize your GitHub account to access and sync repositories.
+                    Tap below to authorize directly with GitHub and access your repositories.
                   </p>
                 </div>
 
@@ -294,28 +248,31 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </p>
                 )}
 
-                {/* Big Authorize Button */}
-                <button
+                {/* Direct Link / Action Button */}
+                <a
                   id="btn-settings-authorize-github"
-                  onClick={handleAuthorizeOAuth}
-                  disabled={authorizing}
-                  className="w-full py-3 px-4 rounded-xl text-xs font-semibold bg-[#d97757] hover:bg-[#c66647] active:bg-[#b5583b] text-white transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer disabled:opacity-50"
+                  href={GitHubService.getLoginUrl()}
+                  className="w-full py-3 px-4 rounded-xl text-xs font-semibold bg-[#d97757] hover:bg-[#c66647] active:bg-[#b5583b] text-white transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer"
                 >
-                  {authorizing ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin text-white" />
-                      <span>Authorizing...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Github className="w-4 h-4 text-white stroke-[2.5]" />
-                      <span>Authorize with GitHub</span>
-                    </>
-                  )}
-                </button>
+                  <Github className="w-4 h-4 text-white stroke-[2.5]" />
+                  <span>Authorize with GitHub</span>
+                </a>
               </div>
             )}
           </div>
+
+          {/* User Signout Link */}
+          {user && (
+            <div className="pt-2 flex items-center justify-between text-xs text-[#737373] px-1">
+              <span className="truncate max-w-[240px]">Signed in as {user.email || user.name}</span>
+              <button
+                onClick={() => logout()}
+                className="text-[#85857a] hover:text-red-400 transition-colors cursor-pointer text-xs"
+              >
+                Log out
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

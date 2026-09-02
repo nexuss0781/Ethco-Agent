@@ -721,7 +721,26 @@ app.post("/api/github/client-config", (req, res) => {
   }
 });
 
-// 1. Get GitHub Repository Authorization URL
+// 1. Direct GitHub Login Redirect
+app.get("/api/github/login", (req, res) => {
+  const config = loadGitHubOAuthConfig();
+  const clientId = process.env.GITHUB_CLIENT_ID || config.clientId;
+
+  const host = req.headers["x-forwarded-host"] || req.headers.host || "localhost:3000";
+  const proto = req.headers["x-forwarded-proto"] || "https";
+  const defaultAppUrl = process.env.NODE_ENV === "production" ? "https://ethco-agent.vercel.app" : `${proto}://${host}`;
+  const origin = (req.query.origin as string) || process.env.APP_URL || defaultAppUrl;
+  const redirectUri = `${origin}/api/github/callback`;
+
+  if (!clientId) {
+    return res.status(400).send("GITHUB_CLIENT_ID is not configured in environment variables.");
+  }
+
+  const targetUrl = `https://github.com/login/oauth/authorize?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=repo,user`;
+  res.redirect(targetUrl);
+});
+
+// 2. Get GitHub Repository Authorization URL
 app.get("/api/github/auth-url", (req, res) => {
   const config = loadGitHubOAuthConfig();
   const clientId = process.env.GITHUB_CLIENT_ID || config.clientId;
@@ -729,7 +748,7 @@ app.get("/api/github/auth-url", (req, res) => {
   const host = req.headers["x-forwarded-host"] || req.headers.host || "localhost:3000";
   const proto = req.headers["x-forwarded-proto"] || "https";
   const defaultAppUrl = process.env.NODE_ENV === "production" ? "https://ethco-agent.vercel.app" : `${proto}://${host}`;
-  const origin = process.env.APP_URL || defaultAppUrl;
+  const origin = (req.query.origin as string) || process.env.APP_URL || defaultAppUrl;
   const redirectUri = `${origin}/api/github/callback`;
 
   if (!clientId) {

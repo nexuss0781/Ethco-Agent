@@ -357,15 +357,14 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
                 Disconnect
               </button>
             ) : (
-              <button
+              <a
                 id="btn-github-authorize"
-                onClick={handleAuthorizeGitHub}
-                disabled={statusLoading}
+                href={GitHubService.getLoginUrl()}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#d97757] hover:bg-[#e08668] text-white transition-all shadow-xs cursor-pointer"
               >
                 <Github className="w-3.5 h-3.5" />
                 <span>Authorize GitHub</span>
-              </button>
+              </a>
             )}
           </div>
         </div>

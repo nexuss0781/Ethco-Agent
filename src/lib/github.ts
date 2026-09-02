@@ -80,110 +80,19 @@ export const GitHubService = {
     return headers;
   },
 
-  // 1. Authorize via direct GitHub OAuth
+  // 1. Authorize via direct GitHub OAuth (full-page redirect or direct link)
+  getLoginUrl(): string {
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    return `/api/github/login?origin=${encodeURIComponent(origin)}`;
+  },
+
   async authorizeOAuth(): Promise<GitHubUser | null> {
-    const res = await fetch('/api/github/auth-url');
-    const data = await res.json();
-    if (!res.ok || !data.url) {
-      throw new Error(data.error || 'GitHub Client ID not configured in server environment.');
-    }
-    const targetUrl = data.url;
-
-    return new Promise((resolve, reject) => {
-      try {
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        
-        let authWindow: Window | null = null;
-        if (!isMobile) {
-          const width = 600;
-          const height = 720;
-          const left = window.screen.width / 2 - width / 2;
-          const top = window.screen.height / 2 - height / 2;
-          authWindow = window.open(
-            targetUrl,
-            'github_auth_popup',
-            `width=${width},height=${height},top=${top},left=${left},scrollbars=yes`
-          );
-        }
-
-        if (!authWindow) {
-          // Full page redirect if popup blocked or on mobile
-          window.location.href = targetUrl;
-          return;
-        }
-
-        let cleanupTimer: any = null;
-        let safetyTimeout: any = null;
-        let bc: BroadcastChannel | null = null;
-
-        const handleSuccess = (user: any, token?: string) => {
-          cleanup();
-          const cleanUser: GitHubUser = {
-            ...user,
-            name: fixMojibake(user.name || user.login),
-            login: fixMojibake(user.login || user.name),
-          };
-          try {
-            localStorage.setItem('ethco_github_user', JSON.stringify(cleanUser));
-            if (token) localStorage.setItem('ethco_github_token', token);
-          } catch {}
-          resolve(cleanUser);
-        };
-
-        const handleMessage = (event: MessageEvent) => {
-          if ((event.data?.type === 'OAUTH_AUTH_SUCCESS' || event.data?.type === 'NEXUSS_AUTH_SUCCESS') && event.data?.user) {
-            handleSuccess(event.data.user, event.data.token);
-          }
-        };
-
-        const handleStorage = (event: StorageEvent) => {
-          if (event.key === 'ethco_github_user' && event.newValue) {
-            try {
-              const u = JSON.parse(event.newValue);
-              handleSuccess(u);
-            } catch {}
-          }
-        };
-
-        try {
-          bc = new BroadcastChannel('github_oauth_channel');
-          bc.onmessage = (event) => {
-            if (event.data?.type === 'OAUTH_AUTH_SUCCESS' && event.data?.user) {
-              handleSuccess(event.data.user, event.data.token);
-            }
-          };
-        } catch {}
-
-        const cleanup = () => {
-          window.removeEventListener('message', handleMessage);
-          window.removeEventListener('storage', handleStorage);
-          if (bc) {
-            try { bc.close(); } catch {}
-          }
-          if (cleanupTimer) clearInterval(cleanupTimer);
-          if (safetyTimeout) clearTimeout(safetyTimeout);
-        };
-
-        window.addEventListener('message', handleMessage);
-        window.addEventListener('storage', handleStorage);
-
-        cleanupTimer = setInterval(async () => {
-          if (authWindow && authWindow.closed) {
-            cleanup();
-            const status = await GitHubService.getStatus();
-            resolve(status.user || null);
-          }
-        }, 800);
-
-        safetyTimeout = setTimeout(async () => {
-          cleanup();
-          const status = await GitHubService.getStatus();
-          resolve(status.user || null);
-        }, 45000);
-      } catch (err) {
-        reject(err);
-      }
-    });
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const loginUrl = `/api/github/login?origin=${encodeURIComponent(origin)}`;
+    
+    // Direct page redirection
+    window.location.href = loginUrl;
+    return null;
   },
 
   // 3. Get Status (reads active token & user info from server or validated client storage)
