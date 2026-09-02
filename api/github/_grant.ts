@@ -19,6 +19,8 @@ export function userId(req: VercelRequest): string {
 }
 
 export function loadGrant(req: VercelRequest): { grantToken: string; user?: any } | null {
+  const cookie = (req.headers.cookie || "").match(/(?:^|;\s*)github_grant_token=([^;]+)/);
+  if (cookie?.[1]) return { grantToken: decodeURIComponent(cookie[1]) };
   try {
     if (!fs.existsSync(GITHUB_GRANTS_FILE)) return null;
     const data = JSON.parse(fs.readFileSync(GITHUB_GRANTS_FILE, "utf8"));
@@ -34,8 +36,13 @@ export function saveGrant(req: VercelRequest, grantToken: string, user: any): vo
   data[userId(req)] = record;
   data.default_user = record;
   data.latest = record;
-  fs.mkdirSync(path.dirname(GITHUB_GRANTS_FILE), { recursive: true });
-  fs.writeFileSync(GITHUB_GRANTS_FILE, JSON.stringify(data, null, 2), "utf8");
+  try {
+    fs.mkdirSync(path.dirname(GITHUB_GRANTS_FILE), { recursive: true });
+    fs.writeFileSync(GITHUB_GRANTS_FILE, JSON.stringify(data, null, 2), "utf8");
+  } catch {
+    // Serverless deployments may have a read-only project directory. The callback
+    // also sets the grant as an HttpOnly cookie, so repository access still works.
+  }
 }
 
 export async function centralGithubRequest<T>(req: VercelRequest, endpoint: string): Promise<T> {

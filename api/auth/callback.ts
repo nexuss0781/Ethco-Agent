@@ -174,6 +174,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const githubGrantToken = rawData.githubGrantToken || rawData.data?.githubGrantToken;
     if (typeof githubGrantToken === "string" && githubGrantToken.trim()) {
+      res.appendHeader?.("Set-Cookie", `github_grant_token=${encodeURIComponent(githubGrantToken)}; Path=/; Max-Age=${7 * 24 * 60 * 60}; HttpOnly; Secure; SameSite=Lax`);
       saveGrant(req, githubGrantToken, {
         id: sanitizedUser.id,
         login: resolvedUser.login || resolvedUser.githubLogin || resolvedUser.name || sanitizedUser.name,
