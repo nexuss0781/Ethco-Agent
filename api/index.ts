@@ -2920,13 +2920,21 @@ Return ONLY a valid JSON object:
 }`;
 
     // 1. Try external AI via OmniRoute if key is configured
-    const omniKey = (
+    let omniKey = (
       req.body?.omnirouteApiKey ||
       (req.headers["x-omniroute-key"] as string) ||
       process.env.OMNIROUTE_AI_API_KEY ||
       process.env.OMNIROUTE_API_KEY ||
       ""
     ).trim();
+
+    // Strip accidental quotes from environment variables
+    if (omniKey.startsWith("\"") && omniKey.endsWith("\"")) {
+      omniKey = omniKey.slice(1, -1);
+    } else if (omniKey.startsWith("\'") && omniKey.endsWith("\'")) {
+      omniKey = omniKey.slice(1, -1);
+    }
+    omniKey = omniKey.trim();
 
     if (omniKey) {
       try {
@@ -3199,7 +3207,15 @@ async function executeOmniRouteTurn(
     mappedModel = modelName;
   }
 
-  const apiKey = (customApiKey || process.env.OMNIROUTE_AI_API_KEY || process.env.OMNIROUTE_API_KEY || "").trim();
+  let apiKey = (customApiKey || process.env.OMNIROUTE_AI_API_KEY || process.env.OMNIROUTE_API_KEY || "").trim();
+  // Strip accidental quotes from environment variables
+  if (apiKey.startsWith("\"") && apiKey.endsWith("\"")) {
+    apiKey = apiKey.slice(1, -1);
+  } else if (apiKey.startsWith("\'") && apiKey.endsWith("\'")) {
+    apiKey = apiKey.slice(1, -1);
+  }
+  apiKey = apiKey.trim();
+
   if (!apiKey) {
     throw new Error(
       "OmniRoute API Key missing: Please set the OMNIROUTE_AI_API_KEY secret/environment variable to authenticate with OmniRoute."
