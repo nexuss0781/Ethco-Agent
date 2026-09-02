@@ -17,6 +17,17 @@ const PORT = 3000;
 app.use(express.json({ limit: "50mb" }));
 app.use(cookieParser());
 
+// Global CORS & preflight handler
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-omniroute-key");
+  if (req.method === "OPTIONS") {
+    return res.status(204).end();
+  }
+  next();
+});
+
 // Initialize Gemini SDK with telemetry header
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY || "",
@@ -1732,10 +1743,11 @@ async function executeAgentTurnWithTools(
 async function executeOmniRouteTurn(
   modelName: string, // e.g. "omniroute/auto"
   messages: any[], // Raw original messages from req.body
-  systemInstruction: string,
-  onChunk: (text: string) => void
+  systemInstruction?: string,
+  onChunk?: (text: string) => void,
+  customApiKey?: string
 ) {
-  const openAiMessages = [];
+  const openAiMessages: any[] = [];
   
   // Add system prompt
   if (systemInstruction) {
@@ -1786,12 +1798,31 @@ async function executeOmniRouteTurn(
   let mappedModel = "auto";
   if (modelName === "omniroute/auto" || modelName === "omniroute-auto") {
     mappedModel = "auto";
+  } else if (modelName.startsWith("omniroute/")) {
+    mappedModel = modelName.replace(/^omniroute\//, "");
+  } else if (modelName) {
+    mappedModel = modelName;
   }
 
-  const response = await fetch("https://omnirouter-vercel.vercel.app/api/v1/chat/completions", {
+  const apiKey = (customApiKey || process.env.OMNIROUTE_AI_API_KEY || process.env.OMNIROUTE_API_KEY || "").trim();
+  if (!apiKey) {
+    throw new Error(
+      "OmniRoute API Key missing: Please set the OMNIROUTE_AI_API_KEY secret/environment variable to authenticate with OmniRoute."
+    );
+  }
+
+  const rawBase = (process.env.OMNIROUTE_API_BASE || "https://omniouter-vercel.vercel.app").trim().replace(/\/+$/, "");
+  const targetUrl = rawBase.endsWith("/api/v1")
+    ? `${rawBase}/chat/completions`
+    : rawBase.endsWith("/chat/completions")
+    ? rawBase
+    : `${rawBase}/api/v1/chat/completions`;
+
+  const response = await fetch(targetUrl, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
       model: mappedModel,
@@ -1804,7 +1835,14 @@ async function executeOmniRouteTurn(
 
   if (!response.ok) {
     const errText = await response.text();
-    throw new Error(`OmniRoute API Error: ${response.status} ${errText}`);
+    let detail = errText;
+    try {
+      const parsed = JSON.parse(errText);
+      if (parsed.error?.message) {
+        detail = parsed.error.message;
+      }
+    } catch {}
+    throw new Error(`OmniRoute API Error (${response.status}): ${detail}`);
   }
 
   const reader = response.body?.getReader();
@@ -1838,7 +1876,16 @@ async function executeOmniRouteTurn(
 }
 
 // 6. Chat Streaming SSE Endpoint
+app.get("/api/chat/stream", (req, res) => {
+  res.status(200).json({
+    status: "ok",
+    message: "Chat stream endpoint is operational. Send a POST request with messages to stream completions.",
+  });
+});
+
 app.post("/api/chat/stream", async (req, res) => {
+  console.log("Received POST /api/chat/stream");
+  res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
@@ -1912,9 +1959,13 @@ Please take the correct action based purely on the context of the user's message
     }
 
     // Model fallback sequence
-    const preferredModel = typeof model === "string" && model ? model : "gemini-3.1-flash-lite";
+    const preferredModel = typeof model === "string" && model ? model : "auto";
 
-    if (preferredModel.startsWith("omniroute")) {
+    if (
+      preferredModel.startsWith("omniroute") ||
+      preferredModel === "auto" ||
+      preferredModel.startsWith("auto/")
+    ) {
       // Execute via OmniRoute custom router without workspace tools (standard chat fallback)
       await executeOmniRouteTurn(
         preferredModel,
@@ -1922,7 +1973,8 @@ Please take the correct action based purely on the context of the user's message
         activeSystemInstruction,
         (textChunk: string) => {
           res.write(`data: ${JSON.stringify({ text: textChunk })}\n\n`);
-        }
+        },
+        req.body?.omnirouteApiKey || (req.headers["x-omniroute-key"] as string)
       );
     } else {
       // Execute via native Gemini with workspace tools

@@ -2,6 +2,22 @@
   "framework": "vite",
   "rewrites": [
     {
+      "source": "/api/chat/stream",
+      "destination": "/api/chat/stream"
+    },
+    {
+      "source": "/api/chat/title",
+      "destination": "/api/chat/title"
+    },
+    {
+      "source": "/api/conversations",
+      "destination": "/api/conversations"
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": "/api"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

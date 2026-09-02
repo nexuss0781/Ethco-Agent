@@ -121,7 +121,7 @@ export default function App() {
 
   // Start new chat
   const handleNewChat = () => {
-    const newConvo = StorageService.createNewConversation('New Chat', AVAILABLE_MODELS[0].id);
+    const newConvo = StorageService.createNewConversation('New Chat', "auto");
     setConversations(StorageService.getLocalConversations());
     setActiveConversationId(newConvo.id);
   };
@@ -172,7 +172,7 @@ export default function App() {
 
     // If no active conversation or active has no messages, ensure target convo exists
     if (!targetConvo) {
-      targetConvo = StorageService.createNewConversation('New Chat', AVAILABLE_MODELS[0].id);
+      targetConvo = StorageService.createNewConversation('New Chat', "auto");
       isBrandNew = true;
       setActiveConversationId(targetConvo.id);
     }
@@ -195,7 +195,7 @@ export default function App() {
       thinkingContent: thinkingEnabled
         ? `Reasoning step (${currentMode.toUpperCase()} mode): Analyzing inquiry in depth, evaluating core nuances, and formulating structured response...`
         : undefined,
-      model: AVAILABLE_MODELS[0].id,
+      model: "auto",
     };
 
     const updatedMessages = [...(targetConvo.messages || []), userMessage, assistantMessage];
@@ -233,7 +233,7 @@ export default function App() {
         body: JSON.stringify({
           messages: messagesForBackend,
           thinkingEnabled,
-          model: AVAILABLE_MODELS[0].geminiModel,
+          model: 'omniroute/auto',
           actionMode: currentMode,
           selectedRepos: selectedRepos.map((r) => ({
             name: r.name,
