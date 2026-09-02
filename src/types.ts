@@ -39,6 +39,7 @@ export interface Conversation {
   isPinned?: boolean;
   tags?: string[];
   model?: string;
+  icon?: string; // Dynamic Lucide icon name based on conversation context
 }
 
 export interface ModelOption {

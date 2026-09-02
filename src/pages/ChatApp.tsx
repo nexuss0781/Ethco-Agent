@@ -147,9 +147,12 @@ export default function App() {
     setConversations([...updated]);
   };
 
-  // Rename conversation
-  const handleRenameConversation = (id: string, newTitle: string) => {
-    const updated = StorageService.updateConversation(id, { title: newTitle });
+  // Rename conversation and optionally update icon
+  const handleRenameConversation = (id: string, newTitle: string, newIcon?: string) => {
+    const updated = StorageService.updateConversation(id, {
+      title: newTitle,
+      ...(newIcon ? { icon: newIcon } : {}),
+    });
     setConversations([...updated]);
   };
 
@@ -209,6 +212,40 @@ export default function App() {
     const updatedList = StorageService.updateConversation(targetConvo.id, updatedConvo);
     setConversations([...updatedList]);
     setIsLoading(true);
+
+    // At the second prompt: give the entire history (first prompt, model response, and second prompt)
+    // + chat titling prompt to external AI and tell it to name conversation title + Lucide icon based on context
+    const prevUserMsgs = (targetConvo.messages || []).filter((m) => m.role === 'user');
+    const prevAsstMsgs = (targetConvo.messages || []).filter((m) => m.role === 'assistant');
+
+    if (prevUserMsgs.length === 1) {
+      const firstPrompt = prevUserMsgs[0].content;
+      const modelResponse = prevAsstMsgs[0]?.content || '';
+      const secondPrompt = text;
+      const targetId = targetConvo.id;
+
+      fetch('/api/chat/title', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstPrompt,
+          modelResponse,
+          secondPrompt,
+          history: [
+            { role: 'user', content: firstPrompt },
+            { role: 'assistant', content: modelResponse },
+            { role: 'user', content: secondPrompt },
+          ],
+        }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.title) {
+            handleRenameConversation(targetId, data.title, data.icon);
+          }
+        })
+        .catch((e) => console.warn('Second prompt contextual titling error:', e));
+    }
 
     // Abort previous if any
     if (abortControllerRef.current) {
@@ -358,8 +395,9 @@ export default function App() {
           : m
       );
 
+      const currentStored = StorageService.getLocalConversations().find((c) => c.id === targetConvo.id) || targetConvo;
       const finalizedConvo: Conversation = {
-        ...targetConvo,
+        ...currentStored,
         messages: finalizedMessages,
         updatedAt: Date.now(),
       };
@@ -367,8 +405,37 @@ export default function App() {
       StorageService.updateConversation(targetConvo.id, finalizedConvo);
       setConversations(StorageService.getLocalConversations());
 
-      // If this was the first turn or title is default, generate an intelligent title
+      const userTurns = finalizedMessages.filter((m) => m.role === 'user');
+      const asstTurns = finalizedMessages.filter((m) => m.role === 'assistant');
+
+      // If this is the second prompt and the title or icon has not been set yet, ensure titling runs
       if (
+        userTurns.length === 2 &&
+        (!finalizedConvo.icon || finalizedConvo.title === 'New Chat' || finalizedConvo.title === 'New Conversation')
+      ) {
+        fetch('/api/chat/title', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            firstPrompt: userTurns[0].content,
+            modelResponse: asstTurns[0]?.content || '',
+            secondPrompt: userTurns[1].content,
+            history: [
+              { role: 'user', content: userTurns[0].content },
+              { role: 'assistant', content: asstTurns[0]?.content || '' },
+              { role: 'user', content: userTurns[1].content },
+            ],
+          }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.title) {
+              handleRenameConversation(targetConvo.id, data.title, data.icon);
+            }
+          })
+          .catch((e) => console.warn('Second turn title completion error:', e));
+      } else if (
+        userTurns.length === 1 &&
         (isBrandNew || targetConvo.title === 'New Chat' || targetConvo.title === 'New Conversation') &&
         text.trim()
       ) {
@@ -376,17 +443,17 @@ export default function App() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            userMessage: text,
-            assistantMessage: accumulatedText.substring(0, 100),
+            firstPrompt: text,
+            modelResponse: accumulatedText.substring(0, 150),
           }),
         })
           .then((res) => res.json())
           .then((data) => {
             if (data.title) {
-              handleRenameConversation(targetConvo.id, data.title);
+              handleRenameConversation(targetConvo.id, data.title, data.icon);
             }
           })
-          .catch((e) => console.warn('Title generation error:', e));
+          .catch((e) => console.warn('First turn title generation error:', e));
       }
     } catch (error: any) {
       if (error.name === 'AbortError') {
@@ -509,6 +576,7 @@ export default function App() {
           onSelectRepoForChat={handleSelectRepoForChat}
           selectedReposList={selectedRepos}
           onToggleSelectRepo={handleToggleSelectRepo}
+          activeConversation={activeConversation}
         />
 
         {/* Center Area: Empty State OR Message Stream */}

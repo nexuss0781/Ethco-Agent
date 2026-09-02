@@ -17,9 +17,10 @@ import {
   MessageSquare,
   X,
 } from 'lucide-react';
-import { ModelOption } from '../types';
+import { ModelOption, Conversation } from '../types';
 import { AVAILABLE_MODELS } from '../constants/models';
 import { GitHubService, GitHubRepo, ImportedRepo, SelectedRepoContext } from '../lib/github';
+import { getDynamicLucideIcon } from '../lib/icons';
 
 interface ChatHeaderProps {
   onToggleSidebar: () => void;
@@ -32,6 +33,7 @@ interface ChatHeaderProps {
   selectedReposList?: SelectedRepoContext[];
   onToggleSelectRepo?: (repo: SelectedRepoContext) => void;
   hasUnread?: boolean;
+  activeConversation?: Conversation;
 }
 
 export const ChatHeader: React.FC<ChatHeaderProps> = ({
@@ -45,6 +47,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   selectedReposList = [],
   onToggleSelectRepo,
   hasUnread = true,
+  activeConversation,
 }) => {
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
   const [repoDropdownOpen, setRepoDropdownOpen] = useState(false);
@@ -200,8 +203,18 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
         </button>
       </div>
 
-      {/* Center: Empty / Flexible spacing */}
-      <div className="hidden md:flex items-center"></div>
+      {/* Center: Active Conversation Title & Contextual Lucide Icon */}
+      <div className="hidden md:flex items-center">
+        {activeConversation && activeConversation.title && activeConversation.title !== 'New Chat' && activeConversation.title !== 'New Conversation' && (
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-[#20201d] border border-[#2b2b27] text-xs text-[#ecece7] max-w-xs shadow-xs animate-in fade-in duration-200">
+            {(() => {
+              const ActiveIcon = getDynamicLucideIcon(activeConversation.icon);
+              return <ActiveIcon className="w-3.5 h-3.5 text-[#d97757] shrink-0" />;
+            })()}
+            <span className="truncate font-medium text-[12px]">{activeConversation.title}</span>
+          </div>
+        )}
+      </div>
 
       {/* Right: Model Selector & Settings */}
       <div className="flex items-center gap-1.5 sm:gap-2">

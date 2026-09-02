@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { Conversation } from '../types';
 import { StorageService } from '../lib/storage';
+import { getDynamicLucideIcon } from '../lib/icons';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -152,7 +153,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         }`}
       >
         <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-1">
-          <MessageSquare className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-[#d97757]' : 'text-[#85857a]'}`} />
+          {(() => {
+            const ConvoIcon = getDynamicLucideIcon(c.icon);
+            return <ConvoIcon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-[#d97757]' : 'text-[#85857a]'}`} />;
+          })()}
           {isEditing ? (
             <input
               type="text"

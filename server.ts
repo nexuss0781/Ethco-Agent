@@ -1568,46 +1568,223 @@ app.post("/api/conversations", (req, res) => {
   }
 });
 
-// 5. Auto-generate Conversation Title
+function sanitizeLucideIcon(name: string): string {
+  if (!name) return "MessageSquare";
+  const cleaned = name.replace(/[^a-zA-Z0-9]/g, " ").trim();
+  const pascal = cleaned
+    .split(/\s+/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join("");
+  return pascal || "MessageSquare";
+}
+
+function parseTitleAndIcon(rawText: string): { title?: string; icon?: string } {
+  if (!rawText) return {};
+  const jsonMatch = rawText.match(/\{[\s\S]*?\}/);
+  if (jsonMatch) {
+    try {
+      const parsed = JSON.parse(jsonMatch[0]);
+      const title = parsed.title ? String(parsed.title).trim().replace(/^["']|["']$/g, "") : undefined;
+      const icon = parsed.icon ? sanitizeLucideIcon(String(parsed.icon)) : undefined;
+      if (title) return { title, icon };
+    } catch {}
+  }
+  let title: string | undefined;
+  let icon: string | undefined;
+  const titleMatch = rawText.match(/title\s*:\s*["']?([^"\n]+)["']?/i);
+  if (titleMatch) title = titleMatch[1].trim().replace(/^["']|["']$/g, "");
+  const iconMatch = rawText.match(/icon\s*:\s*["']?([A-Za-z0-9_-]+)["']?/i);
+  if (iconMatch) icon = sanitizeLucideIcon(iconMatch[1].trim());
+  if (!title && rawText.trim().length > 0 && rawText.trim().length < 60) {
+    title = rawText.trim().replace(/^["']|["']$/g, "");
+  }
+  return { title, icon };
+}
+
+function inferFallbackIconAndTitle(p1: string, p2: string): { title: string; icon: string } {
+  const combined = `${p1} ${p2}`.toLowerCase();
+  let icon = "MessageSquare";
+  if (/python|javascript|typescript|react|html|css|code|function|class|algorithm|syntax|variable|loop/.test(combined)) {
+    icon = "Code";
+  } else if (/terminal|bash|shell|command|linux|cli|powershell|script|exec/.test(combined)) {
+    icon = "Terminal";
+  } else if (/git|github|branch|commit|pull request|merge|repo|repository/.test(combined)) {
+    icon = "GitBranch";
+  } else if (/sql|postgres|database|mongo|sqlite|query|schema|table|prisma|drizzle/.test(combined)) {
+    icon = "Database";
+  } else if (/bug|error|exception|debug|fix|crash|failure|issue/.test(combined)) {
+    icon = "Bug";
+  } else if (/design|color|theme|css|style|tailwind|ui|ux|layout|font/.test(combined)) {
+    icon = "Palette";
+  } else if (/ai|llm|prompt|gemini|gpt|claude|agent|intelligence|neural/.test(combined)) {
+    icon = "Brain";
+  } else if (/server|api|http|rest|docker|deploy|cloud|endpoint/.test(combined)) {
+    icon = "Server";
+  } else if (/search|find|google|lookup|explore/.test(combined)) {
+    icon = "Search";
+  } else if (/book|learn|read|doc|documentation|study|guide/.test(combined)) {
+    icon = "BookOpen";
+  } else if (/speed|performance|optimize|fast|latency/.test(combined)) {
+    icon = "Zap";
+  } else if (/auth|security|password|token|jwt|encrypt|shield/.test(combined)) {
+    icon = "Shield";
+  }
+
+  const primaryText = p2 || p1;
+  const title = primaryText
+    ? primaryText.substring(0, 30).trim() + (primaryText.length > 30 ? "..." : "")
+    : "Conversation";
+
+  return { title, icon };
+}
+
+// 5. Auto-generate Conversation Title & Dynamic Lucide Icon
 app.post("/api/chat/title", async (req, res) => {
-  const userMessage = req.body?.userMessage || "";
-  const assistantMessage = req.body?.assistantMessage || "";
+  let p1 = String(req.body?.firstPrompt || "").trim();
+  let r1 = String(req.body?.modelResponse || req.body?.assistantMessage || "").trim();
+  let p2 = String(req.body?.secondPrompt || "").trim();
+
+  // If messages/history array provided, extract the first prompt, model response, and second prompt
+  if ((!p1 || !p2) && Array.isArray(req.body?.history)) {
+    const userTurns = req.body.history.filter((m: any) => m.role === "user");
+    const asstTurns = req.body.history.filter((m: any) => m.role === "assistant");
+    if (!p1 && userTurns[0]) p1 = typeof userTurns[0].content === "string" ? userTurns[0].content.trim() : "";
+    if (!r1 && asstTurns[0]) r1 = typeof asstTurns[0].content === "string" ? asstTurns[0].content.trim() : "";
+    if (!p2 && userTurns[1]) p2 = typeof userTurns[1].content === "string" ? userTurns[1].content.trim() : "";
+  }
+
+  if (!p1 && req.body?.userMessage) {
+    p1 = String(req.body.userMessage).trim();
+  }
+
   try {
-    if (!userMessage) {
-      return res.json({ title: "New Conversation" });
+    if (!p1 && !p2) {
+      return res.json({ title: "New Conversation", icon: "MessageSquare" });
     }
 
-    const modelsToTry = ["gemini-3.1-flash-lite", "gemini-flash-latest", "gemini-3.7-flash"];
-    let generated = "";
+    // Compose titling prompt to external AI
+    const titlingPrompt = p2
+      ? `You are an AI assistant specialized in naming conversations and selecting matching iconography.
+Analyze the entire multi-turn conversation history below:
 
+First prompt (User):
+"""${p1.substring(0, 1000)}"""
+
+Model response (Assistant):
+"""${r1.substring(0, 1000)}"""
+
+Second prompt (User):
+"""${p2.substring(0, 1000)}"""
+
+Task:
+1. Name conversation title: Formulate a concise, intelligent, and natural title (2 to 5 words, without quotation marks) summarizing what this conversation is about based on both prompts and the response.
+2. Select Lucide icon: Choose the single best Lucide icon name (PascalCase) that accurately represents the context, domain, or theme of this conversation. Examples of valid Lucide icon names:
+Code, Terminal, Cpu, Bug, GitBranch, GitPullRequest, GitCommit, FileText, FileCode, Database, Sparkles, Brain, Compass, BookOpen, Search, Folder, Settings, Shield, Workflow, Zap, PenTool, Palette, Layers, Globe, Server, MessageSquare, Bot, Key, Lock, Wrench, Package, Rocket, Activity, HelpCircle, Flame, Lightbulb, Music, Video, Image, ListTodo, CheckSquare, BarChart, TrendingUp, Cloud, Wifi, Monitor, Smartphone, Hammer, Box, Coffee, ShoppingCart, DollarSign, HeartPulse, Stethoscope, Briefcase, GraduationCap, MapPin, Calculator, Mail, Atom, Gauge, Sun, Moon, ShieldCheck, TerminalSquare
+
+Return ONLY a valid JSON object in this exact schema, with no additional markdown or commentary:
+{
+  "title": "Concise Conversation Title",
+  "icon": "LucideIconName"
+}`
+      : `You are an AI assistant specialized in naming conversations and selecting matching iconography.
+User's initial query:
+"""${p1.substring(0, 1000)}"""
+${r1 ? `Assistant intro:\n"""${r1.substring(0, 500)}"""` : ""}
+
+Task:
+1. Name conversation title: Formulate a concise, intelligent title (2 to 5 words, no quotation marks).
+2. Select Lucide icon: Choose the single best Lucide icon name in PascalCase (e.g., Code, Terminal, Brain, Cpu, Database, Sparkles, Bug, FileCode, GitBranch, Globe, Server, Bot, Search, Shield, Zap, BookOpen, Palette, Compass, Workflow, Key, Package, Rocket, etc.).
+
+Return ONLY a valid JSON object:
+{
+  "title": "Concise Conversation Title",
+  "icon": "LucideIconName"
+}`;
+
+    // 1. Try external AI via OmniRoute if key is configured
+    const omniKey = (
+      req.body?.omnirouteApiKey ||
+      (req.headers["x-omniroute-key"] as string) ||
+      process.env.OMNIROUTE_AI_API_KEY ||
+      process.env.OMNIROUTE_API_KEY ||
+      ""
+    ).trim();
+
+    if (omniKey) {
+      try {
+        const rawBase = (process.env.OMNIROUTE_API_BASE || "https://omniouter-vercel.vercel.app").trim().replace(/\/+$/, "");
+        const targetUrl = rawBase.endsWith("/api/v1")
+          ? `${rawBase}/chat/completions`
+          : rawBase.endsWith("/chat/completions")
+          ? rawBase
+          : `${rawBase}/api/v1/chat/completions`;
+
+        const omniRes = await fetch(targetUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${omniKey}`,
+          },
+          body: JSON.stringify({
+            model: "auto",
+            messages: [
+              { role: "system", content: "You generate conversation titles and Lucide icon names formatted as JSON." },
+              { role: "user", content: titlingPrompt },
+            ],
+            stream: false,
+          }),
+        });
+
+        if (omniRes.ok) {
+          const data: any = await omniRes.json();
+          const content = data.choices?.[0]?.message?.content || "";
+          const parsed = parseTitleAndIcon(content);
+          if (parsed.title) {
+            return res.json({
+              title: parsed.title,
+              icon: parsed.icon || "MessageSquare",
+            });
+          }
+        }
+      } catch (omniErr) {
+        console.warn("OmniRoute titling attempt error:", omniErr);
+      }
+    }
+
+    // 2. Try Gemini API models
+    const modelsToTry = ["gemini-3.1-flash-lite", "gemini-flash-latest", "gemini-3.7-flash"];
     for (const modelName of modelsToTry) {
       try {
         const response = await ai.models.generateContent({
           model: modelName,
-          contents: `Generate a concise, elegant 2 to 5 word title (no quotation marks, no markdown, no punctuation at end) summarizing this initial user query:
-User: "${userMessage.substring(0, 300)}"
-${assistantMessage ? `Assistant intro: "${assistantMessage.substring(0, 150)}"` : ""}
-
-Title:`,
+          contents: titlingPrompt,
           config: {
-            systemInstruction: "You generate ultra-concise, elegant titles for conversations.",
-            temperature: 0.3,
+            systemInstruction: "You are an AI that creates ultra-concise conversation titles and appropriate Lucide icon names formatted as JSON.",
+            temperature: 0.2,
           },
         });
 
         if (response.text) {
-          generated = response.text.trim().replace(/^["']|["']$/g, "");
-          if (generated) break;
+          const parsed = parseTitleAndIcon(response.text);
+          if (parsed.title) {
+            return res.json({
+              title: parsed.title,
+              icon: parsed.icon || "MessageSquare",
+            });
+          }
         }
       } catch (e) {
-        console.warn(`Title gen failed with ${modelName}:`, e);
+        console.warn(`Gemini titling failed with ${modelName}:`, e);
       }
     }
 
-    res.json({ title: generated || userMessage.substring(0, 30) + (userMessage.length > 30 ? "..." : "") });
+    // 3. Fallback inference based on context keywords
+    const fallback = inferFallbackIconAndTitle(p1, p2);
+    res.json(fallback);
   } catch (err: any) {
     console.error("Error generating title:", err);
-    res.json({ title: userMessage ? userMessage.substring(0, 30) + (userMessage.length > 30 ? "..." : "") : "New Conversation" });
+    const fallback = inferFallbackIconAndTitle(p1, p2);
+    res.json(fallback);
   }
 });
 
