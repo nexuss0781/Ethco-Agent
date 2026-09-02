@@ -30,6 +30,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [tokenInput, setTokenInput] = useState('');
   const [connectingToken, setConnectingToken] = useState(false);
 
+  const [clientIdInput, setClientIdInput] = useState('');
+  const [clientSecretInput, setClientSecretInput] = useState('');
+  const [showClientConfig, setShowClientConfig] = useState(false);
+  const [savingClientConfig, setSavingClientConfig] = useState(false);
+  const [clientSecretConfigured, setClientSecretConfigured] = useState(false);
+
   const handleConnectToken = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!tokenInput.trim()) return;
@@ -90,11 +96,32 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           localStorage.removeItem('ethco_github_user');
         } catch {}
       }
+      try {
+        const cfg = await GitHubService.getClientConfig();
+        if (cfg.clientId) setClientIdInput(cfg.clientId);
+        setClientSecretConfigured(cfg.clientSecretConfigured);
+      } catch {}
     } catch (err: any) {
       console.error('Failed to load GitHub status:', err);
       setGhUser(null);
     } finally {
       setLoadingStatus(false);
+    }
+  };
+
+  const handleSaveClientConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingClientConfig(true);
+    setErrorMessage(null);
+    try {
+      await GitHubService.saveClientConfig(clientIdInput, clientSecretInput);
+      setClientSecretConfigured(true);
+      setClientSecretInput('');
+      setShowClientConfig(false);
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Failed to save GitHub client config');
+    } finally {
+      setSavingClientConfig(false);
     }
   };
 
@@ -295,6 +322,60 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </>
                   )}
                 </button>
+
+                {/* Native GitHub App Client ID & Secret configuration */}
+                <div className="pt-2 border-t border-[#262626]">
+                  {!showClientConfig ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowClientConfig(true)}
+                      className="text-[11px] text-[#85857a] hover:text-[#d97757] transition-colors underline cursor-pointer w-full text-center"
+                    >
+                      {clientIdInput ? '⚙️ Update Native GitHub OAuth App Credentials' : '⚙️ Configure Native GitHub App (Client ID & Secret)'}
+                    </button>
+                  ) : (
+                    <form onSubmit={handleSaveClientConfig} className="space-y-2.5 pt-1 bg-[#141412] p-3 rounded-xl border border-[#262626] text-left">
+                      <div className="text-[11px] font-semibold text-white">Native GitHub App Authorization</div>
+                      <div className="text-[10px] text-[#737373]">Provide your GitHub OAuth App Client ID and Client Secret for direct authorization:</div>
+                      <div>
+                        <label className="block text-[10px] text-[#a3a3a3] mb-1">GitHub Client ID</label>
+                        <input
+                          type="text"
+                          value={clientIdInput}
+                          onChange={(e) => setClientIdInput(e.target.value)}
+                          placeholder="Ov23li..."
+                          className="w-full px-3 py-1.5 bg-[#1a1a18] border border-[#33332e] rounded-lg text-xs text-white placeholder-[#737373] focus:outline-none focus:border-[#d97757]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-[#a3a3a3] mb-1">GitHub Client Secret {clientSecretConfigured && '(configured)'}</label>
+                        <input
+                          type="password"
+                          value={clientSecretInput}
+                          onChange={(e) => setClientSecretInput(e.target.value)}
+                          placeholder={clientSecretConfigured ? "••••••••••••••••" : "client_secret_..."}
+                          className="w-full px-3 py-1.5 bg-[#1a1a18] border border-[#33332e] rounded-lg text-xs text-white placeholder-[#737373] focus:outline-none focus:border-[#d97757]"
+                        />
+                      </div>
+                      <div className="flex gap-2 pt-1">
+                        <button
+                          type="submit"
+                          disabled={savingClientConfig || !clientIdInput.trim()}
+                          className="flex-1 py-1.5 px-3 bg-[#d97757] hover:bg-[#c66647] text-white text-xs font-semibold rounded-lg disabled:opacity-50 cursor-pointer"
+                        >
+                          {savingClientConfig ? 'Saving...' : 'Save Credentials'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowClientConfig(false)}
+                          className="py-1.5 px-3 bg-[#22221f] text-[#a3a3a3] hover:text-white text-xs rounded-lg cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
 
                 <div className="pt-2 border-t border-[#262626]">
                   {!showTokenInput ? (
