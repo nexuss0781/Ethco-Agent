@@ -1,4 +1,9 @@
 {
+  "functions": {
+    "api/index.ts": {
+      "includeFiles": "SYSTEM.md"
+    }
+  },
   "rewrites": [
     {
       "source": "/api/(.*)",
@@ -14,5 +19,3 @@
     }
   ]
 }
-
-
