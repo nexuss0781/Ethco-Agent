@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import fs from "fs";
 import path from "path";
-import { centralGithubRequest } from "./_grant";
+import { centralGithubRequest } from "./_grant.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {

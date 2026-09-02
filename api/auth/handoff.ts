@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import jwt from "jsonwebtoken";
-import { saveGrant } from "../github/_grant";
+import { saveGrant } from "../github/_grant.js";
 
 const COOKIE_MAX_AGE = 7 * 24 * 60 * 60;
 
