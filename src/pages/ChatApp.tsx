@@ -49,6 +49,13 @@ export default function App() {
     getUser().then(usr => {
       if (usr) { setUser(usr); } else { navigate('/auth'); }
     });
+
+    // Check if returned from GitHub OAuth redirect
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('github_auth') === 'success') {
+      setIsSettingsModalOpen(true);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
   }, [navigate]);
 
   // Global Keyboard shortcuts (Cmd+K / Ctrl+K for new chat, Esc to close modals)

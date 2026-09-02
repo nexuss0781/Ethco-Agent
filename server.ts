@@ -620,7 +620,26 @@ function getActiveUserIdentifier(req: express.Request): string {
   return "default_user";
 }
 
-function getStoredGitHubToken(userId: string): { token: string; githubGrantToken?: string; user?: any; source?: string } | null {
+function getStoredGitHubToken(req?: express.Request, explicitUserId?: string): { token: string; githubGrantToken?: string; user?: any; source?: string } | null {
+  // 1. Direct header token override
+  const headerToken = req?.headers?.["x-github-token"] as string;
+  if (headerToken && typeof headerToken === "string" && headerToken.trim()) {
+    return { token: headerToken.trim(), source: "header" };
+  }
+
+  // 2. Bearer token in authorization header (if github token)
+  const authHeader = req?.headers?.authorization;
+  if (authHeader && (authHeader.startsWith("Bearer ghp_") || authHeader.startsWith("Bearer gho_") || authHeader.startsWith("Bearer github_pat_"))) {
+    return { token: authHeader.replace(/^Bearer\s+/i, "").trim(), source: "bearer" };
+  }
+
+  // 3. Cookie token
+  const cookieToken = req?.cookies?.ethco_github_token;
+  if (cookieToken && typeof cookieToken === "string" && cookieToken.trim()) {
+    return { token: cookieToken.trim(), source: "cookie" };
+  }
+
+  const userId = explicitUserId || (req ? getActiveUserIdentifier(req) : "default_user");
   const tokens = loadGitHubTokens();
   if (tokens[userId] && tokens[userId].token) {
     return {
@@ -810,35 +829,110 @@ const githubCallbackHandler = async (req: express.Request, res: express.Response
     }
     saveGitHubTokens(tokens);
 
+    // Set cookie so all browser API calls include it
+    res.cookie("ethco_github_token", accessToken, {
+      httpOnly: false,
+      secure: true,
+      sameSite: "lax",
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+      path: "/",
+    });
+
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     return res.send(`
       <!DOCTYPE html>
       <html>
         <head>
           <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>GitHub Authorized</title>
           <style>
-            body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #121210; color: #ecece7; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-            .card { background: #1c1c19; padding: 28px 36px; border-radius: 16px; border: 1px solid #33332e; text-align: center; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-            h2 { color: #d97757; margin-top: 0; font-size: 20px; }
-            p { font-size: 14px; color: #a3a3a3; }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+              background: #0d0d0d;
+              color: #ecece7;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              min-height: 100vh;
+              margin: 0;
+              padding: 20px;
+              box-sizing: border-box;
+            }
+            .card {
+              background: #141412;
+              padding: 32px 28px;
+              border-radius: 16px;
+              border: 1px solid #262626;
+              text-align: center;
+              max-width: 360px;
+              width: 100%;
+              box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            }
+            .avatar {
+              width: 64px;
+              height: 64px;
+              border-radius: 50%;
+              border: 2px solid #d97757;
+              margin: 0 auto 16px;
+              display: block;
+              object-fit: cover;
+            }
+            h2 { color: #ffffff; margin: 0 0 8px 0; font-size: 18px; }
+            p { font-size: 13px; color: #85857a; margin: 0 0 20px 0; line-height: 1.4; }
+            .btn {
+              display: inline-block;
+              width: 100%;
+              padding: 12px 16px;
+              background: #d97757;
+              color: #ffffff;
+              font-weight: 600;
+              font-size: 14px;
+              border-radius: 10px;
+              text-decoration: none;
+              border: none;
+              cursor: pointer;
+              box-sizing: border-box;
+            }
+            .btn:hover { background: #c66647; }
           </style>
         </head>
         <body>
           <div class="card">
-            <h2>GitHub Authorized</h2>
-            <p>Connected repository access as <strong style="color:#ffffff;">@${githubUser.login || "user"}</strong>. Closing popup...</p>
+            ${githubUser.avatar_url ? `<img src="${githubUser.avatar_url}" class="avatar" alt="${githubUser.login}">` : ''}
+            <h2>GitHub Connected!</h2>
+            <p>Authorized as <strong style="color: #ffffff;">@${githubUser.login || 'user'}</strong></p>
+            <a href="/app" class="btn" id="continue-btn">Continue to Workspace</a>
           </div>
           <script>
+            const userData = ${JSON.stringify(githubUser)};
+            const token = ${JSON.stringify(accessToken)};
+
             try {
-              if (window.opener) {
-                window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS', provider: 'github', user: ${JSON.stringify(githubUser)} }, '*');
-                setTimeout(() => window.close(), 500);
-              } else {
-                window.location.href = '/app';
+              localStorage.setItem('ethco_github_user', JSON.stringify(userData));
+              localStorage.setItem('ethco_github_token', token);
+            } catch (e) {}
+
+            try {
+              const bc = new BroadcastChannel('github_oauth_channel');
+              bc.postMessage({ type: 'OAUTH_AUTH_SUCCESS', provider: 'github', user: userData, token: token });
+            } catch (e) {}
+
+            let openerNotified = false;
+            try {
+              if (window.opener && !window.opener.closed) {
+                window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS', provider: 'github', user: userData, token: token }, '*');
+                openerNotified = true;
+                setTimeout(() => {
+                  try { window.close(); } catch (e) {}
+                }, 600);
               }
-            } catch (e) {
-              window.location.href = '/app';
+            } catch (e) {}
+
+            if (!openerNotified) {
+              setTimeout(() => {
+                window.location.href = '/app?github_auth=success';
+              }, 1000);
             }
           </script>
         </body>
@@ -854,8 +948,7 @@ app.get(["/api/github/callback", "/api/github/callback/"], githubCallbackHandler
 
 // 4. GitHub Connection Status (checks actual GitHub OAuth token & profile)
 app.get("/api/github/status", async (req, res) => {
-  const userId = getActiveUserIdentifier(req);
-  const tokenInfo = getStoredGitHubToken(userId);
+  const tokenInfo = getStoredGitHubToken(req);
 
   if (tokenInfo?.token) {
     try {
@@ -878,11 +971,17 @@ app.get("/api/github/status", async (req, res) => {
             public_repos: liveUser.public_repos,
             total_private_repos: liveUser.total_private_repos,
           };
+          const userId = getActiveUserIdentifier(req);
           const tokens = loadGitHubTokens();
-          if (tokens[userId]) {
-            tokens[userId].user = tokenInfo.user;
-            saveGitHubTokens(tokens);
-          }
+          tokens[userId] = {
+            token: tokenInfo.token,
+            user: tokenInfo.user,
+            updatedAt: new Date().toISOString(),
+          };
+          tokens["default_user"] = tokens[userId];
+          tokens["latest"] = tokens[userId];
+          tokens[liveUser.login] = tokens[userId];
+          saveGitHubTokens(tokens);
         }
       }
     } catch {}
@@ -908,6 +1007,7 @@ app.get("/api/github/status", async (req, res) => {
 app.post("/api/github/disconnect", (req, res) => {
   try {
     saveGitHubTokens({});
+    res.clearCookie("ethco_github_token");
   } catch {}
   res.json({ success: true });
 });
@@ -958,7 +1058,7 @@ app.post("/api/github/connect-token", async (req, res) => {
 // 6. List Repositories (Authenticated User's Repos & Public Repos)
 app.get("/api/github/repos", async (req, res) => {
   const userId = getActiveUserIdentifier(req);
-  const tokenInfo = getStoredGitHubToken(userId);
+  const tokenInfo = getStoredGitHubToken(req, userId);
   const query = (req.query.q as string || "").trim();
 
   // Check active Nexuss Auth session
@@ -1116,7 +1216,7 @@ app.post("/api/github/clone", async (req, res) => {
   }
 
   const userId = getActiveUserIdentifier(req);
-  const tokenInfo = getStoredGitHubToken(userId);
+  const tokenInfo = getStoredGitHubToken(req, userId);
   let token = tokenInfo?.token || "";
 
   // If central githubGrantToken is present, fetch temporary in-memory clone token (Skill Section 12)

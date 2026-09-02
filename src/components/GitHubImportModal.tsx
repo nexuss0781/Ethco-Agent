@@ -24,7 +24,7 @@ import {
   ArrowRight,
   ShieldCheck
 } from 'lucide-react';
-import { GitHubService, GitHubUser, GitHubRepo, ImportedRepo } from '../lib/github';
+import { GitHubService, GitHubUser, GitHubRepo, ImportedRepo, fixMojibake } from '../lib/github';
 
 interface GitHubImportModalProps {
   isOpen: boolean;
@@ -73,6 +73,52 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
     refreshStatus();
     loadImportedRepos();
   }, [isOpen]);
+
+  // Listen to postMessage, BroadcastChannel, and storage when GitHub OAuth completes
+  useEffect(() => {
+    const handleGlobalMessage = async (event: MessageEvent) => {
+      if (
+        (event.data?.type === 'OAUTH_AUTH_SUCCESS' || event.data?.type === 'NEXUSS_AUTH_SUCCESS') &&
+        event.data?.user
+      ) {
+        const u = { ...event.data.user };
+        u.name = fixMojibake(u.name || u.login);
+        u.login = fixMojibake(u.login || u.name || 'user');
+        setGhUser(u);
+        try {
+          localStorage.setItem('ethco_github_user', JSON.stringify(u));
+          if (event.data?.token) localStorage.setItem('ethco_github_token', event.data.token);
+        } catch {}
+        refreshStatus();
+      }
+    };
+
+    let bc: BroadcastChannel | null = null;
+    try {
+      bc = new BroadcastChannel('github_oauth_channel');
+      bc.onmessage = (event) => {
+        if (event.data?.type === 'OAUTH_AUTH_SUCCESS' && event.data?.user) {
+          const u = { ...event.data.user };
+          u.name = fixMojibake(u.name || u.login);
+          u.login = fixMojibake(u.login || u.name || 'user');
+          setGhUser(u);
+          try {
+            localStorage.setItem('ethco_github_user', JSON.stringify(u));
+            if (event.data?.token) localStorage.setItem('ethco_github_token', event.data.token);
+          } catch {}
+          refreshStatus();
+        }
+      };
+    } catch {}
+
+    window.addEventListener('message', handleGlobalMessage);
+    return () => {
+      window.removeEventListener('message', handleGlobalMessage);
+      if (bc) {
+        try { bc.close(); } catch {}
+      }
+    };
+  }, []);
 
   const showToast = (type: 'success' | 'error', message: string) => {
     setFeedback({ type, message });

@@ -33,7 +33,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }, [isOpen]);
 
-  // Listen to postMessage when GitHub OAuth completes
+  // Listen to postMessage, BroadcastChannel, and storage when GitHub OAuth completes
   useEffect(() => {
     const handleGlobalMessage = async (event: MessageEvent) => {
       if (
@@ -46,12 +46,47 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         setGhUser(u);
         try {
           localStorage.setItem('ethco_github_user', JSON.stringify(u));
+          if (event.data?.token) localStorage.setItem('ethco_github_token', event.data.token);
         } catch {}
         await loadGitHubData();
       }
     };
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'ethco_github_user' && e.newValue) {
+        try {
+          setGhUser(JSON.parse(e.newValue));
+        } catch {}
+      }
+    };
+
+    let bc: BroadcastChannel | null = null;
+    try {
+      bc = new BroadcastChannel('github_oauth_channel');
+      bc.onmessage = (event) => {
+        if (event.data?.type === 'OAUTH_AUTH_SUCCESS' && event.data?.user) {
+          const u = { ...event.data.user };
+          u.name = fixMojibake(u.name || u.login);
+          u.login = fixMojibake(u.login || u.name || 'user');
+          setGhUser(u);
+          try {
+            localStorage.setItem('ethco_github_user', JSON.stringify(u));
+            if (event.data?.token) localStorage.setItem('ethco_github_token', event.data.token);
+          } catch {}
+          loadGitHubData();
+        }
+      };
+    } catch {}
+
     window.addEventListener('message', handleGlobalMessage);
-    return () => window.removeEventListener('message', handleGlobalMessage);
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('message', handleGlobalMessage);
+      window.removeEventListener('storage', handleStorageChange);
+      if (bc) {
+        try { bc.close(); } catch {}
+      }
+    };
   }, []);
 
   const loadGitHubData = async () => {
