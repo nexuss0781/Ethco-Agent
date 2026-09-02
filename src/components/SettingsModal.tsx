@@ -7,6 +7,7 @@ import {
   RefreshCw,
   LogOut,
   ExternalLink,
+  Shield,
 } from 'lucide-react';
 import { GitHubService, GitHubUser, fixMojibake } from '../lib/github';
 
@@ -19,6 +20,7 @@ interface SettingsModalProps {
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   onClose,
+  user,
 }) => {
   const [loadingStatus, setLoadingStatus] = useState(false);
   const [ghUser, setGhUser] = useState<GitHubUser | null>(null);
@@ -48,7 +50,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         await loadGitHubData();
       }
     };
-
     window.addEventListener('message', handleGlobalMessage);
     return () => window.removeEventListener('message', handleGlobalMessage);
   }, []);
@@ -57,24 +58,28 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     setLoadingStatus(true);
     setErrorMessage(null);
     try {
+      const cached = localStorage.getItem('ethco_github_user');
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (parsed && (parsed.login || parsed.name)) {
+            setGhUser(parsed);
+          }
+        } catch {}
+      }
+
       const status = await GitHubService.getStatus();
       if (status.connected && status.user) {
         setGhUser(status.user);
         try {
           localStorage.setItem('ethco_github_user', JSON.stringify(status.user));
         } catch {}
-      } else {
-        const saved = localStorage.getItem('ethco_github_user');
-        if (saved) {
-          try {
-            setGhUser(JSON.parse(saved));
-          } catch {}
-        } else {
-          setGhUser(null);
-        }
+      } else if (!status.connected) {
+        setGhUser(null);
+        localStorage.removeItem('ethco_github_user');
       }
-    } catch {
-      // Ignore
+    } catch (err: any) {
+      console.error('Failed to load GitHub status:', err);
     } finally {
       setLoadingStatus(false);
     }
@@ -124,7 +129,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
       <div
         id="settings-modal"
-        className="relative w-full max-w-sm bg-[#0d0d0d] border border-[#262626] rounded-2xl shadow-2xl p-6 text-center animate-in zoom-in-95 duration-150"
+        className="relative w-full max-w-md bg-[#0d0d0d] border border-[#262626] rounded-2xl shadow-2xl p-6 text-center animate-in zoom-in-95 duration-150"
       >
         {/* Close Button */}
         <button
@@ -135,148 +140,150 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <X className="w-4 h-4" />
         </button>
 
-        {/* Top Centered Icon or Authenticated Avatar */}
-        <div className="flex justify-center mb-5 mt-2">
-          {ghUser ? (
-            <div className="relative inline-block">
-              {ghUser.avatar_url ? (
-                <img
-                  src={ghUser.avatar_url}
-                  alt={fixMojibake(ghUser.name || ghUser.login)}
-                  className="w-20 h-20 rounded-full border-2 border-[#d97757] object-cover shadow-xl shadow-[#d97757]/15 ring-4 ring-[#d97757]/10"
-                  onError={(e) => {
-                    // Fallback if avatar fails to load
-                    (e.target as HTMLElement).style.display = 'none';
-                  }}
-                />
-              ) : (
-                <div className="w-20 h-20 rounded-full bg-[#1c1c1a] border-2 border-[#d97757] flex items-center justify-center shadow-xl text-[#d97757] font-semibold text-xl">
-                  {fixMojibake(ghUser.name || ghUser.login).charAt(0).toUpperCase()}
-                </div>
-              )}
-              <div className="absolute bottom-0 right-0 p-1.5 rounded-full bg-[#121210] border border-[#d97757]/60 text-[#d97757] shadow-md">
-                <Github className="w-3.5 h-3.5 stroke-[2.5]" />
-              </div>
-            </div>
-          ) : (
-            <div className="w-20 h-20 rounded-2xl bg-[#171717] border border-[#d97757]/30 flex items-center justify-center shadow-lg shadow-[#d97757]/5">
-              <Github className="w-11 h-11 text-[#d97757] stroke-[2.5]" />
-            </div>
-          )}
+        {/* Header */}
+        <div className="mb-5">
+          <h2 className="text-lg font-semibold text-white tracking-tight">Account & Settings</h2>
+          <p className="text-xs text-[#737373] mt-0.5">Your active Google account session with GitHub repository integration.</p>
         </div>
 
-        {/* State: Loading */}
-        {loadingStatus && !ghUser ? (
-          <div className="py-6 flex flex-col items-center justify-center gap-2 text-[#737373]">
-            <Loader2 className="w-5 h-5 animate-spin text-[#d97757]" />
-            <span className="text-xs">Checking authorization...</span>
+        <div className="space-y-4 text-left">
+          {/* Google Account Section */}
+          <div className="p-3.5 rounded-xl bg-[#141412] border border-[#262626] flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-[#3b82f6]/15 border border-[#3b82f6]/30 flex items-center justify-center text-[#3b82f6] shrink-0">
+              {user?.avatar ? (
+                <img src={user.avatar} alt="Google" className="w-10 h-10 rounded-full object-cover" />
+              ) : (
+                <Shield className="w-5 h-5" />
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[11px] font-semibold text-[#85857a] uppercase tracking-wider flex items-center gap-1">
+                <span>Google Account</span>
+                <span className="text-emerald-400 text-[10px] lowercase font-normal">(primary login)</span>
+              </div>
+              <div className="text-xs font-medium text-white truncate mt-0.5">
+                {user?.name || user?.email || 'Google User'}
+              </div>
+              <div className="text-[11px] text-[#737373] truncate">
+                {user?.email || 'Connected via Google'}
+              </div>
+            </div>
           </div>
-        ) : ghUser ? (
-          /* State: Connected & Persisted */
-          <div className="space-y-5 animate-in fade-in duration-200">
-            <div>
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium mb-2">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Connected &amp; Authorized</span>
+
+          {/* GitHub Repository Authorization Section */}
+          <div className="p-3.5 rounded-xl bg-[#141412] border border-[#262626]">
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-[11px] font-semibold text-[#85857a] uppercase tracking-wider flex items-center gap-1.5">
+                <Github className="w-3.5 h-3.5 text-[#d97757]" />
+                <span>GitHub Profile & Repository Auth</span>
               </div>
-              <h2
-                className="text-lg font-semibold text-white tracking-tight leading-snug px-2"
-                dir="auto"
-                title={fixMojibake(ghUser.name || ghUser.login)}
-              >
-                {fixMojibake(ghUser.name || ghUser.login)}
-              </h2>
-              <div className="flex items-center justify-center gap-1.5 mt-1 text-xs text-[#a3a3a3] font-mono">
-                <span>@{fixMojibake(ghUser.login)}</span>
-                {ghUser.html_url && (
-                  <a
-                    href={ghUser.html_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-[#737373] hover:text-[#d97757] transition-colors inline-flex items-center"
-                    title="View GitHub profile"
-                  >
-                    <ExternalLink className="w-3 h-3 ml-0.5" />
-                  </a>
-                )}
-              </div>
-              {ghUser.email && (
-                <p className="text-[11px] text-[#737373] mt-1 truncate">
-                  {ghUser.email}
-                </p>
+              {ghUser && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-medium">
+                  <CheckCircle2 className="w-3 h-3" />
+                  <span>Authorized</span>
+                </span>
               )}
             </div>
 
-            <div className="space-y-2 pt-1">
-              <button
-                id="btn-reconfigure-github"
-                onClick={handleAuthorizeOAuth}
-                disabled={authorizing}
-                className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold bg-[#d97757] hover:bg-[#c66647] active:bg-[#b5583b] text-white transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm disabled:opacity-50"
-              >
-                {authorizing ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin text-white" />
-                    <span>Authorizing...</span>
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="w-3.5 h-3.5 stroke-[2.2]" />
-                    <span>Reconfigure Connection</span>
-                  </>
+            {loadingStatus && !ghUser ? (
+              <div className="py-4 flex flex-col items-center justify-center gap-2 text-[#737373]">
+                <Loader2 className="w-4 h-4 animate-spin text-[#d97757]" />
+                <span className="text-xs">Checking GitHub authorization...</span>
+              </div>
+            ) : ghUser ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  {ghUser.avatar_url ? (
+                    <img
+                      src={ghUser.avatar_url}
+                      alt={fixMojibake(ghUser.name || ghUser.login)}
+                      className="w-12 h-12 rounded-full border-2 border-[#d97757]/60 object-cover shrink-0 shadow-md"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-[#1c1c1a] border-2 border-[#d97757]/60 flex items-center justify-center text-[#d97757] font-semibold">
+                      {fixMojibake(ghUser.name || ghUser.login).charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div
+                      className="text-sm font-semibold text-white truncate"
+                      title={fixMojibake(ghUser.name || ghUser.login)}
+                    >
+                      {fixMojibake(ghUser.name || ghUser.login)}
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-[#a3a3a3] font-mono">
+                      <span>@{fixMojibake(ghUser.login)}</span>
+                      {ghUser.html_url && (
+                        <a
+                          href={ghUser.html_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[#737373] hover:text-[#d97757] transition-colors"
+                          title="View GitHub profile"
+                        >
+                          <ExternalLink className="w-3 h-3 ml-0.5" />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <button
+                    id="btn-reconfigure-github"
+                    onClick={handleAuthorizeOAuth}
+                    disabled={authorizing}
+                    className="py-2 px-3 rounded-lg text-xs font-semibold bg-[#22221f] hover:bg-[#2c2c28] text-white transition-all flex items-center justify-center gap-1.5 cursor-pointer border border-[#33332e] disabled:opacity-50"
+                  >
+                    {authorizing ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-[#d97757]" />
+                    ) : (
+                      <RefreshCw className="w-3.5 h-3.5 text-[#d97757]" />
+                    )}
+                    <span>Reconfigure</span>
+                  </button>
+                  <button
+                    id="btn-disconnect-github"
+                    onClick={handleDisconnect}
+                    className="py-2 px-3 rounded-lg text-xs font-medium text-[#a3a3a3] hover:text-red-400 hover:bg-[#1a1a1a] border border-[#262626] hover:border-red-500/30 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Disconnect</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-xs text-[#737373] leading-relaxed">
+                  Authorize GitHub to display your GitHub profile name & avatar here and enable repository importing.
+                </p>
+                {errorMessage && (
+                  <p className="text-[11px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg p-2" dir="auto">
+                    {errorMessage}
+                  </p>
                 )}
-              </button>
-
-              <button
-                id="btn-disconnect-github"
-                onClick={handleDisconnect}
-                className="w-full py-2.5 px-4 rounded-xl text-xs font-medium text-[#a3a3a3] hover:text-red-400 hover:bg-[#1a1a1a] border border-[#262626] hover:border-red-500/30 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                <span>Disconnect</span>
-              </button>
-            </div>
-          </div>
-        ) : (
-          /* State: Not Connected (OAuth or PAT) */
-          <div className="space-y-4">
-            <div>
-              <h2 className="text-lg font-semibold text-white tracking-tight">
-                GitHub Authorization
-              </h2>
-              <p className="text-xs text-[#737373] mt-1 leading-relaxed">
-                Authorize GitHub to import repositories and manage workspace code.
-              </p>
-            </div>
-
-            {errorMessage && (
-              <p className="text-[11px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg p-2" dir="auto">
-                {errorMessage}
-              </p>
+                <button
+                  id="btn-settings-authorize-github"
+                  onClick={handleAuthorizeOAuth}
+                  disabled={authorizing}
+                  className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold bg-[#d97757] hover:bg-[#c66647] active:bg-[#b5583b] text-white transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer disabled:opacity-50"
+                >
+                  {authorizing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-white" />
+                      <span>Authorizing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Github className="w-4 h-4 text-white stroke-[2.5]" />
+                      <span>Authorize GitHub Profile</span>
+                    </>
+                  )}
+                </button>
+              </div>
             )}
-
-            <div className="space-y-3">
-              <button
-                id="btn-settings-authorize-github"
-                onClick={handleAuthorizeOAuth}
-                disabled={authorizing}
-                className="w-full py-3 px-4 rounded-xl text-xs font-semibold bg-[#d97757] hover:bg-[#c66647] active:bg-[#b5583b] text-white transition-all flex items-center justify-center gap-2.5 shadow-md hover:scale-[1.01] active:scale-[0.99] cursor-pointer disabled:opacity-50"
-              >
-                {authorizing ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin text-white" />
-                    <span>Authorizing...</span>
-                  </>
-                ) : (
-                  <>
-                    <Github className="w-4 h-4 text-white stroke-[2.5]" />
-                    <span>Authorize GitHub</span>
-                  </>
-                )}
-              </button>
-            </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
