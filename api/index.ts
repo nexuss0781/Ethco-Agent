@@ -2977,34 +2977,7 @@ Return ONLY a valid JSON object:
       }
     }
 
-    // 2. Try Gemini API models
-    const modelsToTry = ["gemini-3.1-flash-lite", "gemini-flash-latest", "gemini-3.7-flash"];
-    for (const modelName of modelsToTry) {
-      try {
-        const response = await ai.models.generateContent({
-          model: modelName,
-          contents: titlingPrompt,
-          config: {
-            systemInstruction: "You are an AI that creates ultra-concise conversation titles and appropriate Lucide icon names formatted as JSON.",
-            temperature: 0.2,
-          },
-        });
-
-        if (response.text) {
-          const parsed = parseTitleAndIcon(response.text);
-          if (parsed.title) {
-            return res.json({
-              title: parsed.title,
-              icon: parsed.icon || "MessageSquare",
-            });
-          }
-        }
-      } catch (e) {
-        console.warn(`Gemini titling failed with ${modelName}:`, e);
-      }
-    }
-
-    // 3. Fallback inference based on context keywords
+    // Fallback inference based on context keywords directly (No Gemini SDK fallback)
     const fallback = inferFallbackIconAndTitle(p1, p2);
     res.json(fallback);
   } catch (err: any) {
@@ -3377,46 +3350,18 @@ Please take the correct action based purely on the context of the user's message
       }
     }
 
-    // Model fallback sequence
-    const preferredModel = typeof model === "string" && model ? model : "auto";
+    // Force OmniRoute auto custom router stream directly (No Gemini SDK fallback)
+    const preferredModel = "omniroute/auto";
 
-    if (
-      preferredModel.startsWith("omniroute") ||
-      preferredModel === "auto" ||
-      preferredModel.startsWith("auto/")
-    ) {
-      // Execute via OmniRoute custom router without workspace tools (standard chat fallback)
-      await executeOmniRouteTurn(
-        preferredModel,
-        messages,
-        activeSystemInstruction,
-        (textChunk: string) => {
-          res.write(`data: ${JSON.stringify({ text: textChunk })}\n\n`);
-        },
-        req.body?.omnirouteApiKey || (req.headers["x-omniroute-key"] as string)
-      );
-    } else {
-      // Execute via native Gemini with workspace tools
-      const candidates = [preferredModel, "gemini-3.1-flash-lite", "gemini-flash-latest", "gemini-3.7-flash"];
-      const modelsToTry = Array.from(new Set(candidates));
-
-      const config: any = {
-        systemInstruction: activeSystemInstruction,
-        temperature: 0.7,
-      };
-
-      await executeAgentTurnWithTools(
-        modelsToTry,
-        contents,
-        config,
-        (textChunk: string) => {
-          res.write(`data: ${JSON.stringify({ text: textChunk })}\n\n`);
-        },
-        (toolEvent: any) => {
-          res.write(`data: ${JSON.stringify({ toolEvent })}\n\n`);
-        }
-      );
-    }
+    await executeOmniRouteTurn(
+      preferredModel,
+      messages,
+      activeSystemInstruction,
+      (textChunk: string) => {
+        res.write(`data: ${JSON.stringify({ text: textChunk })}\n\n`);
+      },
+      req.body?.omnirouteApiKey || (req.headers["x-omniroute-key"] as string)
+    );
 
     res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
     res.end();
