@@ -10,6 +10,14 @@ export const AVAILABLE_MODELS: ModelOption[] = [
     geminiModel: 'gemini-2.5-flash',
   },
   {
+    id: 'omniroute-auto',
+    name: 'OmniRoute (Auto)',
+    versionBadge: 'Dynamic',
+    description: 'Automatically routes to the best available live model via OmniRoute.',
+    thinkingSupported: true,
+    geminiModel: 'omniroute/auto',
+  },
+  {
     id: 'ethco-3-5-sonnet',
     name: 'Ethco 3.5 Sonnet',
     versionBadge: 'Fast & Precise',

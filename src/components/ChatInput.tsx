@@ -29,8 +29,6 @@ interface ChatInputProps {
   onSendMessage: (text: string, attachments: Attachment[], mode?: ActionMode) => void;
   isLoading: boolean;
   onStopGeneration: () => void;
-  selectedModel: ModelOption;
-  onOpenModelSelector?: () => void;
   thinkingEnabled: boolean;
   onToggleThinking?: () => void;
   actionMode?: ActionMode;
@@ -48,8 +46,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   onSendMessage,
   isLoading,
   onStopGeneration,
-  selectedModel,
-  onOpenModelSelector,
   thinkingEnabled,
   onToggleThinking,
   actionMode: controlledActionMode,
@@ -431,17 +427,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
           {/* Right Controls */}
           <div className="flex items-center gap-2">
-            {/* Model & Thinking status */}
-            <button
-              onClick={onOpenModelSelector}
-              className="hidden sm:flex items-center gap-1 text-xs text-[#85857a] hover:text-[#b4b4aa] transition-colors"
-            >
-              <span>{selectedModel.name}</span>
-              <span className="text-[10px] text-[#6b6b62]">
-                {thinkingEnabled ? 'High' : 'Fast'}
-              </span>
-            </button>
-
             {/* Microphone Dictation Button (with live recording animation) */}
             <button
               id="btn-voice-dictation"

@@ -24,8 +24,6 @@ import { GitHubService, GitHubRepo, ImportedRepo, SelectedRepoContext } from '..
 interface ChatHeaderProps {
   onToggleSidebar: () => void;
   onNewChat: () => void;
-  selectedModel: ModelOption;
-  onSelectModel: (model: ModelOption) => void;
   thinkingEnabled: boolean;
   onToggleThinking: () => void;
   onOpenUpgradeModal: () => void;
@@ -39,8 +37,6 @@ interface ChatHeaderProps {
 export const ChatHeader: React.FC<ChatHeaderProps> = ({
   onToggleSidebar,
   onNewChat,
-  selectedModel,
-  onSelectModel,
   thinkingEnabled,
   onToggleThinking,
   onOpenUpgradeModal,
@@ -202,6 +198,27 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           <Plus className="w-3.5 h-3.5" />
           <span>New Chat</span>
         </button>
+      </div>
+
+      {/* Center: Empty / Flexible spacing */}
+      <div className="hidden md:flex items-center"></div>
+
+      {/* Right: Model Selector & Settings */}
+      <div className="flex items-center gap-1.5 sm:gap-2">
+        {/* Thinking Mode Toggle Pill */}
+        <button
+          id="btn-toggle-thinking"
+          onClick={onToggleThinking}
+          className={`hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors cursor-pointer ${
+            thinkingEnabled
+              ? 'bg-[#d97757]/15 border-[#d97757]/40 text-[#f0a282]'
+              : 'bg-[#222220] border-[#33332e] text-[#85857a] hover:text-[#b4b4aa]'
+          }`}
+          title="Toggle Extended Reasoning Mode"
+        >
+          <Brain className="w-3.5 h-3.5" />
+          <span>Thinking: {thinkingEnabled ? 'High' : 'Off'}</span>
+        </button>
 
         {/* Git Repositories Dropdown */}
         <div className="relative">
@@ -229,7 +246,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
               />
               <div
                 id="git-repos-dropdown-menu"
-                className="absolute left-0 mt-2 w-[340px] sm:w-[420px] bg-[#161614] border border-[#2c2c28] rounded-2xl shadow-2xl z-40 overflow-hidden animate-in fade-in zoom-in-95 duration-150 flex flex-col"
+                className="absolute right-0 mt-2 w-[340px] sm:w-[420px] bg-[#161614] border border-[#2c2c28] rounded-2xl shadow-2xl z-40 overflow-hidden animate-in fade-in zoom-in-95 duration-150 flex flex-col"
               >
                 {/* 1. Header Bar with Manage / Import link */}
                 <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-[#262622] bg-[#1a1a17]">
@@ -560,83 +577,8 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
               </div>
             </>
           )}
-        </div>
-      </div>
-
-      {/* Center: Empty / Flexible spacing */}
-      <div className="hidden md:flex items-center"></div>
-
-      {/* Right: Model Selector & Settings */}
-      <div className="flex items-center gap-1.5 sm:gap-2">
-        {/* Thinking Mode Toggle Pill */}
-        <button
-          id="btn-toggle-thinking"
-          onClick={onToggleThinking}
-          className={`hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors cursor-pointer ${
-            thinkingEnabled
-              ? 'bg-[#d97757]/15 border-[#d97757]/40 text-[#f0a282]'
-              : 'bg-[#222220] border-[#33332e] text-[#85857a] hover:text-[#b4b4aa]'
-          }`}
-          title="Toggle Extended Reasoning Mode"
-        >
-          <Brain className="w-3.5 h-3.5" />
-          <span>Thinking: {thinkingEnabled ? 'High' : 'Off'}</span>
-        </button>
-
-        {/* Model Selector Dropdown */}
-        <div className="relative">
-          <button
-            id="btn-model-selector"
-            onClick={() => setModelDropdownOpen(!modelDropdownOpen)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-[#222220] hover:bg-[#2a2a26] border border-[#33332e] text-[#ecece7] transition-colors cursor-pointer"
-          >
-            <span className="max-w-[100px] sm:max-w-none truncate">{selectedModel.name}</span>
-            <ChevronDown className="w-3.5 h-3.5 text-[#85857a]" />
-          </button>
-
-          {modelDropdownOpen && (
-            <>
-              <div
-                className="fixed inset-0 z-30"
-                onClick={() => setModelDropdownOpen(false)}
-              />
-              <div className="absolute right-0 mt-1.5 w-64 p-1.5 bg-[#222220] border border-[#33332e] rounded-xl shadow-xl z-40 animate-in fade-in zoom-in-95 duration-100">
-                <div className="px-2 py-1.5 text-[11px] font-medium text-[#85857a] uppercase tracking-wider">
-                  Select Model
-                </div>
-                {AVAILABLE_MODELS.map((model) => (
-                  <button
-                    key={model.id}
-                    onClick={() => {
-                      onSelectModel(model);
-                      setModelDropdownOpen(false);
-                    }}
-                    className={`w-full text-left px-2.5 py-2 rounded-lg text-xs flex items-start justify-between transition-colors cursor-pointer ${
-                      selectedModel.id === model.id
-                        ? 'bg-[#2f2f2a] text-[#ecece7]'
-                        : 'text-[#b4b4aa] hover:bg-[#282824] hover:text-[#ecece7]'
-                    }`}
-                  >
-                    <div>
-                      <div className="font-medium flex items-center gap-1.5">
-                        <span>{model.name}</span>
-                        <span className="text-[10px] px-1.5 py-0.2 bg-[#181816] text-[#85857a] rounded border border-[#33332e]">
-                          {model.versionBadge}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-[#85857a] mt-0.5 leading-snug">
-                        {model.description}
-                      </p>
-                    </div>
-                    {selectedModel.id === model.id && (
-                      <Check className="w-4 h-4 text-[#d97757] shrink-0 ml-2 mt-0.5" />
-                    )}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
+        
+</div>
       </div>
     </header>
   );

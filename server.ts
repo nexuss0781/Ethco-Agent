@@ -1729,6 +1729,114 @@ async function executeAgentTurnWithTools(
   return { success: true };
 }
 
+async function executeOmniRouteTurn(
+  modelName: string, // e.g. "omniroute/auto"
+  messages: any[], // Raw original messages from req.body
+  systemInstruction: string,
+  onChunk: (text: string) => void
+) {
+  const openAiMessages = [];
+  
+  // Add system prompt
+  if (systemInstruction) {
+    openAiMessages.push({
+      role: "system",
+      content: systemInstruction
+    });
+  }
+
+  // Convert messages to OpenAI format
+  for (const msg of messages) {
+    const role = msg.role === "assistant" ? "assistant" : "user";
+    const content = [];
+
+    if (msg.content) {
+      content.push({ type: "text", text: msg.content });
+    }
+
+    if (msg.attachments && Array.isArray(msg.attachments)) {
+      for (const att of msg.attachments) {
+        if (att.type === "image" && att.data) {
+          const base64Data = att.data.includes("base64,") ? att.data : `data:${att.mimeType || 'image/png'};base64,${att.data}`;
+          content.push({
+            type: "image_url",
+            image_url: { url: base64Data }
+          });
+        } else if (att.type === "file" && att.data) {
+          content.push({
+            type: "text",
+            text: `[Attached File: ${att.name}]\n${att.data}`
+          });
+        }
+      }
+    }
+
+    if (content.length > 0) {
+      // If there's only one text part, use string to be safe for older OpenAI parsers, else use array
+      if (content.length === 1 && content[0].type === "text") {
+        openAiMessages.push({ role, content: content[0].text });
+      } else {
+        openAiMessages.push({ role, content });
+      }
+    }
+  }
+
+  // Extract model ID from something like 'omniroute/auto' or just 'auto'
+  // But SKILL.md says use auto or exact live model. 'omniroute-auto' maps to 'auto'.
+  let mappedModel = "auto";
+  if (modelName === "omniroute/auto" || modelName === "omniroute-auto") {
+    mappedModel = "auto";
+  }
+
+  const response = await fetch("https://omniouter-vercel.vercel.app/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model: mappedModel,
+      stream: true,
+      messages: openAiMessages,
+      temperature: 0.7,
+      max_tokens: 8000
+    })
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`OmniRoute API Error: ${response.status} ${errText}`);
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error("No response stream");
+
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() || "";
+
+    for (const line of lines) {
+      if (line.startsWith("data: ") && line !== "data: [DONE]") {
+        try {
+          const parsed = JSON.parse(line.slice(6));
+          const chunk = parsed.choices?.[0]?.delta?.content;
+          if (chunk) {
+            onChunk(chunk);
+          }
+        } catch (e) {
+          // Ignore parse errors on partial stream
+        }
+      }
+    }
+  }
+}
+
 // 6. Chat Streaming SSE Endpoint
 app.post("/api/chat/stream", async (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
@@ -1805,26 +1913,39 @@ Please take the correct action based purely on the context of the user's message
 
     // Model fallback sequence
     const preferredModel = typeof model === "string" && model ? model : "gemini-3.1-flash-lite";
-    const candidates = [preferredModel, "gemini-3.1-flash-lite", "gemini-flash-latest", "gemini-3.7-flash"];
-    const modelsToTry = Array.from(new Set(candidates));
 
-    const config: any = {
-      systemInstruction: activeSystemInstruction,
-      temperature: 0.7,
-    };
+    if (preferredModel.startsWith("omniroute")) {
+      // Execute via OmniRoute custom router without workspace tools (standard chat fallback)
+      await executeOmniRouteTurn(
+        preferredModel,
+        messages,
+        activeSystemInstruction,
+        (textChunk: string) => {
+          res.write(`data: ${JSON.stringify({ text: textChunk })}\n\n`);
+        }
+      );
+    } else {
+      // Execute via native Gemini with workspace tools
+      const candidates = [preferredModel, "gemini-3.1-flash-lite", "gemini-flash-latest", "gemini-3.7-flash"];
+      const modelsToTry = Array.from(new Set(candidates));
 
-    // Execute agent turn with tool calling support
-    await executeAgentTurnWithTools(
-      modelsToTry,
-      contents,
-      config,
-      (textChunk: string) => {
-        res.write(`data: ${JSON.stringify({ text: textChunk })}\n\n`);
-      },
-      (toolEvent: any) => {
-        res.write(`data: ${JSON.stringify({ toolEvent })}\n\n`);
-      }
-    );
+      const config: any = {
+        systemInstruction: activeSystemInstruction,
+        temperature: 0.7,
+      };
+
+      await executeAgentTurnWithTools(
+        modelsToTry,
+        contents,
+        config,
+        (textChunk: string) => {
+          res.write(`data: ${JSON.stringify({ text: textChunk })}\n\n`);
+        },
+        (toolEvent: any) => {
+          res.write(`data: ${JSON.stringify({ toolEvent })}\n\n`);
+        }
+      );
+    }
 
     res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
     res.end();

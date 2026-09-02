@@ -22,8 +22,7 @@ export default function App() {
     () => StorageService.getActiveConversationId() || conversations[0]?.id || null
   );
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<ModelOption>(AVAILABLE_MODELS[0]);
-  const [thinkingEnabled, setThinkingEnabled] = useState(true);
+    const [thinkingEnabled, setThinkingEnabled] = useState(true);
   const [actionMode, setActionMode] = useState<ActionMode>('planning');
   const [isLoading, setIsLoading] = useState(false);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
@@ -122,7 +121,7 @@ export default function App() {
 
   // Start new chat
   const handleNewChat = () => {
-    const newConvo = StorageService.createNewConversation('New Chat', selectedModel.id);
+    const newConvo = StorageService.createNewConversation('New Chat', AVAILABLE_MODELS[0].id);
     setConversations(StorageService.getLocalConversations());
     setActiveConversationId(newConvo.id);
   };
@@ -173,7 +172,7 @@ export default function App() {
 
     // If no active conversation or active has no messages, ensure target convo exists
     if (!targetConvo) {
-      targetConvo = StorageService.createNewConversation('New Chat', selectedModel.id);
+      targetConvo = StorageService.createNewConversation('New Chat', AVAILABLE_MODELS[0].id);
       isBrandNew = true;
       setActiveConversationId(targetConvo.id);
     }
@@ -196,7 +195,7 @@ export default function App() {
       thinkingContent: thinkingEnabled
         ? `Reasoning step (${currentMode.toUpperCase()} mode): Analyzing inquiry in depth, evaluating core nuances, and formulating structured response...`
         : undefined,
-      model: selectedModel.id,
+      model: AVAILABLE_MODELS[0].id,
     };
 
     const updatedMessages = [...(targetConvo.messages || []), userMessage, assistantMessage];
@@ -234,7 +233,7 @@ export default function App() {
         body: JSON.stringify({
           messages: messagesForBackend,
           thinkingEnabled,
-          model: selectedModel.geminiModel,
+          model: AVAILABLE_MODELS[0].geminiModel,
           actionMode: currentMode,
           selectedRepos: selectedRepos.map((r) => ({
             name: r.name,
@@ -503,8 +502,6 @@ export default function App() {
         <ChatHeader
           onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
           onNewChat={handleNewChat}
-          selectedModel={selectedModel}
-          onSelectModel={setSelectedModel}
           thinkingEnabled={thinkingEnabled}
           onToggleThinking={() => setThinkingEnabled(!thinkingEnabled)}
           onOpenUpgradeModal={() => setIsUpgradeModalOpen(true)}
@@ -536,9 +533,7 @@ export default function App() {
               onSendMessage={handleSendMessage}
               isLoading={isLoading}
               onStopGeneration={handleStopGeneration}
-              selectedModel={selectedModel}
-              onOpenModelSelector={() => {}}
-              thinkingEnabled={thinkingEnabled}
+          thinkingEnabled={thinkingEnabled}
               actionMode={actionMode}
               onSelectActionMode={setActionMode}
               activeTodos={activeTodos}
