@@ -818,25 +818,6 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
                             </div>
                           )}
                         </div>
-
-                        {/* Select / Selected Button (Tick / Multi-select) */}
-                        <button
-                          onClick={() => handleToggleRepoSelect(repo)}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                            isSelected
-                              ? 'bg-[#d97757] text-white shadow-xs'
-                              : 'bg-[#22221e] text-[#85857a] hover:text-[#ecece7] hover:bg-[#282824] border border-[#33332e]'
-                          }`}
-                        >
-                          {isSelected ? (
-                            <>
-                              <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                              <span>Selected</span>
-                            </>
-                          ) : (
-                            <span>Select</span>
-                          )}
-                        </button>
                       </div>
                     </div>
                   );
