@@ -192,6 +192,23 @@ export const GitHubService = {
     return data.repos || [];
   },
 
+  // 5b. Fetch Branches for a Repository
+  async fetchBranches(repoFullName: string, repoName?: string): Promise<string[]> {
+    try {
+      const url = `/api/github/branches?repo=${encodeURIComponent(repoFullName)}&repoName=${encodeURIComponent(repoName || '')}`;
+      const res = await fetch(url, {
+        headers: this.getHeaders(),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.branches) && data.branches.length > 0) {
+          return data.branches;
+        }
+      }
+    } catch {}
+    return ['main', 'master', 'dev'];
+  },
+
   // 6. Clone / Import Repo into workspace
   async cloneRepo(params: { repoUrl: string; branch?: string; depth?: number; folderName?: string }): Promise<ImportedRepo> {
     const res = await fetch('/api/github/clone', {

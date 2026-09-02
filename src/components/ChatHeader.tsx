@@ -1,8 +1,25 @@
-import React, { useState } from 'react';
-import { Menu, Plus, Brain, ChevronDown, Check, FolderGit2, Globe, Lock, Loader2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+  Menu,
+  Plus,
+  Brain,
+  ChevronDown,
+  Check,
+  FolderGit2,
+  Globe,
+  Lock,
+  Loader2,
+  Search,
+  GitBranch,
+  Star,
+  ExternalLink,
+  Download,
+  MessageSquare,
+  X,
+} from 'lucide-react';
 import { ModelOption } from '../types';
 import { AVAILABLE_MODELS } from '../constants/models';
-import { GitHubService, ImportedRepo } from '../lib/github';
+import { GitHubService, GitHubRepo, ImportedRepo } from '../lib/github';
 
 interface ChatHeaderProps {
   onToggleSidebar: () => void;
@@ -31,10 +48,18 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
 }) => {
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
   const [repoDropdownOpen, setRepoDropdownOpen] = useState(false);
-  const [reposList, setReposList] = useState<any[]>([]);
-  const [importedList, setImportedList] = useState<any[]>([]);
+  const [reposList, setReposList] = useState<GitHubRepo[]>([]);
+  const [importedList, setImportedList] = useState<ImportedRepo[]>([]);
   const [reposLoading, setReposLoading] = useState(false);
   const [selectedRepoName, setSelectedRepoName] = useState<string | null>(null);
+
+  // Search & Branch management
+  const [repoSearch, setRepoSearch] = useState('');
+  const [activeBranchMenuRepo, setActiveBranchMenuRepo] = useState<string | null>(null);
+  const [selectedBranches, setSelectedBranches] = useState<Record<string, string>>({});
+  const [repoBranchesMap, setRepoBranchesMap] = useState<Record<string, string[]>>({});
+  const [branchLoadingRepo, setBranchLoadingRepo] = useState<string | null>(null);
+  const [cloningRepoName, setCloningRepoName] = useState<string | null>(null);
 
   const loadDropdownRepos = async () => {
     setReposLoading(true);
@@ -45,6 +70,16 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
       ]);
       setReposList(ghRepos || []);
       setImportedList(impRepos || []);
+
+      // Initialize selected branches map from repos default_branch
+      const branchMap: Record<string, string> = {};
+      (ghRepos || []).forEach((r) => {
+        branchMap[r.full_name || r.name] = r.default_branch || 'main';
+      });
+      (impRepos || []).forEach((r) => {
+        branchMap[r.name] = r.branch || 'main';
+      });
+      setSelectedBranches((prev) => ({ ...branchMap, ...prev }));
     } catch {} finally {
       setReposLoading(false);
     }
@@ -55,8 +90,87 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
     setRepoDropdownOpen(nextState);
     if (nextState) {
       loadDropdownRepos();
+    } else {
+      setActiveBranchMenuRepo(null);
     }
   };
+
+  // Fetch branches for a specific repository when user clicks the branch dropdown
+  const handleToggleBranchDropdown = async (e: React.MouseEvent, repoKey: string, fullName: string) => {
+    e.stopPropagation();
+    if (activeBranchMenuRepo === repoKey) {
+      setActiveBranchMenuRepo(null);
+      return;
+    }
+
+    setActiveBranchMenuRepo(repoKey);
+
+    // If branches are already cached, don't refetch
+    if (repoBranchesMap[repoKey] && repoBranchesMap[repoKey].length > 0) {
+      return;
+    }
+
+    setBranchLoadingRepo(repoKey);
+    try {
+      const branches = await GitHubService.fetchBranches(fullName, repoKey);
+      setRepoBranchesMap((prev) => ({
+        ...prev,
+        [repoKey]: branches && branches.length > 0 ? branches : ['main', 'master'],
+      }));
+    } catch {
+      setRepoBranchesMap((prev) => ({
+        ...prev,
+        [repoKey]: ['main', 'master'],
+      }));
+    } finally {
+      setBranchLoadingRepo(null);
+    }
+  };
+
+  const handleSelectBranch = (e: React.MouseEvent, repoKey: string, branchName: string) => {
+    e.stopPropagation();
+    setSelectedBranches((prev) => ({ ...prev, [repoKey]: branchName }));
+    setActiveBranchMenuRepo(null);
+  };
+
+  const handleCloneFromDropdown = async (e: React.MouseEvent, repo: GitHubRepo) => {
+    e.stopPropagation();
+    const repoKey = repo.full_name || repo.name;
+    const branch = selectedBranches[repoKey] || repo.default_branch || 'main';
+    setCloningRepoName(repoKey);
+    try {
+      const cloned = await GitHubService.cloneRepo({
+        repoUrl: repo.clone_url || repo.html_url,
+        branch,
+        folderName: repo.name,
+      });
+      await loadDropdownRepos();
+      if (onSelectRepoForChat) {
+        onSelectRepoForChat(cloned);
+      }
+      setSelectedRepoName(cloned.name);
+      setRepoDropdownOpen(false);
+    } catch (err: any) {
+      console.error('Clone failed:', err);
+    } finally {
+      setCloningRepoName(null);
+    }
+  };
+
+  // Filter repositories based on search
+  const query = repoSearch.trim().toLowerCase();
+  const filteredImported = importedList.filter((imp) =>
+    imp.name.toLowerCase().includes(query) || (imp.branch && imp.branch.toLowerCase().includes(query))
+  );
+  const filteredRepos = reposList.filter(
+    (repo) =>
+      repo.name.toLowerCase().includes(query) ||
+      (repo.full_name && repo.full_name.toLowerCase().includes(query)) ||
+      (repo.description && repo.description.toLowerCase().includes(query)) ||
+      (repo.language && repo.language.toLowerCase().includes(query))
+  );
+
+  const totalMatching = filteredImported.length + filteredRepos.length;
 
   return (
     <header className="relative z-20 flex items-center justify-between px-3 sm:px-5 py-2.5 bg-[#181816] border-b border-[#262623] shrink-0">
@@ -65,7 +179,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
         <button
           id="btn-toggle-sidebar"
           onClick={onToggleSidebar}
-          className="relative p-2 rounded-lg text-[#b4b4aa] hover:text-[#ecece7] hover:bg-[#262623] transition-colors focus:outline-none"
+          className="relative p-2 rounded-lg text-[#b4b4aa] hover:text-[#ecece7] hover:bg-[#262623] transition-colors focus:outline-none cursor-pointer"
           title="Toggle Navigation"
         >
           <Menu className="w-5 h-5" />
@@ -77,7 +191,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
         <button
           id="btn-header-new-chat"
           onClick={onNewChat}
-          className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-[#b4b4aa] hover:text-[#ecece7] bg-[#222220] hover:bg-[#2a2a26] border border-[#33332e] transition-colors"
+          className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-[#b4b4aa] hover:text-[#ecece7] bg-[#222220] hover:bg-[#2a2a26] border border-[#33332e] transition-colors cursor-pointer"
         >
           <Plus className="w-3.5 h-3.5" />
           <span>New Chat</span>
@@ -92,116 +206,357 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
             title="Git Repositories"
           >
             <FolderGit2 className="w-3.5 h-3.5 text-[#d97757]" />
-            <span className="max-w-[100px] sm:max-w-none truncate">
+            <span className="max-w-[110px] sm:max-w-none truncate">
               {selectedRepoName ? selectedRepoName : 'Repositories'}
             </span>
-            <ChevronDown className="w-3 h-3 text-[#85857a]" />
+            <ChevronDown className={`w-3 h-3 text-[#85857a] transition-transform ${repoDropdownOpen ? 'rotate-180' : ''}`} />
           </button>
 
           {repoDropdownOpen && (
             <>
               <div
                 className="fixed inset-0 z-30"
-                onClick={() => setRepoDropdownOpen(false)}
+                onClick={() => {
+                  setRepoDropdownOpen(false);
+                  setActiveBranchMenuRepo(null);
+                }}
               />
-              <div className="absolute left-0 mt-1.5 w-80 p-2 bg-[#222220] border border-[#33332e] rounded-xl shadow-2xl z-40 animate-in fade-in zoom-in-95 duration-100 max-h-96 overflow-y-auto">
-                <div className="flex items-center justify-between px-2 py-1.5 border-b border-[#33332e] mb-1">
-                  <span className="text-[11px] font-semibold text-[#85857a] uppercase tracking-wider flex items-center gap-1.5">
-                    <FolderGit2 className="w-3.5 h-3.5 text-[#d97757]" />
-                    <span>Git Repositories</span>
-                  </span>
+              <div
+                id="git-repos-dropdown-menu"
+                className="absolute left-0 mt-2 w-[340px] sm:w-[420px] bg-[#161614] border border-[#2c2c28] rounded-2xl shadow-2xl z-40 overflow-hidden animate-in fade-in zoom-in-95 duration-150 flex flex-col"
+              >
+                {/* 1. Header Bar with Manage / Import link */}
+                <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-[#262622] bg-[#1a1a17]">
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 rounded-md bg-[#252521] border border-[#33332e] flex items-center justify-center">
+                      <FolderGit2 className="w-3 h-3 text-[#d97757]" />
+                    </div>
+                    <span className="text-xs font-semibold text-[#ecece7]">
+                      Git Repositories
+                    </span>
+                    <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-[#22221f] text-[#85857a] font-mono">
+                      {totalMatching}
+                    </span>
+                  </div>
                   {onOpenGitHubModal && (
                     <button
                       onClick={() => {
                         setRepoDropdownOpen(false);
                         onOpenGitHubModal();
                       }}
-                      className="text-[11px] text-[#d97757] hover:underline cursor-pointer font-medium"
+                      className="text-[11px] text-[#d97757] hover:text-[#e08668] hover:underline cursor-pointer font-medium flex items-center gap-1"
                     >
-                      Manage / Import
+                      <span>Manage All</span>
+                      <ExternalLink className="w-2.5 h-2.5" />
                     </button>
                   )}
                 </div>
 
-                {reposLoading ? (
-                  <div className="py-6 flex flex-col items-center justify-center gap-2 text-[#737373]">
-                    <Loader2 className="w-4 h-4 animate-spin text-[#d97757]" />
-                    <span className="text-xs">Loading repositories...</span>
-                  </div>
-                ) : (
-                  <div className="space-y-1">
-                    {importedList.length > 0 && (
-                      <div className="pb-1 mb-1 border-b border-[#2d2d29]">
-                        <div className="px-2 py-1 text-[10px] text-[#85857a] font-medium uppercase">
-                          Workspace Cloned Repos ({importedList.length})
-                        </div>
-                        {importedList.map((imp) => (
-                          <button
-                            key={imp.path || imp.name}
-                            onClick={() => {
-                              setSelectedRepoName(imp.name);
-                              setRepoDropdownOpen(false);
-                              if (onSelectRepoForChat) {
-                                onSelectRepoForChat(imp);
-                              }
-                            }}
-                            className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between text-[#ecece7] hover:bg-[#2c2c28] transition-colors cursor-pointer group"
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <FolderGit2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                              <span className="truncate font-medium">{imp.name}</span>
-                            </div>
-                            <span className="text-[10px] text-[#737373] font-mono group-hover:text-white">
-                              {imp.branch || 'main'}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
+                {/* 2. Sticky Search Bar at Top of Dropdown */}
+                <div className="p-2.5 bg-[#181815] border-b border-[#242420]">
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#85857a]" />
+                    <input
+                      type="text"
+                      placeholder="Search repository or branch..."
+                      value={repoSearch}
+                      onChange={(e) => setRepoSearch(e.target.value)}
+                      autoFocus
+                      className="w-full pl-8.5 pr-7 py-1.5 bg-[#10100e] border border-[#2b2b27] focus:border-[#d97757] rounded-xl text-xs text-[#ecece7] placeholder-[#66665e] outline-none transition-all"
+                    />
+                    {repoSearch && (
+                      <button
+                        onClick={() => setRepoSearch('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#85857a] hover:text-white"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
                     )}
+                  </div>
+                </div>
 
-                    <div className="px-2 py-1 text-[10px] text-[#85857a] font-medium uppercase">
-                      GitHub Cloud Repos ({reposList.length})
+                {/* 3. Repositories Scrollable Area - Formatted to show ~5 cards at once */}
+                <div className="max-h-[380px] overflow-y-auto p-2 space-y-1.5 divide-y-0">
+                  {reposLoading ? (
+                    <div className="py-12 flex flex-col items-center justify-center gap-2 text-[#85857a]">
+                      <Loader2 className="w-5 h-5 animate-spin text-[#d97757]" />
+                      <span className="text-xs">Loading repositories & branches...</span>
                     </div>
-                    {reposList.length === 0 ? (
-                      <div className="py-4 text-center text-xs text-[#737373]">
-                        No GitHub repositories found. Connect GitHub in settings or import via URL.
-                      </div>
-                    ) : (
-                      reposList.slice(0, 15).map((repo) => (
+                  ) : totalMatching === 0 ? (
+                    <div className="py-8 text-center text-xs text-[#85857a] space-y-2">
+                      <p>No matching repositories found.</p>
+                      {onOpenGitHubModal && (
                         <button
-                          key={repo.id || repo.name}
                           onClick={() => {
-                            setSelectedRepoName(repo.name);
                             setRepoDropdownOpen(false);
-                            if (onOpenGitHubModal) {
-                              onOpenGitHubModal();
-                            }
+                            onOpenGitHubModal();
                           }}
-                          className="w-full text-left px-2.5 py-2 rounded-lg text-xs flex items-start justify-between text-[#b4b4aa] hover:bg-[#2c2c28] hover:text-[#ecece7] transition-colors cursor-pointer"
+                          className="px-3 py-1 bg-[#22221f] hover:bg-[#2a2a26] text-[#ecece7] rounded-lg border border-[#33332e] text-[11px] cursor-pointer"
                         >
-                          <div className="min-w-0 pr-2">
-                            <div className="font-medium text-white truncate flex items-center gap-1.5">
-                              {repo.private ? (
-                                <Lock className="w-3 h-3 text-amber-400 shrink-0" />
-                              ) : (
-                                <Globe className="w-3 h-3 text-[#85857a] shrink-0" />
-                              )}
-                              <span className="truncate">{repo.name}</span>
-                            </div>
-                            {repo.description && (
-                              <p className="text-[11px] text-[#737373] truncate mt-0.5">
-                                {repo.description}
-                              </p>
-                            )}
-                          </div>
-                          <span className="text-[10px] text-[#85857a] font-mono shrink-0 bg-[#1c1c1a] px-1.5 py-0.5 rounded border border-[#33332e]">
-                            {repo.default_branch || 'main'}
-                          </span>
+                          Import Repository by URL
                         </button>
-                      ))
-                    )}
-                  </div>
-                )}
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      {/* Cloned / Workspace Repos */}
+                      {filteredImported.length > 0 && (
+                        <div className="space-y-1.5 pb-1">
+                          <div className="px-2 py-0.5 text-[10px] font-semibold text-[#85857a] uppercase tracking-wider flex items-center justify-between">
+                            <span>Workspace Cloned ({filteredImported.length})</span>
+                          </div>
+                          {filteredImported.map((imp) => {
+                            const repoKey = imp.name;
+                            const currentBranch = selectedBranches[repoKey] || imp.branch || 'main';
+                            const isBranchMenuOpen = activeBranchMenuRepo === repoKey;
+                            const availableBranches = repoBranchesMap[repoKey] || [currentBranch, 'main', 'master'];
+
+                            return (
+                              <div
+                                key={`imp-${imp.path || imp.name}`}
+                                className="group p-2.5 rounded-xl bg-[#1a1a17] hover:bg-[#20201d] border border-[#282824] hover:border-[#383833] transition-all flex items-center justify-between gap-2.5 relative"
+                              >
+                                {/* Left Info */}
+                                <div
+                                  onClick={() => {
+                                    setSelectedRepoName(imp.name);
+                                    setRepoDropdownOpen(false);
+                                    if (onSelectRepoForChat) {
+                                      onSelectRepoForChat(imp);
+                                    }
+                                  }}
+                                  className="min-w-0 flex-1 cursor-pointer"
+                                >
+                                  <div className="flex items-center gap-1.5">
+                                    <FolderGit2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                                    <span className="font-semibold text-xs text-[#ecece7] group-hover:text-white truncate">
+                                      {imp.name}
+                                    </span>
+                                    <span className="px-1.5 py-0.2 rounded text-[9px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
+                                      Active
+                                    </span>
+                                  </div>
+                                  <div className="text-[10px] text-[#787870] truncate mt-0.5">
+                                    Local workspace repository ready for AI context
+                                  </div>
+                                </div>
+
+                                {/* Right: Branch Dropdown & Chat Action */}
+                                <div className="shrink-0 flex items-center gap-1.5">
+                                  {/* Branch Dropdown Button */}
+                                  <div className="relative">
+                                    <button
+                                      onClick={(e) => handleToggleBranchDropdown(e, repoKey, imp.name)}
+                                      className="flex items-center gap-1 px-2 py-1 rounded-lg bg-[#22221f] hover:bg-[#2c2c28] border border-[#33332e] text-[10px] font-mono text-[#b4b4aa] hover:text-[#ecece7] transition-colors cursor-pointer"
+                                      title="Switch branch"
+                                    >
+                                      <GitBranch className="w-2.5 h-2.5 text-[#d97757]" />
+                                      <span className="max-w-[70px] truncate">{currentBranch}</span>
+                                      <ChevronDown className="w-2.5 h-2.5 text-[#85857a]" />
+                                    </button>
+
+                                    {/* Branch Popover */}
+                                    {isBranchMenuOpen && (
+                                      <div
+                                        className="absolute right-0 top-full mt-1 w-44 p-1 bg-[#1c1c19] border border-[#383832] rounded-xl shadow-xl z-50 animate-in fade-in zoom-in-95 duration-100 max-h-48 overflow-y-auto"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <div className="px-2 py-1 text-[9px] uppercase font-semibold text-[#85857a] border-b border-[#282824]">
+                                          Select Branch
+                                        </div>
+                                        {branchLoadingRepo === repoKey ? (
+                                          <div className="py-2 text-center text-[10px] text-[#85857a]">
+                                            Loading branches...
+                                          </div>
+                                        ) : (
+                                          availableBranches.map((b) => (
+                                            <button
+                                              key={b}
+                                              onClick={(e) => handleSelectBranch(e, repoKey, b)}
+                                              className={`w-full text-left px-2 py-1 rounded-md text-[11px] font-mono flex items-center justify-between transition-colors cursor-pointer ${
+                                                b === currentBranch
+                                                  ? 'bg-[#d97757]/20 text-[#f0a282]'
+                                                  : 'text-[#b4b4aa] hover:bg-[#252522] hover:text-[#ecece7]'
+                                              }`}
+                                            >
+                                              <span className="truncate">{b}</span>
+                                              {b === currentBranch && <Check className="w-3 h-3 text-[#d97757]" />}
+                                            </button>
+                                          ))
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Select for Chat Button */}
+                                  <button
+                                    onClick={() => {
+                                      setSelectedRepoName(imp.name);
+                                      setRepoDropdownOpen(false);
+                                      if (onSelectRepoForChat) {
+                                        onSelectRepoForChat(imp);
+                                      }
+                                    }}
+                                    className="p-1.5 rounded-lg bg-[#252521] hover:bg-[#d97757] text-[#ecece7] hover:text-white border border-[#33332e] hover:border-[#d97757] transition-all cursor-pointer"
+                                    title="Use in Chat"
+                                  >
+                                    <MessageSquare className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* GitHub Cloud Repositories */}
+                      {filteredRepos.length > 0 && (
+                        <div className="space-y-1.5 pt-1">
+                          {filteredImported.length > 0 && (
+                            <div className="px-2 py-0.5 text-[10px] font-semibold text-[#85857a] uppercase tracking-wider">
+                              <span>GitHub Cloud ({filteredRepos.length})</span>
+                            </div>
+                          )}
+                          {filteredRepos.map((repo) => {
+                            const repoKey = repo.full_name || repo.name;
+                            const currentBranch = selectedBranches[repoKey] || repo.default_branch || 'main';
+                            const isBranchMenuOpen = activeBranchMenuRepo === repoKey;
+                            const isCloning = cloningRepoName === repoKey;
+                            const availableBranches = repoBranchesMap[repoKey] || [currentBranch, 'main', 'master'];
+
+                            return (
+                              <div
+                                key={`gh-${repo.id || repo.name}`}
+                                className="group p-2.5 rounded-xl bg-[#181816] hover:bg-[#20201d] border border-[#262622] hover:border-[#383832] transition-all flex items-center justify-between gap-2.5 relative"
+                              >
+                                {/* Left Info */}
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-1.5">
+                                    <span title={repo.private ? "Private" : "Public"}>
+                                      {repo.private ? (
+                                        <Lock className="w-3.5 h-3.5 text-[#d97757] shrink-0" />
+                                      ) : (
+                                        <Globe className="w-3.5 h-3.5 text-[#85857a] shrink-0" />
+                                      )}
+                                    </span>
+                                    <span
+                                      className="font-semibold text-xs text-[#ecece7] group-hover:text-white truncate cursor-pointer"
+                                      onClick={() => {
+                                        setSelectedRepoName(repo.name);
+                                        setRepoDropdownOpen(false);
+                                        if (onOpenGitHubModal) onOpenGitHubModal();
+                                      }}
+                                    >
+                                      {repo.name}
+                                    </span>
+                                  </div>
+
+                                  {repo.description && (
+                                    <p className="text-[10px] text-[#737373] truncate mt-0.5">
+                                      {repo.description}
+                                    </p>
+                                  )}
+
+                                  <div className="flex items-center gap-2 mt-1 text-[9px] text-[#66665e]">
+                                    {repo.language && (
+                                      <span className="flex items-center gap-1 text-[#a3a39e]">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-[#d97757]" />
+                                        {repo.language}
+                                      </span>
+                                    )}
+                                    <span className="flex items-center gap-0.5">
+                                      <Star className="w-2.5 h-2.5 text-[#85857a]" />
+                                      {repo.stargazers_count || 0}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Right: Branch Dropdown & Clone / Import Action */}
+                                <div className="shrink-0 flex items-center gap-1.5">
+                                  {/* Branch Dropdown Button */}
+                                  <div className="relative">
+                                    <button
+                                      onClick={(e) => handleToggleBranchDropdown(e, repoKey, repo.full_name || repo.name)}
+                                      className="flex items-center gap-1 px-2 py-1 rounded-lg bg-[#20201d] hover:bg-[#2a2a26] border border-[#2e2e2a] text-[10px] font-mono text-[#b4b4aa] hover:text-[#ecece7] transition-colors cursor-pointer"
+                                      title="Change branch"
+                                    >
+                                      <GitBranch className="w-2.5 h-2.5 text-[#85857a]" />
+                                      <span className="max-w-[70px] truncate">{currentBranch}</span>
+                                      <ChevronDown className="w-2.5 h-2.5 text-[#85857a]" />
+                                    </button>
+
+                                    {/* Branch Popover */}
+                                    {isBranchMenuOpen && (
+                                      <div
+                                        className="absolute right-0 top-full mt-1 w-44 p-1 bg-[#1c1c19] border border-[#383832] rounded-xl shadow-xl z-50 animate-in fade-in zoom-in-95 duration-100 max-h-48 overflow-y-auto"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <div className="px-2 py-1 text-[9px] uppercase font-semibold text-[#85857a] border-b border-[#282824]">
+                                          Select Branch
+                                        </div>
+                                        {branchLoadingRepo === repoKey ? (
+                                          <div className="py-2 text-center text-[10px] text-[#85857a]">
+                                            Loading branches...
+                                          </div>
+                                        ) : (
+                                          availableBranches.map((b) => (
+                                            <button
+                                              key={b}
+                                              onClick={(e) => handleSelectBranch(e, repoKey, b)}
+                                              className={`w-full text-left px-2 py-1 rounded-md text-[11px] font-mono flex items-center justify-between transition-colors cursor-pointer ${
+                                                b === currentBranch
+                                                  ? 'bg-[#d97757]/20 text-[#f0a282]'
+                                                  : 'text-[#b4b4aa] hover:bg-[#252522] hover:text-[#ecece7]'
+                                              }`}
+                                            >
+                                              <span className="truncate">{b}</span>
+                                              {b === currentBranch && <Check className="w-3 h-3 text-[#d97757]" />}
+                                            </button>
+                                          ))
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Clone Action Button */}
+                                  <button
+                                    onClick={(e) => handleCloneFromDropdown(e, repo)}
+                                    disabled={isCloning}
+                                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#252521] hover:bg-[#d97757] text-[#ecece7] hover:text-white border border-[#33332e] hover:border-[#d97757] text-[10px] font-medium transition-all cursor-pointer"
+                                    title={`Clone branch ${currentBranch}`}
+                                  >
+                                    {isCloning ? (
+                                      <Loader2 className="w-3 h-3 animate-spin" />
+                                    ) : (
+                                      <Download className="w-3 h-3" />
+                                    )}
+                                    <span>Import</span>
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {/* 4. Dropdown Footer */}
+                <div className="p-2 border-t border-[#242420] bg-[#141412] flex items-center justify-between text-[10px] text-[#85857a] px-3">
+                  <span>Scroll to view all repositories</span>
+                  {onOpenGitHubModal && (
+                    <button
+                      onClick={() => {
+                        setRepoDropdownOpen(false);
+                        onOpenGitHubModal();
+                      }}
+                      className="text-[#d97757] hover:underline cursor-pointer"
+                    >
+                      Open Import Center &rarr;
+                    </button>
+                  )}
+                </div>
               </div>
             </>
           )}
@@ -217,7 +572,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
         <button
           id="btn-toggle-thinking"
           onClick={onToggleThinking}
-          className={`hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors ${
+          className={`hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors cursor-pointer ${
             thinkingEnabled
               ? 'bg-[#d97757]/15 border-[#d97757]/40 text-[#f0a282]'
               : 'bg-[#222220] border-[#33332e] text-[#85857a] hover:text-[#b4b4aa]'
@@ -233,7 +588,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           <button
             id="btn-model-selector"
             onClick={() => setModelDropdownOpen(!modelDropdownOpen)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-[#222220] hover:bg-[#2a2a26] border border-[#33332e] text-[#ecece7] transition-colors"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-[#222220] hover:bg-[#2a2a26] border border-[#33332e] text-[#ecece7] transition-colors cursor-pointer"
           >
             <span className="max-w-[100px] sm:max-w-none truncate">{selectedModel.name}</span>
             <ChevronDown className="w-3.5 h-3.5 text-[#85857a]" />
@@ -256,7 +611,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
                       onSelectModel(model);
                       setModelDropdownOpen(false);
                     }}
-                    className={`w-full text-left px-2.5 py-2 rounded-lg text-xs flex items-start justify-between transition-colors ${
+                    className={`w-full text-left px-2.5 py-2 rounded-lg text-xs flex items-start justify-between transition-colors cursor-pointer ${
                       selectedModel.id === model.id
                         ? 'bg-[#2f2f2a] text-[#ecece7]'
                         : 'text-[#b4b4aa] hover:bg-[#282824] hover:text-[#ecece7]'
@@ -286,3 +641,4 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
     </header>
   );
 };
+

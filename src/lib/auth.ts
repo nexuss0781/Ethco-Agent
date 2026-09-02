@@ -87,6 +87,12 @@ export const logout = async () => {
 };
 
 export const getUser = async () => {
+  let ghUser: any = null;
+  try {
+    const rawGh = localStorage.getItem('ethco_github_user');
+    if (rawGh) ghUser = JSON.parse(rawGh);
+  } catch {}
+
   // 1. Try server-side session first (Real Nexuss Auth session)
   try {
     const response = await fetch('/api/auth/me');
@@ -94,15 +100,19 @@ export const getUser = async () => {
       const data = await response.json();
       if (data && data.user) {
         const email = data.user.email;
-        let name = data.user.name || data.user.full_name || deriveNameFromEmail(email);
+        let name = data.user.name || data.user.full_name || (ghUser && (ghUser.name || ghUser.login)) || deriveNameFromEmail(email);
         if (name === 'Ethco Developer' && email) {
-          name = deriveNameFromEmail(email);
+          name = ghUser?.name || deriveNameFromEmail(email);
         }
+        const username = ghUser?.login || data.user.username || data.user.login || deriveNameFromEmail(email);
+        const avatar = ghUser?.avatar_url || data.user.avatarUrl || data.user.avatar_url || data.user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces';
         return {
           id: data.user.id || 'user-id',
           name,
+          username,
           email,
-          avatar: data.user.avatarUrl || data.user.avatar_url || data.user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces',
+          avatar,
+          ghUser,
         };
       }
     }
@@ -115,7 +125,17 @@ export const getUser = async () => {
     const mock = localStorage.getItem('ethco_mock_session');
     if (mock) {
       try {
-        return JSON.parse(mock);
+        const parsed = JSON.parse(mock);
+        const username = ghUser?.login || parsed.username || deriveNameFromEmail(parsed.email);
+        const name = ghUser?.name || parsed.name || deriveNameFromEmail(parsed.email);
+        const avatar = ghUser?.avatar_url || parsed.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces';
+        return {
+          ...parsed,
+          name,
+          username,
+          avatar,
+          ghUser,
+        };
       } catch (e) {
         return null;
       }
@@ -129,15 +149,20 @@ export const getUser = async () => {
     if (!session) return null;
     
     const email = session.user.email;
-    const name = session.user.user_metadata.full_name || 
+    const name = ghUser?.name || 
+                 session.user.user_metadata.full_name || 
                  session.user.user_metadata.name || 
                  deriveNameFromEmail(email);
+    const username = ghUser?.login || deriveNameFromEmail(email);
+    const avatar = ghUser?.avatar_url || session.user.user_metadata.avatar_url;
 
     return {
       id: session.user.id,
       name,
+      username,
       email,
-      avatar: session.user.user_metadata.avatar_url,
+      avatar,
+      ghUser,
     };
   } catch (error) {
     console.error('Failed to get Supabase session:', error);
