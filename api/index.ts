@@ -3,7 +3,6 @@ import path from "path";
 import fs from "fs";
 import https from "https";
 import { exec, execSync } from "child_process";
-import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import jwt from "jsonwebtoken";
@@ -896,15 +895,16 @@ export async function executeWorkspaceTool(name: string, args: Record<string, an
       }
 
       case "list_directory": {
-        const dirPath = resolveSafePath(args.directoryPath || ".");
+        const rawPath = args.directoryPath || args.path || ".";
+        const dirPath = resolveSafePath(rawPath);
         if (!fs.existsSync(dirPath)) {
-          return { error: `Directory not found: "${args.directoryPath}"` };
+          return { error: `Directory not found: "${rawPath}"` };
         }
 
-        const ignored = new Set(["node_modules", ".git", ".next", "dist", ".cache", ".turbo"]);
+        const ignored = new Set(["node_modules", ".git", ".next", "dist", ".cache", ".turbo", "bun.lock", "package-lock.json"]);
 
         function scan(current: string, recursive: boolean, depth = 0): any[] {
-          if (depth > 4) return [];
+          if (depth > 10) return [];
           const entries = fs.readdirSync(current, { withFileTypes: true });
           const list: any[] = [];
 
@@ -939,7 +939,7 @@ export async function executeWorkspaceTool(name: string, args: Record<string, an
 
         const items = scan(dirPath, Boolean(args.recursive));
         return {
-          directory: args.directoryPath || ".",
+          directory: rawPath,
           itemsCount: items.length,
           items,
         };
@@ -1193,16 +1193,6 @@ app.use((req, res, next) => {
     return res.status(204).end();
   }
   next();
-});
-
-// Initialize Gemini SDK with telemetry header
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY || "",
-  httpOptions: {
-    headers: {
-      "User-Agent": "aistudio-build",
-    },
-  },
 });
 
 // Path to SYSTEM.md
@@ -2987,142 +2977,49 @@ Return ONLY a valid JSON object:
   }
 });
 
-// Helper for multi-turn tool calling and streaming
-async function executeAgentTurnWithTools(
-  modelsToTry: string[],
-  contents: any[],
-  baseConfig: any,
-  onChunk: (text: string) => void,
-  onToolEvent: (event: any) => void
-) {
-  const maxToolIterations = 6;
-  let iteration = 0;
-
-  const toolsConfig = {
-    ...baseConfig,
-    tools: [{ functionDeclarations: WORKSPACE_TOOL_DECLARATIONS }],
-  };
-
-  while (iteration < maxToolIterations) {
-    iteration++;
-    let response: any = null;
-    let successfulModel = "";
-    let lastError: any = null;
-
-    for (const modelName of modelsToTry) {
-      for (let attempt = 1; attempt <= 3; attempt++) {
-        try {
-          response = await ai.models.generateContent({
-            model: modelName,
-            contents,
-            config: toolsConfig,
-          });
-          successfulModel = modelName;
-          break;
-        } catch (err: any) {
-          lastError = err;
-          const msg = (err?.message || "").toLowerCase();
-          const status = err?.status || err?.code;
-          const isTransient =
-            status === 503 ||
-            status === 429 ||
-            msg.includes("503") ||
-            msg.includes("429") ||
-            msg.includes("high demand") ||
-            msg.includes("unavailable") ||
-            msg.includes("resource exhausted") ||
-            msg.includes("quota");
-
-          console.warn(`Model ${modelName} attempt ${attempt} error in agent loop:`, err?.message || err);
-
-          if (isTransient && attempt < 3) {
-            // Exponential backoff
-            await new Promise((r) => setTimeout(r, 600 * attempt));
-          } else {
-            break; // Try next fallback model
-          }
+// Helper to convert Workspace tool declarations to OpenAI JSON Schema Tools format
+function convertToOpenAiTools(decls: any[]) {
+  return decls.map(decl => {
+    const mapSchema = (schema: any): any => {
+      if (!schema) return schema;
+      const res = { ...schema };
+      if (typeof res.type === "string") {
+        res.type = res.type.toLowerCase();
+      }
+      if (res.properties) {
+        const props: any = {};
+        for (const k of Object.keys(res.properties)) {
+          props[k] = mapSchema(res.properties[k]);
         }
+        res.properties = props;
       }
-      if (response) break;
-    }
-
-    if (!response) {
-      throw lastError || new Error("All AI models are currently experiencing high demand. Please try again.");
-    }
-
-    const candidate = response.candidates?.[0];
-    const candidateContent = candidate?.content;
-    const functionCalls = response.functionCalls;
-
-    // If the model did not request any tools, send the final text response
-    if (!functionCalls || functionCalls.length === 0) {
-      const finalText = response.text || "";
-      if (finalText) {
-        onChunk(finalText);
+      if (res.items) {
+        res.items = mapSchema(res.items);
       }
-      return { success: true, model: successfulModel };
-    }
+      return res;
+    };
 
-    // Preserve the complete model turn content (including thoughts, thought_signatures, and functionCalls)
-    if (candidateContent) {
-      contents.push(candidateContent);
-    } else {
-      contents.push({
-        role: "model",
-        parts: functionCalls.map((fc: any) => ({ functionCall: { name: fc.name, args: fc.args || {} } })),
-      });
-    }
-
-    // Execute all tools requested in this step and collect the tool responses
-    const responseParts: any[] = [];
-    for (const call of functionCalls) {
-      const callId = `call_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-      const toolName = call.name;
-      const toolArgs = call.args || {};
-
-      onToolEvent({
-        type: "tool_start",
-        id: callId,
-        name: toolName,
-        args: toolArgs,
-      });
-
-      const result = await executeWorkspaceTool(toolName, toolArgs);
-
-      onToolEvent({
-        type: "tool_finish",
-        id: callId,
-        name: toolName,
-        result,
-      });
-
-      responseParts.push({
-        functionResponse: {
-          name: toolName,
-          response: {
-            output: result,
-          },
-        },
-      });
-    }
-
-    // Append user turn containing all functionResponses
-    contents.push({
-      role: "user",
-      parts: responseParts,
-    });
-  }
-
-  return { success: true };
+    return {
+      type: "function",
+      function: {
+        name: decl.name,
+        description: decl.description,
+        parameters: mapSchema(decl.parameters)
+      }
+    };
+  });
 }
 
+// Unified multi-turn tool calling and streaming over OmniRoute
 async function executeOmniRouteTurn(
   modelName: string, // e.g. "omniroute/auto"
   messages: any[], // Raw original messages from req.body
-  systemInstruction?: string,
-  onChunk?: (text: string) => void,
+  systemInstruction: string | undefined,
+  onChunk: (text: string) => void,
+  onToolEvent?: (event: any) => void,
   customApiKey?: string
 ) {
+  const openAiTools = convertToOpenAiTools(WORKSPACE_TOOL_DECLARATIONS);
   const openAiMessages: any[] = [];
   
   // Add system prompt
@@ -3160,7 +3057,6 @@ async function executeOmniRouteTurn(
     }
 
     if (content.length > 0) {
-      // If there's only one text part, use string to be safe for older OpenAI parsers, else use array
       if (content.length === 1 && content[0].type === "text") {
         openAiMessages.push({ role, content: content[0].text });
       } else {
@@ -3170,7 +3066,6 @@ async function executeOmniRouteTurn(
   }
 
   // Extract model ID from something like 'omniroute/auto' or just 'auto'
-  // But SKILL.md says use auto or exact live model. 'omniroute-auto' maps to 'auto'.
   let mappedModel = "auto";
   if (modelName === "omniroute/auto" || modelName === "omniroute-auto") {
     mappedModel = "auto";
@@ -3181,7 +3076,6 @@ async function executeOmniRouteTurn(
   }
 
   let apiKey = (customApiKey || process.env.OMNIROUTE_AI_API_KEY || process.env.OMNIROUTE_API_KEY || "").trim();
-  // Strip accidental quotes from environment variables
   if (apiKey.startsWith("\"") && apiKey.endsWith("\"")) {
     apiKey = apiKey.slice(1, -1);
   } else if (apiKey.startsWith("\'") && apiKey.endsWith("\'")) {
@@ -3202,61 +3096,103 @@ async function executeOmniRouteTurn(
     ? rawBase
     : `${rawBase}/api/v1/chat/completions`;
 
-  const response = await fetch(targetUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: mappedModel,
-      stream: true,
-      messages: openAiMessages,
-      temperature: 0.7,
-      max_tokens: 8000
-    })
-  });
+  const maxToolIterations = 6;
+  let iteration = 0;
 
-  if (!response.ok) {
-    const errText = await response.text();
-    let detail = errText;
-    try {
-      const parsed = JSON.parse(errText);
-      if (parsed.error?.message) {
-        detail = parsed.error.message;
-      }
-    } catch {}
-    throw new Error(`OmniRoute API Error (${response.status}): ${detail}`);
-  }
+  while (iteration < maxToolIterations) {
+    iteration++;
 
-  const reader = response.body?.getReader();
-  if (!reader) throw new Error("No response stream");
+    const response = await fetch(targetUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: mappedModel,
+        messages: openAiMessages,
+        tools: onToolEvent ? openAiTools : undefined,
+        tool_choice: onToolEvent ? "auto" : undefined,
+        temperature: 0.7,
+        max_tokens: 8000,
+        stream: false
+      })
+    });
 
-  const decoder = new TextDecoder();
-  let buffer = "";
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() || "";
-
-    for (const line of lines) {
-      if (line.startsWith("data: ") && line !== "data: [DONE]") {
-        try {
-          const parsed = JSON.parse(line.slice(6));
-          const chunk = parsed.choices?.[0]?.delta?.content;
-          if (chunk) {
-            onChunk(chunk);
-          }
-        } catch (e) {
-          // Ignore parse errors on partial stream
+    if (!response.ok) {
+      const errText = await response.text();
+      let detail = errText;
+      try {
+        const parsed = JSON.parse(errText);
+        if (parsed.error?.message) {
+          detail = parsed.error.message;
         }
+      } catch {}
+      throw new Error(`OmniRoute API Error (${response.status}): ${detail}`);
+    }
+
+    const data = await response.json();
+    const choice = data.choices?.[0];
+    const assistantMessage = choice?.message;
+
+    if (!assistantMessage) {
+      throw new Error("No response message received from OmniRoute API.");
+    }
+
+    const toolCalls = assistantMessage.tool_calls;
+
+    if (!onToolEvent || !toolCalls || toolCalls.length === 0) {
+      const finalText = assistantMessage.content || "";
+      if (finalText) {
+        onChunk(finalText);
       }
+      return { success: true };
+    }
+
+    openAiMessages.push({
+      role: "assistant",
+      content: assistantMessage.content || null,
+      tool_calls: toolCalls
+    });
+
+    for (const toolCall of toolCalls) {
+      const callId = toolCall.id || `call_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const toolName = toolCall.function.name;
+      let toolArgs = {};
+      try {
+        toolArgs = typeof toolCall.function.arguments === "string" 
+          ? JSON.parse(toolCall.function.arguments) 
+          : toolCall.function.arguments || {};
+      } catch (e) {
+        console.warn(`Failed to parse arguments for tool ${toolName}:`, toolCall.function.arguments);
+      }
+
+      onToolEvent({
+        type: "tool_start",
+        id: callId,
+        name: toolName,
+        args: toolArgs,
+      });
+
+      const result = await executeWorkspaceTool(toolName, toolArgs);
+
+      onToolEvent({
+        type: "tool_finish",
+        id: callId,
+        name: toolName,
+        result,
+      });
+
+      openAiMessages.push({
+        role: "tool",
+        tool_call_id: callId,
+        name: toolName,
+        content: typeof result === "string" ? result : JSON.stringify(result)
+      });
     }
   }
+
+  return { success: true };
 }
 
 // 6. Chat Streaming SSE Endpoint
@@ -3315,43 +3251,7 @@ Please take the correct action based purely on the context of the user's message
       ? `${baseSystemPrompt}\n\nAdditional User Context/Preferences:\n${customSystemPrompt}`
       : baseSystemPrompt) + modeDirective + repoContextDirective;
 
-    // Convert messages to Gemini format
-    const contents: Array<{ role: "user" | "model"; parts: any[] }> = [];
-
-    for (const msg of messages) {
-      const role = msg.role === "assistant" ? "model" : "user";
-      const parts: any[] = [];
-
-      // Add attachments if any (e.g. images)
-      if (msg.attachments && Array.isArray(msg.attachments)) {
-        for (const att of msg.attachments) {
-          if (att.type === "image" && att.data) {
-            const base64Data = att.data.includes("base64,") ? att.data.split("base64,")[1] : att.data;
-            parts.push({
-              inlineData: {
-                mimeType: att.mimeType || "image/png",
-                data: base64Data,
-              },
-            });
-          } else if (att.type === "file" && att.data) {
-            parts.push({
-              text: `[Attached File: ${att.name}]\n${att.data}`,
-            });
-          }
-        }
-      }
-
-      if (msg.content) {
-        parts.push({ text: msg.content });
-      }
-
-      if (parts.length > 0) {
-        contents.push({ role, parts });
-      }
-    }
-
-    // Force OmniRoute auto custom router stream directly (No Gemini SDK fallback)
-    const preferredModel = "omniroute/auto";
+    const preferredModel = model || "omniroute/auto";
 
     await executeOmniRouteTurn(
       preferredModel,
@@ -3360,13 +3260,16 @@ Please take the correct action based purely on the context of the user's message
       (textChunk: string) => {
         res.write(`data: ${JSON.stringify({ text: textChunk })}\n\n`);
       },
+      (toolEvent: any) => {
+        res.write(`data: ${JSON.stringify({ toolEvent })}\n\n`);
+      },
       req.body?.omnirouteApiKey || (req.headers["x-omniroute-key"] as string)
     );
 
     res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
     res.end();
   } catch (error: any) {
-    console.error("Gemini API stream error:", error);
+    console.error("OmniRoute API stream error:", error);
 
     let readableError = "The model is currently experiencing high demand. Please try sending your message again in a moment.";
     const errMsg = error?.message || "";

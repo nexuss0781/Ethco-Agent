@@ -166,8 +166,13 @@ export default function App() {
   };
 
   // Send message flow
-  const handleSendMessage = async (text: string, attachments: Attachment[] = [], mode?: ActionMode) => {
-    if (!text && attachments.length === 0) return;
+  const handleSendMessage = async (
+    text: string,
+    attachments: Attachment[] = [],
+    mode?: ActionMode,
+    isRegeneration: boolean = false
+  ) => {
+    if (!text && attachments.length === 0 && !isRegeneration) return;
 
     const currentMode = mode || actionMode;
     let targetConvo = activeConversation;
@@ -179,14 +184,6 @@ export default function App() {
       isBrandNew = true;
       setActiveConversationId(targetConvo.id);
     }
-
-    const userMessage: Message = {
-      id: 'msg_user_' + Date.now(),
-      role: 'user',
-      content: text,
-      timestamp: Date.now(),
-      attachments: attachments.length > 0 ? attachments : undefined,
-    };
 
     const assistantPlaceholderId = 'msg_ast_' + Date.now();
     const assistantMessage: Message = {
@@ -201,7 +198,19 @@ export default function App() {
       model: "auto",
     };
 
-    const updatedMessages = [...(targetConvo.messages || []), userMessage, assistantMessage];
+    let updatedMessages: Message[];
+    if (isRegeneration) {
+      updatedMessages = [...(targetConvo.messages || []), assistantMessage];
+    } else {
+      const userMessage: Message = {
+        id: 'msg_user_' + Date.now(),
+        role: 'user',
+        content: text,
+        timestamp: Date.now(),
+        attachments: attachments.length > 0 ? attachments : undefined,
+      };
+      updatedMessages = [...(targetConvo.messages || []), userMessage, assistantMessage];
+    }
     const updatedConvo: Conversation = {
       ...targetConvo,
       messages: updatedMessages,
@@ -218,7 +227,7 @@ export default function App() {
     const prevUserMsgs = (targetConvo.messages || []).filter((m) => m.role === 'user');
     const prevAsstMsgs = (targetConvo.messages || []).filter((m) => m.role === 'assistant');
 
-    if (prevUserMsgs.length === 1) {
+    if (prevUserMsgs.length === 1 && !isRegeneration) {
       const firstPrompt = prevUserMsgs[0].content;
       const modelResponse = prevAsstMsgs[0]?.content || '';
       const secondPrompt = text;
@@ -425,6 +434,7 @@ export default function App() {
 
       // If this is the second prompt and the title or icon has not been set yet, ensure titling runs
       if (
+        !isRegeneration &&
         userTurns.length === 2 &&
         (!finalizedConvo.icon || finalizedConvo.title === 'New Chat' || finalizedConvo.title === 'New Conversation')
       ) {
@@ -450,6 +460,7 @@ export default function App() {
           })
           .catch((e) => console.warn('Second turn title completion error:', e));
       } else if (
+        !isRegeneration &&
         userTurns.length === 1 &&
         (isBrandNew || targetConvo.title === 'New Chat' || targetConvo.title === 'New Conversation') &&
         text.trim()
@@ -513,8 +524,8 @@ export default function App() {
     if (lastUserIndex === -1) return;
 
     const lastUserMessage = activeConversation.messages[lastUserIndex];
-    // Trim back messages up to the user message
-    const trimmedMessages = activeConversation.messages.slice(0, lastUserIndex);
+    // Trim back messages up to AND INCLUDING the user message (so the user's prompt is preserved in the history)
+    const trimmedMessages = activeConversation.messages.slice(0, lastUserIndex + 1);
     const updatedConvo: Conversation = {
       ...activeConversation,
       messages: trimmedMessages,
@@ -522,8 +533,8 @@ export default function App() {
     StorageService.updateConversation(activeConversation.id, updatedConvo);
     setConversations(StorageService.getLocalConversations());
 
-    // Resend user message
-    handleSendMessage(lastUserMessage.content, lastUserMessage.attachments || []);
+    // Resend with isRegeneration = true
+    handleSendMessage(lastUserMessage.content, lastUserMessage.attachments || [], actionMode, true);
   };
 
   const hasMessages = Boolean(activeConversation && activeConversation.messages.length > 0);
