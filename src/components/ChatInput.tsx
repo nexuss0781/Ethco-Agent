@@ -40,6 +40,7 @@ interface ChatInputProps {
   selectedRepos?: SelectedRepoContext[];
   onRemoveSelectedRepo?: (repoName: string) => void;
   onOpenGitHubModal?: () => void;
+  activeConversationId?: string | null;
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
@@ -54,6 +55,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   selectedRepos = [],
   onRemoveSelectedRepo,
   onOpenGitHubModal,
+  activeConversationId,
 }) => {
   const [internalMode, setInternalMode] = useState<ActionMode>('planning');
   const [modeDropdownOpen, setModeDropdownOpen] = useState(false);
@@ -65,7 +67,20 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     setModeDropdownOpen(false);
   };
 
-  const [inputText, setInputText] = useState('');
+  const [inputText, setInputText] = useState(() => {
+    const key = `ethco_draft_${activeConversationId || 'global'}`;
+    return localStorage.getItem(key) || '';
+  });
+
+  // Save draft whenever inputText changes
+  useEffect(() => {
+    const key = `ethco_draft_${activeConversationId || 'global'}`;
+    if (inputText.trim()) {
+      localStorage.setItem(key, inputText);
+    } else {
+      localStorage.removeItem(key);
+    }
+  }, [inputText, activeConversationId]);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [speechError, setSpeechError] = useState<string | null>(null);

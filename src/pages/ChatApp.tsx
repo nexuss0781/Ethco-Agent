@@ -635,10 +635,12 @@ export default function App() {
           {/* Bottom Chat Input Card */}
           <div className="shrink-0 w-full z-10">
             <ChatInput
+              key={activeConversationId || 'global'}
+              activeConversationId={activeConversationId}
               onSendMessage={handleSendMessage}
               isLoading={isLoading}
               onStopGeneration={handleStopGeneration}
-          thinkingEnabled={thinkingEnabled}
+              thinkingEnabled={thinkingEnabled}
               actionMode={actionMode}
               onSelectActionMode={setActionMode}
               activeTodos={activeTodos}
