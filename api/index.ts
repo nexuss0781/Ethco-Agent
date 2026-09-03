@@ -1203,6 +1203,7 @@ app.use((req, res, next) => {
 // Paths to the agent instruction and tool schema prompts
 const systemPromptPath = path.join(process.cwd(), "SYSTEM.md");
 const thinkingPromptPath = path.join(process.cwd(), "THINKING-EXPERT.md");
+const litePromptPath = path.join(process.cwd(), "ETHCO-LITE-SYSTEM-PROMPT.md");
 const toolSchemasPromptPath = path.join(process.cwd(), "TOOL-SCHEMAS.md");
 const dataDir = process.env.VERCEL ? "/tmp/data" : path.join(process.cwd(), "data");
 const conversationsFile = path.join(dataDir, "conversations.json");
@@ -1213,7 +1214,7 @@ if (!fs.existsSync(dataDir)) {
 }
 
 // Function to read and combine the active Ethco system-prompt layers.
-// Ethco Max receives the deliberate-thinking layer between the shared behavior and tool contract.
+// Ethco Lite receives its focused engineering layer; Ethco Max receives the deliberate-thinking layer.
 function getSystemPrompt(model?: string, modelId?: string): string {
   const promptParts: string[] = [];
 
@@ -1223,6 +1224,17 @@ function getSystemPrompt(model?: string, modelId?: string): string {
     }
   } catch (err) {
     console.error("Error reading SYSTEM.md:", err);
+  }
+
+  const isLiteModel = modelId === "ethco-1.0-lite" && model === "omniroute/agent-fast";
+  if (isLiteModel) {
+    try {
+      if (fs.existsSync(litePromptPath)) {
+        promptParts.push(fs.readFileSync(litePromptPath, "utf-8"));
+      }
+    } catch (err) {
+      console.error("Error reading ETHCO-LITE-SYSTEM-PROMPT.md:", err);
+    }
   }
 
   const isMaxModel = modelId === "ethco-1.0-max" && model === "omniroute/quality";
