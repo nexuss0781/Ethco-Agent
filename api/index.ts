@@ -1205,8 +1205,9 @@ const ai = new GoogleGenAI({
   },
 });
 
-// Path to SYSTEM.md
+// Paths to the agent instruction and tool schema prompts
 const systemPromptPath = path.join(process.cwd(), "SYSTEM.md");
+const toolSchemasPromptPath = path.join(process.cwd(), "TOOL-SCHEMAS.md");
 const dataDir = process.env.VERCEL ? "/tmp/data" : path.join(process.cwd(), "data");
 const conversationsFile = path.join(dataDir, "conversations.json");
 
@@ -1215,16 +1216,27 @@ if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
-// Function to read SYSTEM.md instructions
+// Function to read and combine the agent instruction and tool schema prompts
 function getSystemPrompt(): string {
+  const promptParts: string[] = [];
+
   try {
     if (fs.existsSync(systemPromptPath)) {
-      return fs.readFileSync(systemPromptPath, "utf-8");
+      promptParts.push(fs.readFileSync(systemPromptPath, "utf-8"));
     }
   } catch (err) {
     console.error("Error reading SYSTEM.md:", err);
   }
-  return "You are Claude, a thoughtful, intellectually curious, honest, nuanced, and genuinely helpful AI assistant.";
+
+  try {
+    if (fs.existsSync(toolSchemasPromptPath)) {
+      promptParts.push(`# Tool Schemas\n\n${fs.readFileSync(toolSchemasPromptPath, "utf-8")}`);
+    }
+  } catch (err) {
+    console.error("Error reading TOOL-SCHEMAS.md:", err);
+  }
+
+  return promptParts.join("\n\n") || "You are Ethco, an autonomous AI agent that helps users with software and computer tasks.";
 }
 
 // Ensure conversations storage file exists
