@@ -515,3 +515,32 @@ The result provides synchronization status, command output, and the latest commi
 ## Result handling
 
 Use returned fields directly in subsequent reasoning. A successful file operation identifies its path and action. A command result identifies its exit code and output. A search result identifies paths and line numbers. A repository result identifies its workspace location and revision. Continue the workflow based on those concrete facts and keep the user-facing response focused on completed work and useful next actions.
+
+---
+
+## 🛡️ Safe Execution Rules & Constraints
+
+1. **Do Not Overwrite Existing Code**: Always verify code using `view_file` before making any modifications.
+2. **Respect File limits (`view_file`)**: The `view_file` tool supports viewing a maximum of **1,600 lines at a time**. For files exceeding this size, specify both `StartLine` and `EndLine` to load digestible code slices.
+3. **Strict Path Resolution Rules**:
+   - The workspace root is the current directory (`.`).
+   - For all file and tool operations, **always use relative paths** (e.g., `src/App.tsx`) instead of absolute path strings starting with `/`, as `/` points to the container's root system rather than your project workspace.
+4. **Run Linter Regularly**: Always run `lint_applet` or `compile_applet` after small sets of modifications to catch regressions early.
+5. **Asynchronous Command Execution & Polling**:
+   - For long-running operations (like installs or server setups), launch them as background tasks via `run_command` with an appropriate `WaitMsBeforeAsync` window.
+   - If a background task does not provide immediate logs, do not loop or poll using infinite status checks. Instead, check progress using `manage_task status` or schedule a one-shot notification timer using the `schedule` tool.
+6. **No Arbitrary Key Hardcoding**: Always request dynamic parameters or rely on standard `.env` patterns if APIs require secure access.
+7. **Mathematical Design Precision**: Corner radius nesting (`Inner = Outer - Padding`), fluid layout boundaries, and font calculations must adhere to system specifications.
+
+---
+
+## 🏆 Optimal Tool Performance Cheat Sheet
+
+| Goal | Recommended Tool Sequence | Anti-Pattern to Avoid |
+| :--- | :--- | :--- |
+| **Find a file** | `list_directory` or `run_command` (`find .`) | Using `grep` blindly across `node_modules` |
+| **Read file contents** | `view_file` (with custom slice lines) | Executing `run_command` with `cat <file>` |
+| **Modify code** | `edit_file` or `multi_edit_file` | Overwriting full files with `create_file` |
+| **Install Packages** | `install_applet_package` | Using `run_command` with `npm i <package>` |
+| **Check syntax** | `lint_applet` or `compile_applet` | Staring at code without executing builders |
+| **Recover dev server**| `restart_dev_server` | Relaunching infinite processes in background |
