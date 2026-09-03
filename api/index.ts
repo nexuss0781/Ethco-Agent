@@ -1214,7 +1214,7 @@ if (!fs.existsSync(dataDir)) {
 
 // Function to read and combine the active Ethco system-prompt layers.
 // Ethco Max receives the deliberate-thinking layer between the shared behavior and tool contract.
-function getSystemPrompt(model?: string): string {
+function getSystemPrompt(model?: string, modelId?: string): string {
   const promptParts: string[] = [];
 
   try {
@@ -1225,7 +1225,7 @@ function getSystemPrompt(model?: string): string {
     console.error("Error reading SYSTEM.md:", err);
   }
 
-  const isMaxModel = model === "omniroute/quality" || model === "ethco-1.0-max";
+  const isMaxModel = modelId === "ethco-1.0-max" && model === "omniroute/quality";
   if (isMaxModel) {
     try {
       if (fs.existsSync(thinkingPromptPath)) {
@@ -3251,7 +3251,7 @@ app.post("/api/chat/stream", async (req, res) => {
 
   try {
     const rawBody = typeof req.body === "string" ? JSON.parse(req.body) : (req.body || {});
-    const { messages, thinkingEnabled = true, customSystemPrompt, model, actionMode = "planning", selectedRepos } = rawBody;
+    const { messages, thinkingEnabled = true, customSystemPrompt, model, modelId, actionMode = "planning", selectedRepos } = rawBody;
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       res.write(`data: ${JSON.stringify({ error: "Messages array is required" })}\n\n`);
@@ -3259,7 +3259,7 @@ app.post("/api/chat/stream", async (req, res) => {
     }
 
     // Load active persona instructions from SYSTEM.md
-    const baseSystemPrompt = getSystemPrompt(model);
+    const baseSystemPrompt = getSystemPrompt(model, modelId);
     let modeDirective = "";
     if (actionMode === "planning") {
       modeDirective = `\n\n## ACTIVE MODE: PLANNING

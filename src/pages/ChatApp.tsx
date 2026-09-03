@@ -283,6 +283,7 @@ export default function App() {
           messages: messagesForBackend,
           thinkingEnabled,
           model: selectedModel.geminiModel,
+          modelId: selectedModel.id,
           actionMode: currentMode,
           selectedRepos: selectedRepos.map((r) => ({
             name: r.name,
