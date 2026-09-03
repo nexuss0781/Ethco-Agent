@@ -357,12 +357,15 @@ export const WORKSPACE_TOOL_DECLARATIONS: ToolDefinition[] = [
           type: "STRING",
           description: "Path of the directory to inspect (e.g. '.' or 'src' or 'src/components')",
         },
+        path: {
+          type: "STRING",
+          description: "Alternate path of the directory to inspect (defaults to '.')",
+        },
         recursive: {
           type: "BOOLEAN",
           description: "Whether to list subdirectories recursively (defaults to false)",
         },
       },
-      required: ["directoryPath"],
     },
   },
   {
@@ -473,6 +476,8 @@ export async function executeWorkspaceTool(name: string, args: Record<string, an
     read: "view_file",
     write: "create_file",
     edit: "edit_file",
+    list_dir: "list_directory",
+    list_dirs: "list_directory",
   }[name] || name;
 
   try {
@@ -1263,11 +1268,12 @@ app.get("/api/tools", (req, res) => {
 // 3. Direct Tool Execution API
 app.post("/api/tools/execute", async (req, res) => {
   try {
-    const { name, args } = req.body;
-    if (!name) {
+    const { name, command, tool, action, args } = req.body;
+    const toolName = name || command || tool || action;
+    if (!toolName) {
       return res.status(400).json({ error: "Tool name is required" });
     }
-    const result = await executeWorkspaceTool(name, args || {});
+    const result = await executeWorkspaceTool(toolName, args || {});
     res.json({ success: !result.error, result });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Tool execution failed" });
