@@ -210,11 +210,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           <button
             id="btn-ethco-tier-dropdown"
             onClick={() => setModelDropdownOpen((open) => !open)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold bg-[#222220] hover:bg-[#2a2a26] transition-colors cursor-pointer ${
-              selectedModel.id === 'ethco-1.0-instant' || selectedModel.id === 'ethco-1.0-pro'
-                ? 'border-[#60a5fa]/50 text-[#93c5fd]'
-                : 'border-[#d97757]/40 text-[#f0a282]'
-            }`}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold bg-[#222220] hover:bg-[#2a2a26] border border-[#d97757]/40 text-[#f0a282] transition-colors cursor-pointer"
             title="Choose Ethco model tier"
           >
             <span className="max-w-[125px] sm:max-w-none truncate">{selectedModel.name}</span>
@@ -238,14 +234,10 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
                     }`}
                   >
                     <span className="min-w-0">
-                      <span className={`block text-xs font-semibold truncate ${
-                        model.id === 'ethco-1.0-instant' || model.id === 'ethco-1.0-pro' ? 'text-[#60a5fa]' : ''
-                      }`}>{model.name}</span>
+                      <span className="block text-xs font-semibold truncate">{model.name}</span>
                       <span className="block text-[10px] font-sans text-[#85857a] truncate">{model.description}</span>
                     </span>
-                    {model.id === selectedModel.id && <Check className={`w-3.5 h-3.5 shrink-0 ${
-                      model.id === 'ethco-1.0-instant' || model.id === 'ethco-1.0-pro' ? 'text-[#60a5fa]' : 'text-[#d97757]'
-                    }`} />}
+                    {model.id === selectedModel.id && <Check className="w-3.5 h-3.5 text-[#d97757] shrink-0" />}
                   </button>
                 ))}
               </div>

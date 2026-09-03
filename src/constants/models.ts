@@ -18,8 +18,8 @@ export const AVAILABLE_MODELS: ModelOption[] = [
     geminiModel: 'omniroute/agent-balanced',
   },
   {
-    id: 'ethco-1.0-pro',
-    name: 'Ethco 1.0 Pro',
+    id: 'ethco-1.0-max',
+    name: 'Ethco 1.0 max',
     versionBadge: 'Quality',
     description: 'Escalates through quality candidates for the strongest responses.',
     thinkingSupported: true,
