@@ -22,8 +22,9 @@ export default function App() {
     () => StorageService.getActiveConversationId() || conversations[0]?.id || null
   );
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const [thinkingEnabled, setThinkingEnabled] = useState(true);
+  const [thinkingEnabled, setThinkingEnabled] = useState(true);
   const [actionMode, setActionMode] = useState<ActionMode>('planning');
+  const [selectedModel, setSelectedModel] = useState<ModelOption>(AVAILABLE_MODELS[1]);
   const [isLoading, setIsLoading] = useState(false);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [isGitHubModalOpen, setIsGitHubModalOpen] = useState(false);
@@ -196,7 +197,7 @@ export default function App() {
       thinkingContent: thinkingEnabled
         ? `Reasoning step (${currentMode.toUpperCase()} mode): Analyzing inquiry in depth, evaluating core nuances, and formulating structured response...`
         : undefined,
-      model: "auto",
+      model: selectedModel.geminiModel,
     };
 
     let updatedMessages: Message[];
@@ -281,7 +282,7 @@ export default function App() {
         body: JSON.stringify({
           messages: messagesForBackend,
           thinkingEnabled,
-          model: 'omniroute/auto',
+          model: selectedModel.geminiModel,
           actionMode: currentMode,
           selectedRepos: selectedRepos.map((r) => ({
             name: r.name,
@@ -603,6 +604,8 @@ export default function App() {
         <ChatHeader
           onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
           onNewChat={handleNewChat}
+          selectedModel={selectedModel}
+          onSelectModel={setSelectedModel}
           thinkingEnabled={thinkingEnabled}
           onToggleThinking={() => setThinkingEnabled(!thinkingEnabled)}
           onOpenUpgradeModal={() => setIsUpgradeModalOpen(true)}

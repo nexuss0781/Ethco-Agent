@@ -25,6 +25,8 @@ import { getDynamicLucideIcon } from '../lib/icons';
 interface ChatHeaderProps {
   onToggleSidebar: () => void;
   onNewChat: () => void;
+  selectedModel: ModelOption;
+  onSelectModel: (model: ModelOption) => void;
   thinkingEnabled: boolean;
   onToggleThinking: () => void;
   onOpenUpgradeModal: () => void;
@@ -39,6 +41,8 @@ interface ChatHeaderProps {
 export const ChatHeader: React.FC<ChatHeaderProps> = ({
   onToggleSidebar,
   onNewChat,
+  selectedModel,
+  onSelectModel,
   thinkingEnabled,
   onToggleThinking,
   onOpenUpgradeModal,
@@ -179,7 +183,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
 
   return (
     <header className="relative z-20 flex items-center justify-between px-3 sm:px-5 py-2.5 bg-[#181816] border-b border-[#262623] shrink-0">
-      {/* Left: Sidebar Toggle, New Chat Button & Git Repositories Dropdown */}
+      {/* Left: Sidebar Toggle, New Chat Button & Ethco tier selector */}
       <div className="flex items-center gap-2">
         <button
           id="btn-toggle-sidebar"
@@ -201,6 +205,45 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           <Plus className="w-3.5 h-3.5" />
           <span>New Chat</span>
         </button>
+
+        <div className="relative">
+          <button
+            id="btn-ethco-tier-dropdown"
+            onClick={() => setModelDropdownOpen((open) => !open)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#222220] hover:bg-[#2a2a26] border border-[#d97757]/40 text-[#f0a282] transition-colors cursor-pointer"
+            title="Choose Ethco model tier"
+          >
+            <span className="max-w-[125px] sm:max-w-none truncate">{selectedModel.name}</span>
+            <ChevronDown className={`w-3 h-3 text-[#f0a282] transition-transform ${modelDropdownOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {modelDropdownOpen && (
+            <>
+              <div className="fixed inset-0 z-30" onClick={() => setModelDropdownOpen(false)} />
+              <div id="ethco-tier-dropdown-menu" className="absolute left-0 mt-2 w-64 p-1.5 bg-[#161614] border border-[#2c2c28] rounded-2xl shadow-2xl z-40 animate-in fade-in zoom-in-95 duration-150">
+                <div className="px-2.5 py-2 text-[10px] uppercase tracking-wider font-semibold text-[#85857a]">Ethco model tier</div>
+                {AVAILABLE_MODELS.map((model) => (
+                  <button
+                    key={model.id}
+                    onClick={() => {
+                      onSelectModel(model);
+                      setModelDropdownOpen(false);
+                    }}
+                    className={`w-full text-left px-2.5 py-2 rounded-xl flex items-center justify-between gap-3 transition-colors cursor-pointer ${
+                      model.id === selectedModel.id ? 'bg-[#d97757]/15 text-[#f0a282]' : 'text-[#b4b4aa] hover:bg-[#252522] hover:text-[#ecece7]'
+                    }`}
+                  >
+                    <span className="min-w-0">
+                      <span className="block text-xs font-medium truncate">{model.name}</span>
+                      <span className="block text-[10px] text-[#85857a] truncate">{model.description}</span>
+                    </span>
+                    {model.id === selectedModel.id && <Check className="w-3.5 h-3.5 text-[#d97757] shrink-0" />}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Center: Active Conversation Title & Contextual Lucide Icon */}
@@ -596,4 +639,3 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
     </header>
   );
 };
-
