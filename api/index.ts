@@ -1202,6 +1202,7 @@ app.use((req, res, next) => {
 
 // Paths to the agent instruction and tool schema prompts
 const systemPromptPath = path.join(process.cwd(), "SYSTEM.md");
+const thinkingPromptPath = path.join(process.cwd(), "THINKING-EXPERT.md");
 const toolSchemasPromptPath = path.join(process.cwd(), "TOOL-SCHEMAS.md");
 const dataDir = process.env.VERCEL ? "/tmp/data" : path.join(process.cwd(), "data");
 const conversationsFile = path.join(dataDir, "conversations.json");
@@ -1211,8 +1212,9 @@ if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
-// Function to read and combine the agent instruction and tool schema prompts
-function getSystemPrompt(): string {
+// Function to read and combine the active Ethco system-prompt layers.
+// Ethco Max receives the deliberate-thinking layer between the shared behavior and tool contract.
+function getSystemPrompt(model?: string): string {
   const promptParts: string[] = [];
 
   try {
@@ -1221,6 +1223,17 @@ function getSystemPrompt(): string {
     }
   } catch (err) {
     console.error("Error reading SYSTEM.md:", err);
+  }
+
+  const isMaxModel = model === "omniroute/quality" || model === "ethco-1.0-max";
+  if (isMaxModel) {
+    try {
+      if (fs.existsSync(thinkingPromptPath)) {
+        promptParts.push(fs.readFileSync(thinkingPromptPath, "utf-8"));
+      }
+    } catch (err) {
+      console.error("Error reading THINKING-EXPERT.md:", err);
+    }
   }
 
   try {
@@ -3246,7 +3259,7 @@ app.post("/api/chat/stream", async (req, res) => {
     }
 
     // Load active persona instructions from SYSTEM.md
-    const baseSystemPrompt = getSystemPrompt();
+    const baseSystemPrompt = getSystemPrompt(model);
     let modeDirective = "";
     if (actionMode === "planning") {
       modeDirective = `\n\n## ACTIVE MODE: PLANNING
