@@ -1201,10 +1201,10 @@ app.use((req, res, next) => {
 });
 
 // Paths to the agent instruction and tool schema prompts
-const systemPromptPath = path.join(process.cwd(), "SYSTEM.md");
-const thinkingPromptPath = path.join(process.cwd(), "THINKING-EXPERT.md");
-const litePromptPath = path.join(process.cwd(), "ETHCO-LITE-SYSTEM-PROMPT.md");
-const toolSchemasPromptPath = path.join(process.cwd(), "TOOL-SCHEMAS.md");
+const systemPromptPath = path.join(process.cwd(), "SYSTEM", "SYSTEM.md");
+const thinkingPromptPath = path.join(process.cwd(), "SYSTEM", "THINKING-EXPERT.md");
+const litePromptPath = path.join(process.cwd(), "SYSTEM", "ETHCO-LITE-SYSTEM-PROMPT.md");
+const toolSchemasPromptPath = path.join(process.cwd(), "SYSTEM", "TOOL-SCHEMAS.md");
 const dataDir = process.env.VERCEL ? "/tmp/data" : path.join(process.cwd(), "data");
 const conversationsFile = path.join(dataDir, "conversations.json");
 
@@ -1223,7 +1223,7 @@ function getSystemPrompt(model?: string, modelId?: string): string {
       promptParts.push(fs.readFileSync(systemPromptPath, "utf-8"));
     }
   } catch (err) {
-    console.error("Error reading SYSTEM.md:", err);
+    console.error("Error reading SYSTEM/SYSTEM.md:", err);
   }
 
   const isLiteModel = modelId === "ethco-1.0-lite" && model === "omniroute/agent-fast";
@@ -1233,7 +1233,7 @@ function getSystemPrompt(model?: string, modelId?: string): string {
         promptParts.push(fs.readFileSync(litePromptPath, "utf-8"));
       }
     } catch (err) {
-      console.error("Error reading ETHCO-LITE-SYSTEM-PROMPT.md:", err);
+      console.error("Error reading SYSTEM/ETHCO-LITE-SYSTEM-PROMPT.md:", err);
     }
   }
 
@@ -1244,7 +1244,7 @@ function getSystemPrompt(model?: string, modelId?: string): string {
         promptParts.push(fs.readFileSync(thinkingPromptPath, "utf-8"));
       }
     } catch (err) {
-      console.error("Error reading THINKING-EXPERT.md:", err);
+      console.error("Error reading SYSTEM/THINKING-EXPERT.md:", err);
     }
   }
 
@@ -1253,7 +1253,7 @@ function getSystemPrompt(model?: string, modelId?: string): string {
       promptParts.push(`# Tool Schemas\n\n${fs.readFileSync(toolSchemasPromptPath, "utf-8")}`);
     }
   } catch (err) {
-    console.error("Error reading TOOL-SCHEMAS.md:", err);
+      console.error("Error reading SYSTEM/TOOL-SCHEMAS.md:", err);
   }
 
   return promptParts.join("\n\n") || "You are Ethco, an autonomous AI agent that helps users with software and computer tasks.";
@@ -3270,7 +3270,7 @@ app.post("/api/chat/stream", async (req, res) => {
       return res.end();
     }
 
-    // Load active persona instructions from SYSTEM.md
+    // Load active persona instructions from SYSTEM/SYSTEM.md
     const baseSystemPrompt = getSystemPrompt(model, modelId);
     let modeDirective = "";
     if (actionMode === "planning") {

@@ -173,7 +173,7 @@ For multi-stage work, use the available task-list tool to track meaningful stage
 
 ## 8. Tool Use
 
-The separately injected `TOOL-SCHEMAS.md` is the operational reference for available tools, arguments, aliases, path rules, and returned results. Follow that contract exactly.
+The separately injected `SYSTEM/TOOL-SCHEMAS.md` is the operational reference for available tools, arguments, aliases, path rules, and returned results. Follow that contract exactly.
 
 Use the most direct available capability:
 
