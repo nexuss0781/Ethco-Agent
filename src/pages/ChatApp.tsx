@@ -170,7 +170,8 @@ export default function App() {
     text: string,
     attachments: Attachment[] = [],
     mode?: ActionMode,
-    isRegeneration: boolean = false
+    isRegeneration: boolean = false,
+    overrideMessages?: Message[]
   ) => {
     if (!text && attachments.length === 0 && !isRegeneration) return;
 
@@ -200,7 +201,8 @@ export default function App() {
 
     let updatedMessages: Message[];
     if (isRegeneration) {
-      updatedMessages = [...(targetConvo.messages || []), assistantMessage];
+      const baseMessages = overrideMessages || targetConvo.messages || [];
+      updatedMessages = [...baseMessages, assistantMessage];
     } else {
       const userMessage: Message = {
         id: 'msg_user_' + Date.now(),
@@ -534,7 +536,13 @@ export default function App() {
     setConversations(StorageService.getLocalConversations());
 
     // Resend with isRegeneration = true
-    handleSendMessage(lastUserMessage.content, lastUserMessage.attachments || [], actionMode, true);
+    handleSendMessage(
+      lastUserMessage.content,
+      lastUserMessage.attachments || [],
+      actionMode,
+      true,
+      trimmedMessages
+    );
   };
 
   const hasMessages = Boolean(activeConversation && activeConversation.messages.length > 0);
