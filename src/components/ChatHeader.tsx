@@ -210,11 +210,15 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           <button
             id="btn-ethco-tier-dropdown"
             onClick={() => setModelDropdownOpen((open) => !open)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#222220] hover:bg-[#2a2a26] border border-[#d97757]/40 text-[#f0a282] transition-colors cursor-pointer"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold bg-[#222220] hover:bg-[#2a2a26] transition-colors cursor-pointer ${
+              selectedModel.id === 'ethco-1.0-instant' || selectedModel.id === 'ethco-1.0-pro'
+                ? 'border-[#60a5fa]/50 text-[#93c5fd]'
+                : 'border-[#d97757]/40 text-[#f0a282]'
+            }`}
             title="Choose Ethco model tier"
           >
             <span className="max-w-[125px] sm:max-w-none truncate">{selectedModel.name}</span>
-            <ChevronDown className={`w-3 h-3 text-[#f0a282] transition-transform ${modelDropdownOpen ? 'rotate-180' : ''}`} />
+            <ChevronDown className={`w-3 h-3 transition-transform ${modelDropdownOpen ? 'rotate-180' : ''}`} />
           </button>
 
           {modelDropdownOpen && (
@@ -229,15 +233,19 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
                       onSelectModel(model);
                       setModelDropdownOpen(false);
                     }}
-                    className={`w-full text-left px-2.5 py-2 rounded-xl flex items-center justify-between gap-3 transition-colors cursor-pointer ${
+                    className={`w-full text-left px-2.5 py-2 rounded-xl flex items-center justify-between gap-3 transition-colors cursor-pointer font-mono ${
                       model.id === selectedModel.id ? 'bg-[#d97757]/15 text-[#f0a282]' : 'text-[#b4b4aa] hover:bg-[#252522] hover:text-[#ecece7]'
                     }`}
                   >
                     <span className="min-w-0">
-                      <span className="block text-xs font-medium truncate">{model.name}</span>
-                      <span className="block text-[10px] text-[#85857a] truncate">{model.description}</span>
+                      <span className={`block text-xs font-semibold truncate ${
+                        model.id === 'ethco-1.0-instant' || model.id === 'ethco-1.0-pro' ? 'text-[#60a5fa]' : ''
+                      }`}>{model.name}</span>
+                      <span className="block text-[10px] font-sans text-[#85857a] truncate">{model.description}</span>
                     </span>
-                    {model.id === selectedModel.id && <Check className="w-3.5 h-3.5 text-[#d97757] shrink-0" />}
+                    {model.id === selectedModel.id && <Check className={`w-3.5 h-3.5 shrink-0 ${
+                      model.id === 'ethco-1.0-instant' || model.id === 'ethco-1.0-pro' ? 'text-[#60a5fa]' : 'text-[#d97757]'
+                    }`} />}
                   </button>
                 ))}
               </div>
