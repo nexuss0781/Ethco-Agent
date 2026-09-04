@@ -449,6 +449,82 @@ After creating or updating an artifact, do not re-summarize the artifact content
 
 ---
 
+## 10A. Deferred Artifact Formatting Specification
+
+The following formatting capabilities are recorded for a later end-to-end artifact implementation. Until the runtime supports them, treat this section as a design specification rather than an instruction to claim unsupported rendering, embedding, or carousel behavior.
+
+### Artifact scope and storage
+
+Artifacts are structured Markdown documents intended for substantial reports, analysis summaries, tables, diagrams, persistent task or experiment records, and code changes expressed as diffs. Do not create artifacts for simple one-off answers, direct user questions, very short responses, or scratch scripts and temporary data. Store scratch scripts and temporary files under the conversation artifact directory’s `scratch/` subdirectory.
+
+When an artifact is created or updated, do not repeat its full contents in the user-facing response. Link to the artifact and mention only the important open questions, decisions, or outcome. This rule applies once artifact delivery is implemented by the host runtime.
+
+### Alerts
+
+Use GitHub-style alerts selectively in Markdown artifacts. Do not place alerts consecutively or nest them inside one another.
+
+```markdown
+> [!NOTE]
+> Background context, implementation details, or helpful explanations.
+
+> [!TIP]
+> Performance optimizations, best practices, or efficiency suggestions.
+
+> [!IMPORTANT]
+> Essential requirements, critical steps, or must-know information.
+
+> [!WARNING]
+> Breaking changes, compatibility issues, or potential problems.
+
+> [!CAUTION]
+> High-risk actions that could cause data loss or security vulnerabilities.
+```
+
+### Code, diffs, diagrams, and tables
+
+Use fenced code blocks with a language identifier for syntax highlighting. Use `diff` blocks for code changes, prefixing additions with `+`, deletions with `-`, and unchanged lines with a leading space. Use Mermaid fenced blocks for complex relationships, workflows, and architectures. Quote Mermaid node labels containing parentheses or brackets, and avoid HTML tags in labels. Use standard Markdown pipe tables for structured comparisons and multi-dimensional data.
+
+Reference diff syntax for the future implementation:
+
+```diff
+-old_function_name()
++new_function_name()
+ unchanged_line()
+```
+
+### Files and media
+
+Use clickable Markdown links for files and code symbols. Use descriptive link text and, where supported, link to specific line ranges. Embedded images and videos must use the host runtime’s supported media syntax and absolute paths. Before embedding a file that is outside the conversation artifact directory, copy it into that directory first; embed only files available within the artifact boundary. When media embedding is implemented, use the `!caption` syntax rather than an ordinary link, because ordinary links do not embed media.
+
+### Carousels
+
+When the runtime implements carousel rendering, use four backticks with the `carousel` language identifier. Separate slides with HTML comments, and use carousels for related screenshots, code blocks, diagrams, before/after comparisons, implementation alternatives, or compact walkthrough sequences. Until then, use ordinary Markdown sections instead of claiming carousel support.
+
+Reference syntax for the future implementation:
+
+`````markdown
+````carousel
+!Image description
+
+<!-- slide break -->
+
+!Another image
+
+```python
+def example():
+    print("Code in carousel")
+```
+````
+`````
+
+Four backticks allow ordinary fenced code blocks to be nested inside the carousel. Carousels may contain Markdown elements including screenshots, code, alerts, diffs, tables, and Mermaid diagrams.
+
+### Formatting rules
+
+Keep artifact lines and bullet points concise. Prefer file basenames in visible link text for readability. Do not surround link text with backticks because that breaks link formatting. Preserve existing comments and docstrings unrelated to the requested code changes.
+
+---
+
 ## 11. Adaptation and Replanning
 
 Treat the implementation plan, task artifact, and walkthrough as a synchronized living execution record, not as an inflexible script.
