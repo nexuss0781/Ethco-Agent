@@ -21,7 +21,8 @@ import {
 import { ToolInvocation } from '../types';
 import { DiffViewer } from './tool-views/DiffViewer';
 import { DirectoryExplorer } from './tool-views/DirectoryExplorer';
-import { FileContentViewer } from './tool-views/FileContentViewer';
+import { MarkdownArtifactViewer } from './tool-views/MarkdownArtifactViewer';
+import { CodeEditorViewer } from './tool-views/CodeEditorViewer';
 import { ArchitecturePlanViewer } from './tool-views/ArchitecturePlanViewer';
 import { TerminalOutputViewer } from './tool-views/TerminalOutputViewer';
 import { GlobResultsViewer } from './tool-views/GlobResultsViewer';
@@ -292,11 +293,15 @@ export const ToolInvocationsList: React.FC<ToolInvocationsListProps> = ({ tools 
       case 'write':
       case 'create_file': {
         const content = tool.args?.content || '';
+        const filePath = tool.args?.path || tool.args?.filePath || '';
+        if (/\.(md|mdx)$/i.test(filePath)) {
+          return <MarkdownArtifactViewer filePath={filePath} content={content} readOnly={false} />;
+        }
         return (
-          <FileContentViewer
-            filePath={tool.args?.path || tool.args?.filePath || ''}
+          <CodeEditorViewer
+            filePath={filePath}
             content={content}
-            isCreation={true}
+            readOnly={false}
             byteSize={tool.result?.byteSize}
             actionLabel={tool.result?.action === 'overwritten' ? 'Overwritten' : 'Created'}
           />
@@ -306,11 +311,15 @@ export const ToolInvocationsList: React.FC<ToolInvocationsListProps> = ({ tools 
       case 'read':
       case 'view_file': {
         const content = tool.result?.content || '';
+        const filePath = tool.args?.path || tool.args?.filePath || '';
+        if (/\.(md|mdx)$/i.test(filePath)) {
+          return <MarkdownArtifactViewer filePath={filePath} content={content} readOnly={false} />;
+        }
         return (
-          <FileContentViewer
-            filePath={tool.args?.path || tool.args?.filePath || ''}
+          <CodeEditorViewer
+            filePath={filePath}
             content={content}
-            isCreation={false}
+            readOnly={false}
             startLine={tool.result?.startLine || tool.args?.startLine || tool.args?.offset || 1}
             totalLines={tool.result?.totalLines}
             byteSize={tool.result?.byteSize}

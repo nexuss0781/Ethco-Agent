@@ -9,3 +9,4 @@ coverage/
 repos/
 /data/
 !src/data/
+.ethco/artifacts/

@@ -1,7 +1,7 @@
 {
   "functions": {
     "api/index.ts": {
-      "includeFiles": "{SYSTEM/SYSTEM.md,SYSTEM/THINKING-EXPERT.md,SYSTEM/ETHCO-LITE-SYSTEM-PROMPT.md,SYSTEM/TOOL-SCHEMAS.md}"
+      "includeFiles": "{.ethco/system/SYSTEM.md,.ethco/system/PLANNING-AND-EXECUTION.md,.ethco/system/THINKING-EXPERT.md,.ethco/system/ETHCO-LITE-SYSTEM-PROMPT.md,.ethco/system/TOOL-SCHEMAS.md}"
     }
   },
   "rewrites": [

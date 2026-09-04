@@ -1,0 +1,127 @@
+.artifact-viewer,
+.code-editor-viewer {
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid #34342e;
+  border-radius: 14px;
+  background: #11110f;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, .18);
+}
+
+.artifact-viewer-header,
+.code-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  background: linear-gradient(180deg, #22221e 0%, #1a1a17 100%);
+  border-bottom: 1px solid #30302a;
+  color: #aaa99d;
+  font-size: 11px;
+}
+
+.artifact-file-title,
+.code-editor-file,
+.artifact-viewer-actions,
+.code-editor-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.artifact-file-title span:first-of-type,
+.code-editor-file span:first-of-type {
+  overflow: hidden;
+  color: #f1f0e8;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.artifact-file-title svg,
+.code-editor-file svg { color: #d97757; flex: 0 0 auto; }
+.artifact-file-badge,
+.code-editor-language,
+.code-editor-status {
+  padding: 3px 6px;
+  border: 1px solid #45453d;
+  border-radius: 5px;
+  color: #9f9e91;
+  font-size: 9px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.artifact-viewer-actions button,
+.code-editor-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 7px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: #aaa99d;
+  background: transparent;
+  cursor: pointer;
+  font-size: 10px;
+}
+.artifact-viewer-actions button:hover,
+.artifact-viewer-actions button.active,
+.code-editor-actions button:hover,
+.code-editor-actions button.active { border-color: #51443b; color: #f2eee5; background: #302822; }
+
+.artifact-obsidian-shell { padding: 26px clamp(18px, 4vw, 48px) 38px; background: #171714; }
+.artifact-markdown-body { max-width: 860px; margin: 0 auto; font-size: 14px; line-height: 1.75; }
+.artifact-markdown-body h1,
+.artifact-markdown-body h2,
+.artifact-markdown-body h3 { letter-spacing: -.02em; }
+.artifact-markdown-body h1 { padding-bottom: 12px; border-bottom: 1px solid #3c3b33; font-size: clamp(1.65rem, 3vw, 2.25rem); }
+.artifact-markdown-body h2 { margin-top: 2rem; padding-bottom: 5px; border-bottom: 1px solid #2e2e28; font-size: 1.35rem; }
+.artifact-markdown-body hr { margin: 1.6rem 0; border: 0; border-top: 1px solid #46453c; }
+.artifact-markdown-body img { max-width: 100%; border: 1px solid #3b3a32; border-radius: 10px; }
+.artifact-markdown-body th { background: #292923; }
+.artifact-file-mention { padding: 2px 5px; border: 1px solid #51463a; border-radius: 5px; color: #f0b18b !important; background: #31251f; text-decoration: none !important; }
+.artifact-file-mention:hover { border-color: #d97757; background: #432c22; }
+.artifact-alert-note { border-left-color: #d97757 !important; background: rgba(217, 119, 87, .08); padding: 10px 14px !important; border-radius: 0 8px 8px 0; }
+.artifact-carousel { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(82%, 1fr); gap: 12px; margin: 14px 0; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 5px; }
+.artifact-carousel-slide { min-height: 100px; padding: 16px; border: 1px solid #3a3931; border-radius: 10px; background: #1d1d19; scroll-snap-align: start; }
+.artifact-carousel-slide > :first-child { margin-top: 0; }
+.artifact-carousel-slide > :last-child { margin-bottom: 0; }
+
+.artifact-code-block { margin: 14px 0; overflow: hidden; border: 1px solid #34342d; border-radius: 10px; background: #10100e; }
+.artifact-code-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 7px 11px; color: #88877c; background: #1e1e1a; border-bottom: 1px solid #2f2f29; font: 10px var(--font-mono); text-transform: lowercase; }
+.artifact-code-toolbar button { display: inline-flex; align-items: center; gap: 5px; border: 0; color: #9b9a8e; background: transparent; cursor: pointer; font-size: 10px; }
+.artifact-code-block pre { margin: 0; padding: 14px; overflow-x: auto; color: #e8e6dc; font: 12px/1.65 var(--font-mono); }
+
+.artifact-source-wrap { padding: 14px; background: #10100e; }
+.artifact-source-editor { width: 100%; min-height: 560px; resize: vertical; padding: 14px; border: 1px solid #30302a; border-radius: 8px; outline: none; color: #e6e4da; background: #0d0d0b; font: 12px/1.7 var(--font-mono); tab-size: 2; }
+.artifact-source-editor:focus { border-color: #8d5c45; box-shadow: 0 0 0 2px rgba(217, 119, 87, .14); }
+
+.artifact-line-editor { overflow: auto; border: 1px solid #302f29; border-radius: 9px; background: #10100e; font: 12px/1.7 var(--font-mono); }
+.artifact-line-row { display: flex; min-width: max-content; min-height: 28px; }
+.artifact-line-row:hover { background: #20201b; }
+.artifact-line-number { width: 48px; flex: 0 0 48px; border: 0; border-right: 1px solid #292923; color: #646359; background: transparent; cursor: pointer; text-align: right; padding-right: 10px; }
+.artifact-line-text { flex: 1; border: 0; color: #e4e2d8; background: transparent; cursor: text; padding: 3px 12px; text-align: left; white-space: pre; }
+.artifact-line-input-wrap { display: flex; align-items: center; flex: 1; gap: 5px; padding: 2px 8px; }
+.artifact-line-input-wrap input { min-width: 360px; flex: 1; border: 1px solid #79503d; border-radius: 5px; outline: none; padding: 4px 7px; color: #f0eee5; background: #1a1714; font: inherit; }
+.artifact-line-input-wrap button { display: grid; place-items: center; border: 0; color: #a9a79b; background: transparent; cursor: pointer; }
+
+.code-editor-file { flex: 1; overflow: hidden; }
+.code-editor-meta { color: #77766c; font: 10px var(--font-mono); white-space: nowrap; }
+.code-editor-readonly { display: inline-flex; align-items: center; gap: 4px; color: #77766c; white-space: nowrap; }
+.code-editor-surface { min-height: 180px; background: #1e1e1e; }
+
+@media (max-width: 640px) {
+  .artifact-viewer-header,
+  .code-editor-header { align-items: flex-start; flex-direction: column; }
+  .artifact-viewer-actions,
+  .code-editor-actions { width: 100%; flex-wrap: wrap; }
+  .artifact-obsidian-shell { padding: 18px 14px 28px; }
+  .artifact-markdown-body { font-size: 13px; }
+  .artifact-source-editor { min-height: 420px; }
+  .code-editor-surface { min-height: 260px; }
+  .code-editor-meta { margin-right: auto; }
+}
