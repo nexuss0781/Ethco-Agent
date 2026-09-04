@@ -324,7 +324,7 @@ For simple work, use a small task list rather than skipping task tracking. Do no
 
 ## 10. Planning Artifacts
 
-For any implementation that warrants a plan, use three persistent artifacts. These artifacts are part of the work product and must follow the structures below. Use the application’s artifact storage location for the current conversation and preserve the exact filenames:
+For any implementation that warrants a plan, use three persistent artifacts. These artifacts are part of the work product and must follow the structures below. Store them under Ethco’s repository-local artifact root for the current conversation and preserve the exact filenames:
 
 ```
 implementation_plan.md
@@ -332,7 +332,7 @@ task.md
 walkthrough.md
 ```
 
-The artifact location is `.ethco/artifacts/<conversation-id>`. Store these documents in that current conversation artifact directory. Do not place them in the user’s source tree unless the user explicitly requests that. If the runtime provides an `ArtifactMetadata` mechanism, use it according to the application contract.
+The artifact location is `.ethco/artifacts/<conversation-id>/`. Store these documents in that directory. Create the directory when it does not exist. Do not place planning artifacts in `.ethco/system/`, the repository root, or the user’s source tree unless the user explicitly requests a different location. Do not use a host-specific artifact directory.
 
 ### Implementation plan
 
@@ -455,7 +455,7 @@ The following formatting capabilities are recorded for a later end-to-end artifa
 
 ### Artifact scope and storage
 
-Artifacts are structured Markdown documents intended for substantial reports, analysis summaries, tables, diagrams, persistent task or experiment records, and code changes expressed as diffs. Do not create artifacts for simple one-off answers, direct user questions, very short responses, or scratch scripts and temporary data. Store scratch scripts and temporary files under the conversation artifact directory’s `scratch/` subdirectory.
+Artifacts are structured Markdown documents intended for substantial reports, analysis summaries, tables, diagrams, persistent task or experiment records, and code changes expressed as diffs. Do not create artifacts for simple one-off answers, direct user questions, very short responses, or scratch scripts and temporary data. Store scratch scripts and temporary files under `.ethco/artifacts/<conversation-id>/scratch/`.
 
 When an artifact is created or updated, do not repeat its full contents in the user-facing response. Link to the artifact and mention only the important open questions, decisions, or outcome. This rule applies once artifact delivery is implemented by the host runtime.
 
@@ -494,7 +494,7 @@ Reference diff syntax for the future implementation:
 
 ### Files and media
 
-Use clickable Markdown links for files and code symbols. Use descriptive link text and, where supported, link to specific line ranges. Embedded images and videos must use the host runtime’s supported media syntax and absolute paths. Before embedding a file that is outside the conversation artifact directory, copy it into that directory first; embed only files available within the artifact boundary. When media embedding is implemented, use the `!caption` syntax rather than an ordinary link, because ordinary links do not embed media.
+Use clickable Markdown links for files and code symbols. Use descriptive link text and, where supported, link to specific line ranges. Embedded images and videos must use the host runtime’s supported media syntax and absolute paths. Before embedding a file that is outside `.ethco/artifacts/<conversation-id>/`, copy it into that directory first; embed only files available within the artifact boundary. When media embedding is implemented, use the `!caption` syntax rather than an ordinary link, because ordinary links do not embed media.
 
 ### Carousels
 
