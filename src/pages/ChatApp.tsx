@@ -620,8 +620,8 @@ export default function App() {
         {/* Center Area: Empty State OR Message Stream */}
         <div className="flex-1 overflow-hidden flex flex-col min-h-0 relative">
           {!hasMessages ? (
-            <div className="flex-1 flex flex-col justify-end items-center min-h-0 overflow-y-auto">
-              <div className="w-full max-w-3xl mx-auto flex flex-col items-center pb-2">
+            <div className="flex-1 flex flex-col items-center justify-center min-h-0 overflow-y-auto px-3 sm:px-4">
+              <div className="w-full max-w-3xl mx-auto flex flex-col items-center">
                 <EmptyState onSelectPrompt={(prompt) => handleSendMessage(prompt, [])} />
               </div>
             </div>
@@ -648,6 +648,7 @@ export default function App() {
               selectedRepos={selectedRepos}
               onRemoveSelectedRepo={handleRemoveSelectedRepo}
               onOpenGitHubModal={() => setIsGitHubModalOpen(true)}
+              isNewConversation={!hasMessages}
             />
           </div>
         </div>

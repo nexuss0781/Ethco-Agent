@@ -41,6 +41,7 @@ interface ChatInputProps {
   onRemoveSelectedRepo?: (repoName: string) => void;
   onOpenGitHubModal?: () => void;
   activeConversationId?: string | null;
+  isNewConversation?: boolean;
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
@@ -56,6 +57,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   onRemoveSelectedRepo,
   onOpenGitHubModal,
   activeConversationId,
+  isNewConversation,
 }) => {
   const [internalMode, setInternalMode] = useState<ActionMode>('planning');
   const [modeDropdownOpen, setModeDropdownOpen] = useState(false);
@@ -236,7 +238,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
   return (
     <div
-      className={`relative w-full max-w-3xl mx-auto px-3 sm:px-4 pb-2.5 sm:pb-5 transition-all`}
+      className={`relative w-full max-w-3xl mx-auto px-3 sm:px-4 transition-all ${
+        isNewConversation ? 'pb-5 sm:pb-8' : 'pb-2.5 sm:pb-5'
+      }`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -308,7 +312,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           onKeyDown={handleKeyDown}
           placeholder="How can I help you today?"
           rows={1}
-          className="w-full bg-transparent text-[#ecece7] placeholder-[#85857a] text-sm sm:text-[15px] px-3.5 sm:px-4 pt-3 pb-1.5 resize-none outline-none max-h-[200px] min-h-[44px] leading-relaxed"
+          className={`w-full bg-transparent text-[#ecece7] placeholder-[#85857a] px-3.5 sm:px-4 pt-3 pb-1.5 resize-none outline-none max-h-[200px] leading-relaxed ${
+            isNewConversation
+              ? 'min-h-[64px] text-base sm:text-lg'
+              : 'min-h-[44px] text-sm sm:text-[15px]'
+          }`}
         />
 
         {/* Bottom Bar: Attachment & Chat Mode on Left, Model, Mic & Send on Right */}
