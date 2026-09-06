@@ -42,6 +42,8 @@ interface ChatInputProps {
   onOpenGitHubModal?: () => void;
   activeConversationId?: string | null;
   isNewConversation?: boolean;
+  draft?: string;
+  onDraftChange?: (draft: string) => void;
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
@@ -58,6 +60,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   onOpenGitHubModal,
   activeConversationId,
   isNewConversation,
+  draft,
+  onDraftChange,
 }) => {
   const [internalMode, setInternalMode] = useState<ActionMode>('planning');
   const [modeDropdownOpen, setModeDropdownOpen] = useState(false);
@@ -73,6 +77,16 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     const key = `ethco_draft_${activeConversationId || 'global'}`;
     return localStorage.getItem(key) || '';
   });
+
+  // Sync external draft (e.g. prompt chip clicked) into the textarea
+  useEffect(() => {
+    if (draft && draft.trim()) {
+      setInputText(draft);
+      onDraftChange?.('');
+      if (textareaRef.current) textareaRef.current.focus();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft]);
 
   // Save draft whenever inputText changes
   useEffect(() => {

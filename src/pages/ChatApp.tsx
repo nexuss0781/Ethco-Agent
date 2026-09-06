@@ -38,6 +38,8 @@ export default function App() {
   const [user, setUser] = useState<any>(null);
   const navigate = useNavigate();
 
+  const [promptDraft, setPromptDraft] = useState<string>('');
+
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const handleToggleSelectRepo = (repo: SelectedRepoContext) => {
@@ -622,7 +624,7 @@ export default function App() {
           {!hasMessages ? (
             <div className="flex-1 flex flex-col items-center justify-center min-h-0 overflow-y-auto px-3 sm:px-4">
               <div className="w-full max-w-3xl mx-auto flex flex-col items-center justify-center py-4 mb-10 sm:mb-16">
-                <EmptyState onSelectPrompt={(prompt) => handleSendMessage(prompt, [])} />
+                <EmptyState onSelectPrompt={(prompt) => setPromptDraft(prompt)} />
                 <ChatInput
                   key={activeConversationId || 'global'}
                   activeConversationId={activeConversationId}
@@ -637,6 +639,8 @@ export default function App() {
                   onRemoveSelectedRepo={handleRemoveSelectedRepo}
                   onOpenGitHubModal={() => setIsGitHubModalOpen(true)}
                   isNewConversation={!hasMessages}
+                  draft={promptDraft}
+                  onDraftChange={setPromptDraft}
                 />
               </div>
             </div>
