@@ -4,77 +4,6 @@ import { isSupabaseConfigured, saveToSupabase, loadFromSupabase } from './supaba
 const STORAGE_KEY = 'claude_chatbot_conversations_v1';
 const ACTIVE_CONVO_KEY = 'claude_chatbot_active_id_v1';
 
-// Seed demo conversations if first-time user
-const SEED_CONVERSATIONS: Conversation[] = [
-  {
-    id: 'seed-conv-1',
-    title: 'Architecting Clean Full-Stack Microservices',
-    createdAt: Date.now() - 1000 * 60 * 60 * 24 * 2, // 2 days ago
-    updatedAt: Date.now() - 1000 * 60 * 60 * 24 * 2,
-    isPinned: true,
-    model: 'claude-3-7-sonnet',
-    messages: [
-      {
-        id: 'msg-1-1',
-        role: 'user',
-        content: 'What are the key architectural trade-offs between monolithic modularity and event-driven microservices for a high-growth SaaS platform?',
-        timestamp: Date.now() - 1000 * 60 * 60 * 24 * 2,
-      },
-      {
-        id: 'msg-1-2',
-        role: 'assistant',
-        content: `When evaluating **modular monoliths** versus **event-driven microservices**, the core decision centers on operational complexity, team boundaries, and velocity.
-
-### 1. The Modular Monolith Advantage
-- **Zero Network Latency**: In-memory function calls rather than RPC/HTTP serializations.
-- **Single Deployment Pipeline**: Atomic updates without distributed migration orchestration.
-- **Transactional Consistency**: Native ACID database transactions across domain boundaries.
-
-### 2. When Event-Driven Microservices Excel
-- **Independent Scaling Vectors**: Decoupling compute-heavy workflows (e.g. video processing) from high-throughput read paths.
-- **Autonomous Team Ownership**: Conway's Law in practice—each engineering squad manages their own schema lifecycle.
-- **Fault Isolation**: Cascading failure prevention with asynchronous dead-letter queues.
-
-> **Recommendation**: Start with a strictly bounded modular monolith using domain-driven design (DDD). Extract services only when team size or distinct scaling characteristics demand independent deployment units.`,
-        timestamp: Date.now() - 1000 * 60 * 60 * 24 * 2 + 1000 * 15,
-        thinkingContent: 'Analyzed domain-driven boundaries, Conway\'s Law, distributed transactions, and practical engineering trade-offs.',
-      },
-    ],
-  },
-  {
-    id: 'seed-conv-2',
-    title: 'Exploration of Consciousness & Epistemology',
-    createdAt: Date.now() - 1000 * 60 * 60 * 5, // 5 hours ago
-    updatedAt: Date.now() - 1000 * 60 * 60 * 5,
-    isPinned: false,
-    model: 'claude-3-7-sonnet',
-    messages: [
-      {
-        id: 'msg-2-1',
-        role: 'user',
-        content: 'Can you explore the concept of Qualia and why the "Hard Problem" of consciousness remains so philosophically elusive?',
-        timestamp: Date.now() - 1000 * 60 * 60 * 5,
-      },
-      {
-        id: 'msg-2-2',
-        role: 'assistant',
-        content: `The **Hard Problem of Consciousness**, coined by philosopher David Chalmers in 1995, contrasts sharply with the "easy problems" of cognitive neuroscience.
-
-### The Contrast
-- **Easy Problems**: Explaining how the brain integrates information, categorizes sensory stimuli, focuses attention, and generates motor responses. These are functionally tractable through neural correlates.
-- **The Hard Problem**: Why should all this physical information processing be accompanied by an inner subjective life? Why does it *feel like something* to see the redness of a sunset or feel the sting of cold water?
-
-### The Elusiveness of Qualia
-*Qualia* are the raw, subjective properties of experiential states. Even if we map every synapse firing in the visual cortex when observing a rose, an explanatory gap remains between the objective electro-chemical substrate and the subjective qualitative experience.
-
-This tension sits at the frontier of philosophy of mind, physicalism, and panpsychism.`,
-        timestamp: Date.now() - 1000 * 60 * 60 * 5 + 1000 * 12,
-        thinkingContent: 'Framed David Chalmers\' distinction between functional computation and phenomenal consciousness.',
-      },
-    ],
-  },
-];
-
 let syncTimeout: any = null;
 
 export const StorageService = {
@@ -91,9 +20,7 @@ export const StorageService = {
     } catch (e) {
       console.error('Error reading localStorage:', e);
     }
-    // Fallback to seed data and store it
-    this.saveLocalConversations(SEED_CONVERSATIONS);
-    return SEED_CONVERSATIONS;
+    return [];
   },
 
   // Save conversations to LocalStorage and trigger server sync
