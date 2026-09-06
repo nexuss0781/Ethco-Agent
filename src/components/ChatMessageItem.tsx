@@ -81,11 +81,11 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
               <User className="w-3.5 h-3.5" />
             </div>
           ) : (
-            <div className="w-7 h-7 rounded-lg overflow-hidden bg-surface border border-line flex items-center justify-center shadow-xs">
+            <div className="relative w-7 h-7 flex items-center justify-center">
               <img
                 src="/assets/Todo.png"
                 alt="Ethco"
-                className="w-full h-full object-cover"
+                className="w-8 h-8 object-contain -ml-0.5"
               />
             </div>
           )}
