@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   Menu,
-  Plus,
-  Brain,
   ChevronDown,
   Check,
   FolderGit2,
@@ -188,22 +186,13 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
         <button
           id="btn-toggle-sidebar"
           onClick={onToggleSidebar}
-          className="relative p-2 rounded-lg text-[#b4b4aa] hover:text-[#ecece7] hover:bg-[#262623] transition-colors focus:outline-none cursor-pointer"
+          className="md:hidden relative p-2 rounded-lg text-[#b4b4aa] hover:text-[#ecece7] hover:bg-[#262623] transition-colors focus:outline-none cursor-pointer"
           title="Toggle Navigation"
         >
           <Menu className="w-5 h-5" />
           {hasUnread && (
             <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#3b82f6] ring-2 ring-[#181816]" />
           )}
-        </button>
-
-        <button
-          id="btn-header-new-chat"
-          onClick={onNewChat}
-          className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-[#b4b4aa] hover:text-[#ecece7] bg-[#222220] hover:bg-[#2a2a26] border border-[#33332e] transition-colors cursor-pointer"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span>New Chat</span>
         </button>
 
         <div className="relative">
@@ -261,21 +250,6 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
 
       {/* Right: Model Selector & Settings */}
       <div className="flex items-center gap-1.5 sm:gap-2">
-        {/* Thinking Mode Toggle Pill */}
-        <button
-          id="btn-toggle-thinking"
-          onClick={onToggleThinking}
-          className={`hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors cursor-pointer ${
-            thinkingEnabled
-              ? 'bg-[#d97757]/15 border-[#d97757]/40 text-[#f0a282]'
-              : 'bg-[#222220] border-[#33332e] text-[#85857a] hover:text-[#b4b4aa]'
-          }`}
-          title="Toggle Extended Reasoning Mode"
-        >
-          <Brain className="w-3.5 h-3.5" />
-          <span>Thinking: {thinkingEnabled ? 'High' : 'Off'}</span>
-        </button>
-
         {/* Git Repositories Dropdown */}
         <div className="relative">
           <button
