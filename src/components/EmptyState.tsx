@@ -26,7 +26,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({ onSelectPrompt }) => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center w-full px-3 py-4 sm:pt-6 sm:pb-8 max-w-2xl mx-auto select-none">
+    <div className="flex flex-col items-center justify-center w-full px-3 py-4 sm:pt-6 select-none">
       {/* Centered Heading */}
       <div className="flex items-center justify-center mb-5 sm:mb-7 text-center animate-in fade-in duration-500">
         <h1 className="text-2xl sm:text-4xl md:text-5xl font-serif font-normal text-[#f3f3ee] tracking-tight">
