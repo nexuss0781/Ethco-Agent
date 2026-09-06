@@ -201,9 +201,7 @@ service cloud.firestore {
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-12 py-4 backdrop-blur-xl border-b border-white/[0.04] bg-[#070708]/80">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 bg-white text-black flex items-center justify-center rounded-[4px] shadow-[0_0_15px_rgba(255,255,255,0.1)]">
-            <Code2 size={16} strokeWidth={2.5} />
-          </div>
+          <img src="/assets/logo.svg" alt="Ethco" className="w-7 h-7 rounded-[4px] shadow-[0_0_15px_rgba(255,255,255,0.1)]" />
           <span className="font-semibold text-base tracking-tight font-sans">Ethco.</span>
           <span className="hidden sm:inline-block text-[10px] uppercase tracking-widest font-mono text-neutral-500 bg-neutral-900 border border-neutral-800 px-1.5 py-0.5 rounded">v1.2.0</span>
         </div>

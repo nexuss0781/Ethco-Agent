@@ -76,9 +76,7 @@ export default function Auth() {
         className="w-full max-w-md bg-[#0b0b0d] border border-white/[0.08] p-8 rounded-lg shadow-[0_30px_80px_rgba(0,0,0,0.8)] relative z-10"
       >
         <div className="flex justify-center mb-6">
-          <div className="w-10 h-10 bg-white text-black flex items-center justify-center rounded-[4px] shadow-[0_0_15px_rgba(255,255,255,0.1)]">
-            <Code2 size={20} strokeWidth={2.5} />
-          </div>
+          <img src="/assets/logo.svg" alt="Ethco" className="w-10 h-10 rounded-[4px] shadow-[0_0_15px_rgba(255,255,255,0.1)]" />
         </div>
 
         <div className="text-center mb-8">

@@ -26,16 +26,16 @@ export const EmptyState: React.FC<EmptyStateProps> = ({ onSelectPrompt }) => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center w-full px-3 py-2 sm:py-4 max-w-2xl mx-auto select-none">
-      {/* Centered Heading (Without icon above/beside) */}
-      <div className="flex items-center justify-center mb-4 sm:mb-6 text-center animate-in fade-in zoom-in-95 duration-500">
+    <div className="flex flex-col items-center justify-center w-full px-3 py-4 sm:py-6 max-w-2xl mx-auto select-none">
+      {/* Centered Heading */}
+      <div className="flex items-center justify-center mb-5 sm:mb-7 text-center animate-in fade-in duration-500">
         <h1 className="text-2xl sm:text-4xl md:text-5xl font-serif font-normal text-[#f3f3ee] tracking-tight">
           What shall we think through?
         </h1>
       </div>
 
       {/* Suggestion Chips */}
-      <div className="w-full flex flex-wrap items-center justify-center gap-1.5 sm:gap-2.5 max-w-xl animate-in fade-in slide-in-from-bottom-2 duration-500 delay-100">
+      <div className="w-full flex flex-wrap items-center justify-center gap-1.5 sm:gap-2.5 max-w-xl animate-in fade-in slide-in-from-bottom-3 duration-600 delay-150">
         {PROMPT_SUGGESTIONS.map((item) => (
           <button
             key={item.id}

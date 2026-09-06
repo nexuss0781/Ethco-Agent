@@ -10,3 +10,4 @@ repos/
 /data/
 !src/data/
 .ethco/artifacts/
+.vercel

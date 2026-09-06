@@ -27,7 +27,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose }) =
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-serif font-medium text-[#f3f3ee]">Claude Pro Plan</h2>
+              <h2 className="text-lg font-serif font-medium text-[#f3f3ee]">Ethco Pro Plan</h2>
               <p className="text-xs text-[#85857a]">Unleash deep thinking and prioritized compute</p>
             </div>
           </div>

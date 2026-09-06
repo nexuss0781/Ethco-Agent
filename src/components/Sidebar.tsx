@@ -242,10 +242,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="p-3.5 pb-2 border-b border-[#22221f] flex flex-col gap-2.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-md bg-[#262622] flex items-center justify-center border border-[#33332e]">
-                <span className="text-[#d97757] font-serif font-bold text-base leading-none">✳</span>
-              </div>
-              <span className="font-medium text-sm text-[#ecece7] tracking-tight">Claude</span>
+              <img src="/assets/logo.svg" alt="Ethco" className="w-6 h-6 rounded-md" />
+              <span className="font-medium text-sm text-[#ecece7] tracking-tight">Ethco</span>
             </div>
 
             <button

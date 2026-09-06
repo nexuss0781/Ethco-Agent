@@ -159,7 +159,7 @@ export const StorageService = {
   exportConversationMarkdown(convo: Conversation) {
     let md = `# ${convo.title}\n\n*Date: ${new Date(convo.createdAt).toLocaleString()}*\n\n---\n\n`;
     for (const msg of convo.messages) {
-      const sender = msg.role === 'user' ? '👤 User' : '✳ Claude';
+      const sender = msg.role === 'user' ? '👤 User' : '✳ Ethco';
       md += `### ${sender}\n\n${msg.content}\n\n---\n\n`;
     }
 
