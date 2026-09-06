@@ -8,7 +8,6 @@ import { ChatInput } from '../components/ChatInput';
 import { UpgradeModal } from '../components/UpgradeModal';
 import { GitHubImportModal } from '../components/GitHubImportModal';
 import { SettingsModal } from '../components/SettingsModal';
-import { EthcoMascot } from '../components/EthcoMascot';
 import { ImportedRepo, GitHubService, SelectedRepoContext } from '../lib/github';
 import { Conversation, Message, Attachment, ModelOption, ActionMode, ToolInvocation } from '../types';
 import { StorageService } from '../lib/storage';
@@ -698,9 +697,6 @@ export default function App() {
         onClose={() => setIsSettingsModalOpen(false)}
         user={user}
       />
-
-      {/* Ethco Mascot — walks, runs, jumps, eats and naps across the interface */}
-      <EthcoMascot />
     </div>
   );
 }
