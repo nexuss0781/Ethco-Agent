@@ -77,12 +77,12 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
         {/* Avatar */}
         <div className="shrink-0 mt-0.5">
           {isUser ? (
-            <div className="w-7 h-7 rounded-full bg-[#2a2a26] border border-[#383832] flex items-center justify-center text-[#b4b4aa]">
+            <div className="w-7 h-7 rounded-full bg-surface-2 border border-line flex items-center justify-center text-fg-soft">
               <User className="w-3.5 h-3.5" />
             </div>
           ) : (
-            <div className="w-7 h-7 rounded-lg bg-[#222220] border border-[#33332e] flex items-center justify-center shadow-xs">
-              <span className="text-[#d97757] font-serif font-bold text-base leading-none select-none">
+            <div className="w-7 h-7 rounded-lg bg-surface border border-line flex items-center justify-center shadow-xs">
+              <span className="text-teal font-serif font-bold text-base leading-none select-none">
                 ✳
               </span>
             </div>
@@ -97,7 +97,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
               {message.attachments.map((att) => (
                 <div
                   key={att.id}
-                  className="rounded-xl overflow-hidden border border-[#33332e] bg-[#222220] max-w-[200px]"
+                  className="rounded-xl overflow-hidden border border-line bg-surface max-w-[200px]"
                 >
                   {att.type === 'image' ? (
                     <img
@@ -106,8 +106,8 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                       className="max-h-48 object-cover rounded-xl"
                     />
                   ) : (
-                    <div className="p-2.5 flex items-center gap-2 text-xs text-[#ecece7]">
-                      <FileText className="w-4 h-4 text-[#d97757]" />
+                    <div className="p-2.5 flex items-center gap-2 text-xs text-fg">
+                      <FileText className="w-4 h-4 text-teal" />
                       <span className="truncate">{att.name}</span>
                     </div>
                   )}
@@ -118,13 +118,13 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
 
           {/* Reasoning / Thinking Process Accordion (if available) */}
           {!isUser && message.thinkingContent && (
-            <div className="w-full mb-3 rounded-xl bg-[#1c1c19] border border-[#2a2a26] overflow-hidden text-xs">
+            <div className="w-full mb-3 rounded-xl bg-surface border border-line-soft overflow-hidden text-xs">
               <button
                 onClick={() => setThinkingExpanded(!thinkingExpanded)}
-                className="w-full px-3 py-2 flex items-center justify-between text-[#85857a] hover:text-[#ecece7] hover:bg-[#222220] transition-colors cursor-pointer"
+                className="w-full px-3 py-2 flex items-center justify-between text-fg-muted hover:text-fg hover:bg-surface transition-colors cursor-pointer"
               >
                 <div className="flex items-center gap-2">
-                  <Brain className="w-3.5 h-3.5 text-[#d97757]" />
+                  <Brain className="w-3.5 h-3.5 text-teal" />
                   <span>Thinking process</span>
                 </div>
                 {thinkingExpanded ? (
@@ -134,7 +134,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                 )}
               </button>
               {thinkingExpanded && (
-                <div className="px-3.5 py-2.5 bg-[#171715] border-t border-[#262622] text-[#a1a196] leading-relaxed font-mono text-[11px] whitespace-pre-wrap">
+                <div className="px-3.5 py-2.5 bg-canvas border-t border-line-soft text-fg-soft leading-relaxed font-mono text-[11px] whitespace-pre-wrap">
                   {message.thinkingContent}
                 </div>
               )}
@@ -150,8 +150,8 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
           <div
             className={`text-sm sm:text-[15px] leading-relaxed ${
               isUser
-                ? 'px-4 py-3 rounded-2xl bg-[#282824] text-[#f3f3ee] border border-[#33332e] max-w-[85%] whitespace-pre-wrap'
-                : 'w-full text-[#ecece7]'
+                ? 'px-4 py-3 rounded-2xl bg-surface-2 text-fg border border-line max-w-[85%] whitespace-pre-wrap'
+                : 'w-full text-fg'
             }`}
           >
             {isUser ? (
@@ -167,14 +167,14 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
 
                       if (!inline && match) {
                         return (
-                          <div className="relative my-3 rounded-xl overflow-hidden border border-[#33332e] bg-[#121210]">
-                            <div className="flex items-center justify-between px-3 py-1.5 bg-[#1e1e1b] border-b border-[#2d2d29] text-xs text-[#85857a]">
+                          <div className="relative my-3 rounded-xl overflow-hidden border border-line bg-canvas-deep">
+                            <div className="flex items-center justify-between px-3 py-1.5 bg-surface border-b border-line-soft text-xs text-fg-muted">
                               <span className="font-mono text-[11px] lowercase">
                                 {match[1]}
                               </span>
                               <button
                                 onClick={() => handleCopyCode(codeString, codeId)}
-                                className="flex items-center gap-1 hover:text-[#ecece7] transition-colors p-1 rounded"
+                                className="flex items-center gap-1 hover:text-fg transition-colors p-1 rounded"
                                 title="Copy code"
                               >
                                 {copiedCodeId === codeId ? (
@@ -190,7 +190,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                                 )}
                               </button>
                             </div>
-                            <pre className="!m-0 !p-3.5 !bg-transparent overflow-x-auto text-[13px] font-mono leading-relaxed text-[#e5e5dc]">
+                            <pre className="!m-0 !p-3.5 !bg-transparent overflow-x-auto text-[13px] font-mono leading-relaxed text-fg">
                               <code>{codeString}</code>
                             </pre>
                           </div>
@@ -210,7 +210,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
 
                 {/* Streaming indicator cursor */}
                 {message.isStreaming && (
-                  <span className="inline-block w-2 h-4 ml-1 bg-[#d97757] animate-pulse align-middle" />
+                  <span className="inline-block w-2 h-4 ml-1 bg-brand animate-pulse align-middle" />
                 )}
               </div>
             )}
@@ -218,11 +218,11 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
 
           {/* Action Toolbar for Assistant Response */}
           {!isUser && !message.isStreaming && message.content && (
-            <div className="flex items-center gap-2 mt-2 pt-1 opacity-80 hover:opacity-100 transition-opacity text-[#85857a]">
+            <div className="flex items-center gap-2 mt-2 pt-1 opacity-80 hover:opacity-100 transition-opacity text-fg-muted">
               {/* Copy Message */}
               <button
                 onClick={handleCopyMessage}
-                className="flex items-center gap-1 text-xs hover:text-[#ecece7] p-1.5 rounded-md hover:bg-[#222220] transition-colors"
+                className="flex items-center gap-1 text-xs hover:text-fg p-1.5 rounded-md hover:bg-surface transition-colors"
                 title="Copy full response"
               >
                 {copied ? (
@@ -241,8 +241,8 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
               {/* Text to Speech */}
               <button
                 onClick={handleToggleSpeech}
-                className={`flex items-center gap-1 text-xs p-1.5 rounded-md hover:bg-[#222220] transition-colors ${
-                  isSpeaking ? 'text-[#d97757]' : 'hover:text-[#ecece7]'
+                className={`flex items-center gap-1 text-xs p-1.5 rounded-md hover:bg-surface transition-colors ${
+                  isSpeaking ? 'text-teal' : 'hover:text-fg'
                 }`}
                 title={isSpeaking ? 'Stop speech' : 'Read aloud'}
               >
@@ -263,7 +263,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
               {isLatestAssistant && onRegenerate && (
                 <button
                   onClick={onRegenerate}
-                  className="flex items-center gap-1 text-xs hover:text-[#ecece7] p-1.5 rounded-md hover:bg-[#222220] transition-colors"
+                  className="flex items-center gap-1 text-xs hover:text-fg p-1.5 rounded-md hover:bg-surface transition-colors"
                   title="Regenerate response"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />

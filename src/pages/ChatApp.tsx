@@ -580,7 +580,7 @@ export default function App() {
   };
 
   return (
-    <div className="fixed inset-0 flex h-[100dvh] w-full overflow-hidden bg-[#181816] text-[#ecece7]">
+    <div className="fixed inset-0 flex h-[100dvh] w-full overflow-hidden bg-canvas text-fg">
       {/* Responsive Collapsible Sidebar */}
       <Sidebar
         isOpen={isSidebarOpen}
@@ -602,7 +602,7 @@ export default function App() {
       />
 
       {/* Main Conversation Stage */}
-      <main className="flex-1 flex flex-col min-w-0 h-full relative overflow-hidden bg-[#181816]">
+      <main className="flex-1 flex flex-col min-w-0 h-full relative overflow-hidden bg-canvas">
         {/* Top Header */}
         <ChatHeader
           onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}

@@ -19,7 +19,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({ onSelectPrompt }) => {
       case 'Coffee':
         return <Coffee className="w-3.5 h-3.5" />;
       case 'Lightbulb':
-        return <Lightbulb className="w-3.5 h-3.5 text-[#e0a96d]" />;
+        return <Lightbulb className="w-3.5 h-3.5 text-teal-fg" />;
       default:
         return <PenLine className="w-3.5 h-3.5" />;
     }
@@ -29,7 +29,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({ onSelectPrompt }) => {
     <div className="flex flex-col items-center justify-center w-full px-3 py-4 sm:pt-6 select-none">
       {/* Centered Heading */}
       <div className="flex items-center justify-center mb-5 sm:mb-7 text-center animate-in fade-in duration-500">
-        <h1 className="text-2xl sm:text-4xl md:text-5xl font-serif font-normal text-[#f3f3ee] tracking-tight">
+        <h1 className="text-2xl sm:text-4xl md:text-5xl font-serif font-normal text-fg tracking-tight">
           What shall we think through?
         </h1>
       </div>
@@ -41,9 +41,9 @@ export const EmptyState: React.FC<EmptyStateProps> = ({ onSelectPrompt }) => {
             key={item.id}
             id={`chip-prompt-${item.id}`}
             onClick={() => onSelectPrompt(item.prompt)}
-            className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-[#222220] hover:bg-[#2c2c28] active:bg-[#353530] border border-[#33332e] text-[#b4b4aa] hover:text-[#ecece7] text-xs sm:text-sm font-medium transition-all shadow-2xs hover:scale-[1.02] cursor-pointer group"
+            className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-surface hover:bg-surface-2 active:bg-surface-3 border border-line text-fg-soft hover:text-fg text-xs sm:text-sm font-medium transition-all shadow-2xs hover:scale-[1.02] cursor-pointer group"
           >
-            <span className="text-[#85857a] group-hover:text-[#d97757] transition-colors">
+            <span className="text-fg-muted group-hover:text-teal transition-colors">
               {getIcon(item.iconName)}
             </span>
             <span>{item.label}</span>

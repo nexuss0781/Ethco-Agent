@@ -26,15 +26,15 @@ export const GrepResultsViewer: React.FC<GrepResultsViewerProps> = ({
 }) => {
   return (
     <div className="space-y-2 text-xs">
-      <div className="flex flex-wrap items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-[#191916] border border-[#2d2d28]">
-        <div className="flex items-center gap-2 text-[#c2c2b8] font-mono">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-surface border border-line-soft">
+        <div className="flex items-center gap-2 text-fg-soft font-mono">
           <FileSearch className="w-3.5 h-3.5 text-teal-400 shrink-0" />
-          <span className="text-[#88887e]">regex:</span>
+          <span className="text-fg-muted">regex:</span>
           <span className="text-teal-300 font-semibold">{pattern}</span>
         </div>
         <div className="flex items-center gap-1.5">
           {include && (
-            <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-[#242420] text-amber-300/80 font-mono border border-amber-900/30">
+            <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-surface-2 text-amber-300/80 font-mono border border-amber-900/30">
               <Filter className="w-2.5 h-2.5" />
               {include}
             </span>
@@ -46,25 +46,25 @@ export const GrepResultsViewer: React.FC<GrepResultsViewerProps> = ({
       </div>
 
       {matches.length > 0 ? (
-        <div className="max-h-56 overflow-y-auto rounded-lg border border-[#282824] bg-[#121210] p-1.5 space-y-1 font-mono text-[11px]">
+        <div className="max-h-56 overflow-y-auto rounded-lg border border-line-soft bg-canvas-deep p-1.5 space-y-1 font-mono text-[11px]">
           {matches.map((item, idx) => (
             <div
               key={idx}
-              className="p-1.5 rounded hover:bg-[#1c1c18] border border-transparent hover:border-[#2f2f29] transition-colors"
+              className="p-1.5 rounded hover:bg-surface border border-transparent hover:border-line-soft transition-colors"
             >
-              <div className="flex items-center gap-1.5 text-[#88887d] mb-0.5">
+              <div className="flex items-center gap-1.5 text-fg-muted mb-0.5">
                 <span className="text-teal-400 font-medium">{item.path}</span>
                 <span>:</span>
                 <span className="text-amber-400/90">{item.lineNumber}</span>
               </div>
-              <div className="pl-3 border-l-2 border-[#33332b] text-[#eaeae2] overflow-x-auto whitespace-pre">
+              <div className="pl-3 border-l-2 border-line text-fg overflow-x-auto whitespace-pre">
                 {item.line}
               </div>
             </div>
           ))}
         </div>
       ) : (
-        <div className="p-3 text-center text-[#78786e] font-mono bg-[#141412] rounded-lg border border-[#242420]">
+        <div className="p-3 text-center text-fg-muted font-mono bg-canvas-deep rounded-lg border border-line-soft">
           {formatted || 'No pattern matches found.'}
         </div>
       )}

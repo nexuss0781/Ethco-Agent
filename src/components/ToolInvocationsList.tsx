@@ -47,7 +47,7 @@ export const ToolInvocationsList: React.FC<ToolInvocationsListProps> = ({ tools 
         const cmd = tool.args?.command || 'command';
         const execTime = tool.result?.executionTimeMs ? `${tool.result.executionTimeMs}ms` : '';
         return {
-          icon: <Terminal className="w-3.5 h-3.5 text-[#38bdf8]" />,
+          icon: <Terminal className="w-3.5 h-3.5 text-teal" />,
           action: 'Run command',
           target: cmd,
           badge: execTime || 'terminal',
@@ -122,11 +122,11 @@ export const ToolInvocationsList: React.FC<ToolInvocationsListProps> = ({ tools 
         const completed = tool.result?.summary?.completed;
         const badge = completed !== undefined ? `${completed}/${todosCount} done` : `${todosCount} tasks`;
         return {
-          icon: <ListTodo className="w-3.5 h-3.5 text-[#d97757]" />,
+          icon: <ListTodo className="w-3.5 h-3.5 text-teal" />,
           action: 'Tasklist',
           target: 'Session Todos',
           badge,
-          color: 'border-[#d97757]/20 bg-[#d97757]/5',
+          color: 'border-teal/20 bg-brand/5',
         };
       }
       case 'task': {
@@ -163,20 +163,20 @@ export const ToolInvocationsList: React.FC<ToolInvocationsListProps> = ({ tools 
       }
       case 'generate_architecture_plan': {
         return {
-          icon: <Compass className="w-3.5 h-3.5 text-[#d97757]" />,
+          icon: <Compass className="w-3.5 h-3.5 text-teal" />,
           action: 'Planned',
           target: tool.args?.projectName || 'System Architecture',
           badge: 'Roadmap',
-          color: 'border-[#d97757]/20 bg-[#d97757]/5',
+          color: 'border-teal/20 bg-brand/5',
         };
       }
       default:
         return {
-          icon: <Wrench className="w-3.5 h-3.5 text-[#a8a89d]" />,
+          icon: <Wrench className="w-3.5 h-3.5 text-fg-soft" />,
           action: 'Run tool',
           target: tool.name,
           badge: '',
-          color: 'border-[#33332d] bg-[#1a1a17]',
+          color: 'border-line bg-surface',
         };
     }
   };
@@ -342,7 +342,7 @@ export const ToolInvocationsList: React.FC<ToolInvocationsListProps> = ({ tools 
 
       default:
         return (
-          <div className="p-3 rounded-xl border border-[#2b2b27] bg-[#141412] text-xs text-[#a0a096] font-mono">
+          <div className="p-3 rounded-xl border border-line-soft bg-canvas-deep text-xs text-fg-soft font-mono">
             {typeof tool.result === 'string'
               ? tool.result
               : JSON.stringify(tool.result || tool.args, null, 2)}
@@ -363,22 +363,22 @@ export const ToolInvocationsList: React.FC<ToolInvocationsListProps> = ({ tools 
         return (
           <div
             key={tool.id}
-            className="rounded-xl border border-[#2b2b27] bg-[#171714] overflow-hidden text-xs transition-all shadow-sm"
+            className="rounded-xl border border-line-soft bg-canvas overflow-hidden text-xs transition-all shadow-sm"
           >
             {/* Header / Click to Expand */}
             <button
               onClick={() => setExpandedId(isExpanded ? null : tool.id)}
-              className="w-full px-3 py-2 flex items-center justify-between hover:bg-[#20201c] text-left transition-colors cursor-pointer"
+              className="w-full px-3 py-2 flex items-center justify-between hover:bg-surface text-left transition-colors cursor-pointer"
             >
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="p-1 rounded-md bg-[#242420] border border-[#33332d] shrink-0">
+                <div className="p-1 rounded-md bg-surface-2 border border-line shrink-0">
                   {meta.icon}
                 </div>
                 <div className="truncate flex items-center gap-1.5 font-mono text-[11px]">
-                  <span className="text-[#88887e] font-sans font-medium">{meta.action}</span>
-                  <span className="font-semibold text-[#f0f0ea] truncate">{meta.target}</span>
+                  <span className="text-fg-muted font-sans font-medium">{meta.action}</span>
+                  <span className="font-semibold text-fg truncate">{meta.target}</span>
                   {meta.badge && (
-                    <span className="text-[10px] px-1.5 py-0.2 bg-[#252520] text-[#9c9c90] rounded border border-[#33332d] ml-1">
+                    <span className="text-[10px] px-1.5 py-0.2 bg-surface-2 text-fg-soft rounded border border-line ml-1">
                       {meta.badge}
                     </span>
                   )}
@@ -403,7 +403,7 @@ export const ToolInvocationsList: React.FC<ToolInvocationsListProps> = ({ tools 
                   </span>
                 )}
 
-                <div className="p-0.5 rounded text-[#77776d] hover:text-[#e0e0d6]">
+                <div className="p-0.5 rounded text-fg-muted hover:text-fg">
                   {isExpanded ? (
                     <ChevronUp className="w-3.5 h-3.5" />
                   ) : (
@@ -415,7 +415,7 @@ export const ToolInvocationsList: React.FC<ToolInvocationsListProps> = ({ tools 
 
             {/* Expanded Body */}
             {isExpanded && (
-              <div className="p-2.5 border-t border-[#242420] bg-[#10100e]">
+              <div className="p-2.5 border-t border-line-soft bg-canvas-deep">
                 {renderToolBody(tool)}
               </div>
             )}

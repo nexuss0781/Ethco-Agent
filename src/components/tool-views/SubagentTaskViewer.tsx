@@ -22,10 +22,10 @@ export const SubagentTaskViewer: React.FC<SubagentTaskViewerProps> = ({
 }) => {
   return (
     <div className="space-y-2 text-xs">
-      <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-[#191916] border border-[#2d2d28]">
+      <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-surface border border-line-soft">
         <div className="flex items-center gap-2 font-mono">
           <Bot className="w-3.5 h-3.5 text-indigo-400" />
-          <span className="text-[#88887e]">agent:</span>
+          <span className="text-fg-muted">agent:</span>
           <span className="px-1.5 py-0.2 rounded bg-indigo-950/70 border border-indigo-700/50 text-indigo-300 text-[10px] font-semibold">
             {subagentType}
           </span>
@@ -36,22 +36,22 @@ export const SubagentTaskViewer: React.FC<SubagentTaskViewerProps> = ({
         </div>
       </div>
 
-      <div className="rounded-lg border border-[#282824] bg-[#121210] p-2.5 space-y-2">
+      <div className="rounded-lg border border-line-soft bg-canvas-deep p-2.5 space-y-2">
         {description && (
-          <div className="text-[12px] font-medium text-[#eaeae2]">
+          <div className="text-[12px] font-medium text-fg">
             {description}
           </div>
         )}
 
         {prompt && (
-          <div className="p-2 rounded bg-[#181815] border border-[#262622] text-[#a5a59a] text-[11px] font-mono whitespace-pre-wrap">
-            <span className="text-[#6e6e64] block text-[10px] font-sans mb-1 font-semibold">Task Prompt:</span>
+          <div className="p-2 rounded bg-canvas border border-line-soft text-fg-soft text-[11px] font-mono whitespace-pre-wrap">
+            <span className="text-fg-muted block text-[10px] font-sans mb-1 font-semibold">Task Prompt:</span>
             {prompt}
           </div>
         )}
 
         {(summary || result) && (
-          <div className="p-2 rounded bg-[#161b17] border border-[#213526] text-emerald-300 text-[11px] font-mono leading-relaxed">
+          <div className="p-2 rounded bg-canvas border border-line-soft text-emerald-300 text-[11px] font-mono leading-relaxed">
             <span className="text-emerald-500 block text-[10px] font-sans mb-1 font-semibold flex items-center gap-1">
               <Cpu className="w-3 h-3" /> Result
             </span>
@@ -60,7 +60,7 @@ export const SubagentTaskViewer: React.FC<SubagentTaskViewerProps> = ({
         )}
 
         {taskId && (
-          <div className="text-[9px] text-[#66665c] font-mono text-right">
+          <div className="text-[9px] text-fg-muted font-mono text-right">
             session: {taskId}
           </div>
         )}

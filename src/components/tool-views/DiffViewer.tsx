@@ -26,13 +26,13 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
   };
 
   return (
-    <div className="rounded-xl border border-[#2e2e28] bg-[#121210] overflow-hidden">
+    <div className="rounded-xl border border-line-soft bg-canvas-deep overflow-hidden">
       {/* Diff Header */}
-      <div className="px-3 py-2 bg-[#1b1b18] border-b border-[#2a2a24] flex items-center justify-between flex-wrap gap-2 text-xs">
-        <div className="flex items-center gap-2 font-mono text-[11px] text-[#e5e5dc]">
+      <div className="px-3 py-2 bg-surface border-b border-line-soft flex items-center justify-between flex-wrap gap-2 text-xs">
+        <div className="flex items-center gap-2 font-mono text-[11px] text-fg">
           <FileCode className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-          <span className="font-semibold text-[#f5f5f0]">{filePath}</span>
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#2c2c26] text-[#a8a89d]">
+          <span className="font-semibold text-fg">{filePath}</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface-2 text-fg-soft">
             Modified
           </span>
         </div>
@@ -49,13 +49,13 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
           </div>
 
           {/* Toggle view */}
-          <div className="flex items-center rounded-md bg-[#242420] p-0.5 border border-[#33332d]">
+          <div className="flex items-center rounded-md bg-surface-2 p-0.5 border border-line">
             <button
               onClick={() => setViewMode('diff')}
               className={`px-2 py-0.5 text-[10px] rounded transition-colors ${
                 viewMode === 'diff'
-                  ? 'bg-[#33332c] text-[#f5f5f0] font-medium'
-                  : 'text-[#85857a] hover:text-[#e0e0d8]'
+                  ? 'bg-surface-3 text-fg font-medium'
+                  : 'text-fg-muted hover:text-fg'
               }`}
             >
               Diff
@@ -64,8 +64,8 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
               onClick={() => setViewMode('new')}
               className={`px-2 py-0.5 text-[10px] rounded transition-colors ${
                 viewMode === 'new'
-                  ? 'bg-[#33332c] text-[#f5f5f0] font-medium'
-                  : 'text-[#85857a] hover:text-[#e0e0d8]'
+                  ? 'bg-surface-3 text-fg font-medium'
+                  : 'text-fg-muted hover:text-fg'
               }`}
             >
               New Code
@@ -74,7 +74,7 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
 
           <button
             onClick={handleCopy}
-            className="flex items-center gap-1 px-2 py-1 rounded bg-[#242420] hover:bg-[#2d2d28] text-[#a3a398] hover:text-[#f0f0ea] border border-[#33332d] transition-colors text-[10px]"
+            className="flex items-center gap-1 px-2 py-1 rounded bg-surface-2 hover:bg-surface-3 text-fg-soft hover:text-fg border border-line transition-colors text-[10px]"
             title="Copy new code"
           >
             {copied ? (
@@ -93,7 +93,7 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
       </div>
 
       {/* Diff Content Body */}
-      <div className="font-mono text-[11px] overflow-x-auto max-h-80 overflow-y-auto divide-y divide-[#1e1e1a]">
+      <div className="font-mono text-[11px] overflow-x-auto max-h-80 overflow-y-auto divide-y divide-line-soft">
         {viewMode === 'diff' ? (
           <div>
             {/* Removed lines section */}
@@ -142,13 +142,13 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
           </div>
         ) : (
           /* Plain Code Preview */
-          <div className="p-3 bg-[#11110f]">
+          <div className="p-3 bg-canvas-deep">
             {addedLines.map((line, idx) => (
               <div key={`line-${idx}`} className="flex items-start py-0.5">
-                <span className="w-8 shrink-0 text-[#55554e] select-none text-right pr-3 text-[10px]">
+                <span className="w-8 shrink-0 text-fg-muted select-none text-right pr-3 text-[10px]">
                   {idx + 1}
                 </span>
-                <span className="whitespace-pre flex-1 text-[#e5e5dc]">{line || ' '}</span>
+                <span className="whitespace-pre flex-1 text-fg">{line || ' '}</span>
               </div>
             ))}
           </div>

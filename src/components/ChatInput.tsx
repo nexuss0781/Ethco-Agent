@@ -282,10 +282,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
       {/* Main Input Card (Identical layout to screenshot) */}
       <div
-        className={`relative flex flex-col rounded-2xl bg-[#222220] border transition-all shadow-lg ${
+        className={`relative flex flex-col rounded-2xl bg-surface border transition-all shadow-lg ${
           isDragging
-            ? 'border-[#d97757] ring-2 ring-[#d97757]/30'
-            : 'border-[#33332e] hover:border-[#42423c] focus-within:border-[#52524a]'
+            ? 'border-teal ring-2 ring-teal/30'
+            : 'border-line hover:border-line focus-within:border-line'
         }`}
       >
         {/* Attachment Previews */}
@@ -294,7 +294,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             {attachments.map((att) => (
               <div
                 key={att.id}
-                className="relative group flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-[#181816] border border-[#33332e] text-xs text-[#ecece7]"
+                className="relative group flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-canvas border border-line text-xs text-fg"
               >
                 {att.type === 'image' ? (
                   <img
@@ -303,12 +303,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                     className="w-5 h-5 object-cover rounded"
                   />
                 ) : (
-                  <FileText className="w-4 h-4 text-[#d97757]" />
+                  <FileText className="w-4 h-4 text-teal" />
                 )}
                 <span className="max-w-[120px] truncate text-[11px] font-medium">{att.name}</span>
                 <button
                   onClick={() => removeAttachment(att.id)}
-                  className="p-0.5 rounded-full hover:bg-[#33332e] text-[#85857a] hover:text-[#ecece7]"
+                  className="p-0.5 rounded-full hover:bg-surface-3 text-fg-muted hover:text-fg"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -326,7 +326,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           onKeyDown={handleKeyDown}
           placeholder="How can I help you today?"
           rows={1}
-          className={`w-full bg-transparent text-[#ecece7] placeholder-[#85857a] px-3.5 sm:px-4 pt-3 pb-1.5 resize-none outline-none max-h-[200px] leading-relaxed ${
+          className={`w-full bg-transparent text-fg placeholder-fg-muted px-3.5 sm:px-4 pt-3 pb-1.5 resize-none outline-none max-h-[200px] leading-relaxed ${
             isNewConversation
               ? 'min-h-[64px] text-base sm:text-lg'
               : 'min-h-[44px] text-sm sm:text-[15px]'
@@ -334,14 +334,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         />
 
         {/* Bottom Bar: Attachment & Chat Mode on Left, Model, Mic & Send on Right */}
-        <div className="flex items-center justify-between px-3 py-2.5 pt-1 text-[#85857a]">
+        <div className="flex items-center justify-between px-3 py-2.5 pt-1 text-fg-muted">
           {/* Left Controls */}
           <div className="flex items-center gap-2">
             {/* '+' Attachment Button */}
             <button
               id="btn-attach-file"
               onClick={() => fileInputRef.current?.click()}
-              className="p-1.5 rounded-lg hover:bg-[#2c2c28] text-[#85857a] hover:text-[#ecece7] transition-colors"
+              className="p-1.5 rounded-lg hover:bg-surface-2 text-fg-muted hover:text-fg transition-colors"
               title="Add file or image"
             >
               <Plus className="w-4 h-4" />
@@ -355,16 +355,16 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 onClick={() => setModeDropdownOpen(!modeDropdownOpen)}
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-all cursor-pointer select-none ${
                   activeMode === 'planning'
-                    ? 'bg-[#d97757]/15 border-[#d97757]/40 text-[#f0a282] hover:bg-[#d97757]/20'
+                    ? 'bg-brand/15 border-teal/40 text-teal-fg hover:bg-brand/20'
                     : activeMode === 'build'
-                    ? 'bg-[#0284c7]/15 border-[#0284c7]/40 text-[#7dd3fc] hover:bg-[#0284c7]/20'
-                    : 'bg-[#181816] border-[#33332e] text-[#b4b4aa] hover:bg-[#282824] hover:text-[#ecece7]'
+                    ? 'bg-teal-deep/15 border-teal-deep/40 text-teal-fg hover:bg-teal-deep/20'
+                    : 'bg-canvas border-line text-fg-soft hover:bg-surface-2 hover:text-fg'
                 }`}
                 title="Select Planning, Build, or Chat mode"
               >
-                {activeMode === 'planning' && <Compass className="w-3.5 h-3.5 text-[#d97757]" />}
-                {activeMode === 'build' && <Hammer className="w-3.5 h-3.5 text-[#38bdf8]" />}
-                {activeMode === 'chat' && <MessageSquare className="w-3.5 h-3.5 text-[#85857a]" />}
+                {activeMode === 'planning' && <Compass className="w-3.5 h-3.5 text-teal" />}
+                {activeMode === 'build' && <Hammer className="w-3.5 h-3.5 text-teal" />}
+                {activeMode === 'chat' && <MessageSquare className="w-3.5 h-3.5 text-fg-muted" />}
                 <span className="capitalize">{activeMode}</span>
                 <ChevronDown className="w-3 h-3 opacity-70" />
               </button>
@@ -376,7 +376,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                     className="fixed inset-0 z-30"
                     onClick={() => setModeDropdownOpen(false)}
                   />
-                  <div className="absolute left-0 bottom-full mb-2 w-64 p-1.5 bg-[#1c1c19] border border-[#33332e] rounded-xl shadow-2xl z-40 animate-in fade-in zoom-in-95 duration-100 divide-y divide-[#2a2a26]">
+                  <div className="absolute left-0 bottom-full mb-2 w-64 p-1.5 bg-surface border border-line rounded-xl shadow-2xl z-40 animate-in fade-in zoom-in-95 duration-100 divide-y divide-line-soft">
                     <div className="p-1 space-y-1">
                       {/* Planning Mode Option */}
                       <button
@@ -384,21 +384,21 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                         onClick={() => setActionMode('planning')}
                         className={`w-full text-left px-2.5 py-2 rounded-lg text-xs flex items-start gap-2.5 transition-colors cursor-pointer ${
                           activeMode === 'planning'
-                            ? 'bg-[#2a2a26] text-[#ecece7]'
-                            : 'text-[#b4b4aa] hover:bg-[#242421] hover:text-[#ecece7]'
+                            ? 'bg-surface-2 text-fg'
+                            : 'text-fg-soft hover:bg-surface-2 hover:text-fg'
                         }`}
                       >
-                        <div className="p-1.5 rounded-md bg-[#d97757]/15 text-[#d97757] shrink-0 mt-0.5 border border-[#d97757]/30">
+                        <div className="p-1.5 rounded-md bg-brand/15 text-teal shrink-0 mt-0.5 border border-teal/30">
                           <Compass className="w-3.5 h-3.5" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
-                            <span className="font-semibold text-[#ecece7]">Planning</span>
+                            <span className="font-semibold text-fg">Planning</span>
                             {activeMode === 'planning' && (
-                              <Check className="w-3.5 h-3.5 text-[#d97757]" />
+                              <Check className="w-3.5 h-3.5 text-teal" />
                             )}
                           </div>
-                          <p className="text-[11px] text-[#85857a] mt-0.5 leading-snug">
+                          <p className="text-[11px] text-fg-muted mt-0.5 leading-snug">
                             Architectural strategy, blueprints, edge cases & steps before writing code.
                           </p>
                         </div>
@@ -410,21 +410,21 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                         onClick={() => setActionMode('build')}
                         className={`w-full text-left px-2.5 py-2 rounded-lg text-xs flex items-start gap-2.5 transition-colors cursor-pointer ${
                           activeMode === 'build'
-                            ? 'bg-[#2a2a26] text-[#ecece7]'
-                            : 'text-[#b4b4aa] hover:bg-[#242421] hover:text-[#ecece7]'
+                            ? 'bg-surface-2 text-fg'
+                            : 'text-fg-soft hover:bg-surface-2 hover:text-fg'
                         }`}
                       >
-                        <div className="p-1.5 rounded-md bg-[#0284c7]/15 text-[#38bdf8] shrink-0 mt-0.5 border border-[#0284c7]/30">
+                        <div className="p-1.5 rounded-md bg-teal-deep/15 text-teal shrink-0 mt-0.5 border border-teal-deep/30">
                           <Hammer className="w-3.5 h-3.5" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
-                            <span className="font-semibold text-[#ecece7]">Build</span>
+                            <span className="font-semibold text-fg">Build</span>
                             {activeMode === 'build' && (
-                              <Check className="w-3.5 h-3.5 text-[#38bdf8]" />
+                              <Check className="w-3.5 h-3.5 text-teal" />
                             )}
                           </div>
-                          <p className="text-[11px] text-[#85857a] mt-0.5 leading-snug">
+                          <p className="text-[11px] text-fg-muted mt-0.5 leading-snug">
                             Direct code generation, complete implementations & production artifacts.
                           </p>
                         </div>
@@ -436,21 +436,21 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                         onClick={() => setActionMode('chat')}
                         className={`w-full text-left px-2.5 py-2 rounded-lg text-xs flex items-start gap-2.5 transition-colors cursor-pointer ${
                           activeMode === 'chat'
-                            ? 'bg-[#2a2a26] text-[#ecece7]'
-                            : 'text-[#b4b4aa] hover:bg-[#242421] hover:text-[#ecece7]'
+                            ? 'bg-surface-2 text-fg'
+                            : 'text-fg-soft hover:bg-surface-2 hover:text-fg'
                         }`}
                       >
-                        <div className="p-1.5 rounded-md bg-[#242421] text-[#85857a] shrink-0 mt-0.5 border border-[#33332e]">
+                        <div className="p-1.5 rounded-md bg-surface-2 text-fg-muted shrink-0 mt-0.5 border border-line">
                           <MessageSquare className="w-3.5 h-3.5" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
-                            <span className="font-semibold text-[#ecece7]">Chat</span>
+                            <span className="font-semibold text-fg">Chat</span>
                             {activeMode === 'chat' && (
-                              <Check className="w-3.5 h-3.5 text-[#ecece7]" />
+                              <Check className="w-3.5 h-3.5 text-fg" />
                             )}
                           </div>
-                          <p className="text-[11px] text-[#85857a] mt-0.5 leading-snug">
+                          <p className="text-[11px] text-fg-muted mt-0.5 leading-snug">
                             General conversational inquiry and open-ended thought partner.
                           </p>
                         </div>
@@ -471,12 +471,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               className={`relative p-1.5 rounded-lg transition-colors flex items-center gap-1 ${
                 isRecording
                   ? 'bg-red-500/20 text-red-400 animate-pulse'
-                  : 'hover:bg-[#2c2c28] text-[#85857a] hover:text-[#ecece7]'
+                  : 'hover:bg-surface-2 text-fg-muted hover:text-fg'
               }`}
               title={isRecording ? 'Stop listening' : 'Dictate message'}
             >
               {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-              <ChevronDown className="w-3 h-3 text-[#6b6b62]" />
+              <ChevronDown className="w-3 h-3 text-fg-muted" />
             </button>
 
             {/* Send / Stop Button */}
@@ -486,10 +486,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               disabled={!canSubmit && !isLoading}
               className={`p-2 rounded-xl transition-all ${
                 isLoading
-                  ? 'bg-[#d97757] text-white hover:bg-[#e06c43]'
+                  ? 'bg-brand text-white hover:bg-brand-strong'
                   : canSubmit
-                  ? 'bg-[#d97757] text-white hover:bg-[#e06c43] shadow-sm'
-                  : 'bg-[#2a2a26] text-[#63635b] cursor-not-allowed'
+                  ? 'bg-brand text-white hover:bg-brand-strong shadow-sm'
+                  : 'bg-surface-2 text-fg-muted cursor-not-allowed'
               }`}
               title={isLoading ? 'Stop response' : 'Send message (Enter)'}
             >
@@ -512,13 +512,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       )}
 
       {speechError && (
-        <div className="mt-1.5 text-center text-xs text-[#d97757]">
+        <div className="mt-1.5 text-center text-xs text-teal">
           {speechError}
         </div>
       )}
       
       {/* Disclaimer Text */}
-      <div className="mt-2 text-center text-[10px] text-[#85857a] opacity-80 px-2 leading-tight">
+      <div className="mt-2 text-center text-[10px] text-fg-muted opacity-80 px-2 leading-tight">
         Ethco can make mistakes. Please double check important information.
       </div>
     </div>

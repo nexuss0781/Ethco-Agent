@@ -59,29 +59,29 @@ export const TodoListTracker: React.FC<TodoListTrackerProps> = ({
 
   // Mini Terminal Screen icon mockup
   const TerminalMockup = () => (
-    <div className="shrink-0 w-6 h-4.5 rounded-xs bg-[#111110] border border-[#383832] p-0.5 flex flex-col justify-around overflow-hidden shadow-xs">
-      <div className="w-2.5 h-[1.5px] bg-[#66665c] rounded-xs" />
+    <div className="shrink-0 w-6 h-4.5 rounded-xs bg-canvas-deep border border-line p-0.5 flex flex-col justify-around overflow-hidden shadow-xs">
+      <div className="w-2.5 h-[1.5px] bg-surface-3 rounded-xs" />
       <div className="w-4 h-[1.5px] bg-[#4ade80] rounded-xs" />
-      <div className="w-3 h-[1.5px] bg-[#88887e] rounded-xs" />
+      <div className="w-3 h-[1.5px] bg-surface-2 rounded-xs" />
     </div>
   );
 
   return (
     <div className="w-full max-w-full my-2 font-sans select-none">
       {/* Main Manus-style Todo Container */}
-      <div className="w-full rounded-2xl bg-[#1e1e1b] border border-[#2d2d28] shadow-md overflow-hidden transition-all duration-200">
+      <div className="w-full rounded-2xl bg-surface border border-line-soft shadow-md overflow-hidden transition-all duration-200">
         {/* If all tasks completed and collapsed, or explicitly collapsed */}
         {isAllCompleted && !isExpanded ? (
           /* Frozen Completed State matching Manus */
           <div
             onClick={() => setIsExpanded(true)}
-            className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-[#252521] transition-colors cursor-pointer text-left"
+            className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-surface-2 transition-colors cursor-pointer text-left"
           >
             <TerminalMockup />
 
-            <div className="flex items-center gap-2 text-[#d4d4cb] min-w-0 flex-1">
-              <ListChecks className="w-4 h-4 text-[#8e8e82] stroke-[1.8] shrink-0" />
-              <span className="text-[13.5px] font-normal text-[#d4d4cb] truncate">
+            <div className="flex items-center gap-2 text-fg min-w-0 flex-1">
+              <ListChecks className="w-4 h-4 text-fg-muted stroke-[1.8] shrink-0" />
+              <span className="text-[13.5px] font-normal text-fg truncate">
                 Agent todo completed
               </span>
             </div>
@@ -91,24 +91,24 @@ export const TodoListTracker: React.FC<TodoListTrackerProps> = ({
           <button
             type="button"
             onClick={() => setIsExpanded(true)}
-            className="w-full flex items-center justify-between gap-2.5 px-3.5 py-2.5 hover:bg-[#252521] transition-colors cursor-pointer text-left"
+            className="w-full flex items-center justify-between gap-2.5 px-3.5 py-2.5 hover:bg-surface-2 transition-colors cursor-pointer text-left"
           >
             <TerminalMockup />
 
             {/* Middle: Active Task with Icon & single line ellipsis truncation */}
             <div className="flex-1 flex items-center gap-2 min-w-0">
               <div className="shrink-0">{getStatusIcon(currentTask?.status)}</div>
-              <span className="text-[13px] text-[#deded4] truncate font-normal block max-w-full">
+              <span className="text-[13px] text-fg truncate font-normal block max-w-full">
                 {currentTask?.content || 'Task in progress...'}
               </span>
             </div>
 
             {/* Right: Counter and Chevron */}
-            <div className="flex items-center gap-1.5 shrink-0 text-[#9c9c90] text-xs font-mono pl-1">
+            <div className="flex items-center gap-1.5 shrink-0 text-fg-soft text-xs font-mono pl-1">
               <span>
                 {completed} / {total}
               </span>
-              <ChevronDown className="w-4 h-4 text-[#88887e]" />
+              <ChevronDown className="w-4 h-4 text-fg-muted" />
             </div>
           </button>
         ) : (
@@ -122,21 +122,21 @@ export const TodoListTracker: React.FC<TodoListTrackerProps> = ({
               <button
                 type="button"
                 onClick={() => setIsExpanded(false)}
-                className="flex items-center gap-1.5 text-[#9c9c90] hover:text-[#ecece7] text-xs font-mono transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 text-fg-soft hover:text-fg text-xs font-mono transition-colors cursor-pointer"
               >
                 <span>
                   {completed} / {total}
                 </span>
-                <ChevronUp className="w-4 h-4 text-[#88887e]" />
+                <ChevronUp className="w-4 h-4 text-fg-muted" />
               </button>
             </div>
 
             {/* Section Header */}
             <div className="flex items-center justify-between pt-0.5">
-              <span className="text-[13px] font-medium text-[#8e8e82]">Task progress</span>
+              <span className="text-[13px] font-medium text-fg-muted">Task progress</span>
 
               {isAllCompleted && (
-                <span className="inline-flex items-center gap-1.5 text-[11px] text-[#b4b4a6] font-normal font-mono">
+                <span className="inline-flex items-center gap-1.5 text-[11px] text-fg-soft font-normal font-mono">
                   <Check className="w-3 h-3 text-[#4ade80]" />
                   Agent todo completed
                 </span>
@@ -144,7 +144,7 @@ export const TodoListTracker: React.FC<TodoListTrackerProps> = ({
             </div>
 
             {/* Scrollable Tasks List: Renders 5 tasks at once (~180px) with custom scroll and single-line truncation */}
-            <div className="max-h-[185px] overflow-y-auto space-y-2 pr-1 scrollbar-thin scrollbar-thumb-[#383832] scrollbar-track-transparent">
+            <div className="max-h-[185px] overflow-y-auto space-y-2 pr-1 scrollbar-thin scrollbar-thumb-line scrollbar-track-transparent">
               {todos.map((todo, idx) => {
                 const isItemCompleted = todo.status === 'completed';
                 const isItemInProgress = todo.status === 'in_progress';
@@ -162,12 +162,12 @@ export const TodoListTracker: React.FC<TodoListTrackerProps> = ({
                     <span
                       className={`truncate flex-1 min-w-0 transition-colors ${
                         isItemCompleted
-                          ? 'text-[#e5e5dc]'
+                          ? 'text-fg'
                           : isItemInProgress
-                          ? 'text-[#f5f5ee] font-medium'
+                          ? 'text-fg font-medium'
                           : isCancelled
-                          ? 'line-through text-[#6e6e64]'
-                          : 'text-[#a8a89d]'
+                          ? 'line-through text-fg-muted'
+                          : 'text-fg-soft'
                       }`}
                     >
                       {todo.content}

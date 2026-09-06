@@ -456,66 +456,66 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
     >
       <div
         id="github-import-modal"
-        className="relative w-full max-w-3xl bg-[#141412] border border-[#2b2b27] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
+        className="relative w-full max-w-3xl bg-canvas-deep border border-line-soft rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#242421] bg-[#181815]">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-line-soft bg-canvas">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-[#20201c] border border-[#33332e] flex items-center justify-center text-[#ecece7]">
-              <Github className="w-4 h-4 text-[#d97757]" />
+            <div className="w-8 h-8 rounded-xl bg-surface border border-line flex items-center justify-center text-fg">
+              <Github className="w-4 h-4 text-teal" />
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-[#ecece7] flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-fg flex items-center gap-2">
                 GitHub Repository Center
               </h2>
-              <p className="text-[11px] text-[#85857a]">
+              <p className="text-[11px] text-fg-muted">
                 Browse, switch branches, and import repositories directly into your AI workspace.
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-[#85857a] hover:text-[#ecece7] hover:bg-[#262622] transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* User Account Bar - Renders Authorized Real Name, Avatar, Username and Intact Auth Gmail */}
-        <div className="px-5 py-3 bg-[#191916] border-b border-[#242421] flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="px-5 py-3 bg-surface border-b border-line-soft flex flex-wrap items-center justify-between gap-3 text-xs">
           {ghUser || authUser ? (
             <div className="flex items-center gap-3">
               {displayAvatar ? (
                 <img
                   src={displayAvatar}
                   alt={displayName}
-                  className="w-8 h-8 rounded-xl object-cover border border-[#d97757]/40 shrink-0"
+                  className="w-8 h-8 rounded-xl object-cover border border-teal/40 shrink-0"
                 />
               ) : (
-                <div className="w-8 h-8 rounded-xl bg-[#252521] border border-[#d97757]/40 flex items-center justify-center shrink-0 text-[#d97757] font-bold text-xs">
+                <div className="w-8 h-8 rounded-xl bg-surface-2 border border-teal/40 flex items-center justify-center shrink-0 text-teal font-bold text-xs">
                   {displayName.charAt(0).toUpperCase()}
                 </div>
               )}
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-semibold text-xs text-[#ecece7]">{displayName}</span>
-                  <span className="text-[11px] font-mono text-[#d97757]">@{displayUsername}</span>
+                  <span className="font-semibold text-xs text-fg">{displayName}</span>
+                  <span className="text-[11px] font-mono text-teal">@{displayUsername}</span>
                   <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-medium bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
                     <ShieldCheck className="w-2.5 h-2.5" /> Authorized
                   </span>
                 </div>
                 {authEmail && (
-                  <div className="flex items-center gap-1.5 text-[11px] text-[#85857a] mt-0.5">
-                    <Mail className="w-3 h-3 text-[#737370]" />
-                    <span className="font-mono text-[#a3a39b]">{authEmail}</span>
+                  <div className="flex items-center gap-1.5 text-[11px] text-fg-muted mt-0.5">
+                    <Mail className="w-3 h-3 text-fg-muted" />
+                    <span className="font-mono text-fg-soft">{authEmail}</span>
                   </div>
                 )}
               </div>
             </div>
           ) : (
-            <div className="flex items-center gap-2 text-[#85857a]">
-              <Lock className="w-3.5 h-3.5 text-[#d97757]" />
+            <div className="flex items-center gap-2 text-fg-muted">
+              <Lock className="w-3.5 h-3.5 text-teal" />
               <span>Connect GitHub to browse your private & public repositories</span>
             </div>
           )}
@@ -524,7 +524,7 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
             {ghUser ? (
               <button
                 onClick={handleDisconnect}
-                className="px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-[#85857a] hover:text-red-400 hover:bg-[#262622] border border-[#2b2b27] transition-colors cursor-pointer"
+                className="px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-fg-muted hover:text-red-400 hover:bg-surface-2 border border-line-soft transition-colors cursor-pointer"
               >
                 Disconnect
               </button>
@@ -532,7 +532,7 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
               <a
                 id="btn-github-authorize"
                 href={GitHubService.getLoginUrl()}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#d97757] hover:bg-[#e08668] text-white transition-all shadow-xs cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-brand hover:bg-brand-strong text-white transition-all shadow-xs cursor-pointer"
               >
                 <Github className="w-3.5 h-3.5" />
                 <span>Authorize GitHub</span>
@@ -558,19 +558,19 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
         )}
 
         {/* Navigation Tabs */}
-        <div className="flex items-center px-5 pt-2 border-b border-[#242421] bg-[#141412] gap-2">
+        <div className="flex items-center px-5 pt-2 border-b border-line-soft bg-canvas-deep gap-2">
           <button
             onClick={() => setActiveTab('my_repos')}
             className={`pb-2.5 px-3 text-xs font-medium border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === 'my_repos'
-                ? 'border-[#d97757] text-[#ecece7]'
-                : 'border-transparent text-[#85857a] hover:text-[#b4b4aa]'
+                ? 'border-teal text-fg'
+                : 'border-transparent text-fg-muted hover:text-fg-soft'
             }`}
           >
             <Github className="w-3.5 h-3.5" />
             <span>All Repositories</span>
             {repos.length > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-[#22221f] text-[#85857a]">
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-surface text-fg-muted">
                 {repos.length}
               </span>
             )}
@@ -580,8 +580,8 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
             onClick={() => setActiveTab('url_clone')}
             className={`pb-2.5 px-3 text-xs font-medium border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === 'url_clone'
-                ? 'border-[#d97757] text-[#ecece7]'
-                : 'border-transparent text-[#85857a] hover:text-[#b4b4aa]'
+                ? 'border-teal text-fg'
+                : 'border-transparent text-fg-muted hover:text-fg-soft'
             }`}
           >
             <Download className="w-3.5 h-3.5" />
@@ -592,14 +592,14 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
             onClick={() => setActiveTab('imported')}
             className={`pb-2.5 px-3 text-xs font-medium border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === 'imported'
-                ? 'border-[#d97757] text-[#ecece7]'
-                : 'border-transparent text-[#85857a] hover:text-[#b4b4aa]'
+                ? 'border-teal text-fg'
+                : 'border-transparent text-fg-muted hover:text-fg-soft'
             }`}
           >
             <FolderGit2 className="w-3.5 h-3.5" />
             <span>Workspace Repos</span>
             {importedRepos.length > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-[#d97757]/20 text-[#d97757] font-semibold">
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-brand/20 text-teal font-semibold">
                 {importedRepos.length}
               </span>
             )}
@@ -610,10 +610,10 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
         {activeTab === 'my_repos' && (
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
             {/* Search & Filter Header with Multi-Select Actions at Top of Dropdown / List */}
-            <div className="p-3 bg-[#181815] border-b border-[#242421] flex flex-wrap items-center justify-between gap-2">
+            <div className="p-3 bg-canvas border-b border-line-soft flex flex-wrap items-center justify-between gap-2">
               <div className="flex flex-1 items-center gap-2 min-w-[220px]">
                 <div className="relative flex-1">
-                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#85857a]" />
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-fg-muted" />
                   <input
                     type="text"
                     placeholder="Search repository name, branch or description..."
@@ -626,7 +626,7 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
                         loadUserRepos();
                       }
                     }}
-                    className="w-full pl-8.5 pr-3 py-1.5 bg-[#121210] border border-[#2b2b27] rounded-xl text-xs text-[#ecece7] placeholder-[#66665e] focus:outline-none focus:border-[#d97757]"
+                    className="w-full pl-8.5 pr-3 py-1.5 bg-canvas-deep border border-line-soft rounded-xl text-xs text-fg placeholder-fg-muted focus:outline-none focus:border-teal"
                   />
                 </div>
 
@@ -634,7 +634,7 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
                   <select
                     value={languageFilter}
                     onChange={(e) => setLanguageFilter(e.target.value)}
-                    className="px-2.5 py-1.5 bg-[#121210] border border-[#2b2b27] rounded-xl text-xs text-[#ecece7] focus:outline-none focus:border-[#d97757]"
+                    className="px-2.5 py-1.5 bg-canvas-deep border border-line-soft rounded-xl text-xs text-fg focus:outline-none focus:border-teal"
                   >
                     <option value="all">All Languages</option>
                     {languages.map((lang) => (
@@ -648,7 +648,7 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
                 <button
                   onClick={() => loadUserRepos(searchQuery)}
                   disabled={reposLoading}
-                  className="p-1.5 rounded-xl text-[#85857a] hover:text-[#ecece7] hover:bg-[#262622] border border-[#282824] transition-colors cursor-pointer"
+                  className="p-1.5 rounded-xl text-fg-muted hover:text-fg hover:bg-surface-2 border border-line-soft transition-colors cursor-pointer"
                   title="Refresh Repositories"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${reposLoading ? 'animate-spin' : ''}`} />
@@ -658,20 +658,20 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
               {/* Multi-Select Quick Action Bar */}
               {filteredRepos.length > 0 && (
                 <div className="flex items-center gap-2 text-xs">
-                  <span className="text-[11px] text-[#85857a] font-medium hidden sm:inline">
+                  <span className="text-[11px] text-fg-muted font-medium hidden sm:inline">
                     Selected:{' '}
-                    <strong className="text-[#d97757] font-semibold">{effectiveSelectedRepos.length}</strong>
+                    <strong className="text-teal font-semibold">{effectiveSelectedRepos.length}</strong>
                   </span>
                   <button
                     onClick={handleSelectAllVisible}
-                    className="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-[#22221e] hover:bg-[#2c2c27] text-[#ecece7] border border-[#33332e] transition-colors cursor-pointer"
+                    className="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-surface hover:bg-surface-2 text-fg border border-line transition-colors cursor-pointer"
                   >
                     Select All ({filteredRepos.length})
                   </button>
                   {effectiveSelectedRepos.length > 0 && (
                     <button
                       onClick={handleClearAllSelected}
-                      className="px-2 py-1 rounded-lg text-[11px] font-medium text-[#85857a] hover:text-red-400 hover:bg-[#262622] transition-colors cursor-pointer"
+                      className="px-2 py-1 rounded-lg text-[11px] font-medium text-fg-muted hover:text-red-400 hover:bg-surface-2 transition-colors cursor-pointer"
                     >
                       Clear
                     </button>
@@ -683,8 +683,8 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
             {/* Repositories Scrollable Area - Renders ALL repos (supports 100+), sized to show ~5 cards at once */}
             <div className="max-h-[390px] sm:max-h-[420px] overflow-y-auto p-3 space-y-2">
               {reposLoading ? (
-                <div className="py-14 flex flex-col items-center justify-center gap-2 text-[#85857a]">
-                  <Loader2 className="w-5 h-5 animate-spin text-[#d97757]" />
+                <div className="py-14 flex flex-col items-center justify-center gap-2 text-fg-muted">
+                  <Loader2 className="w-5 h-5 animate-spin text-teal" />
                   <span className="text-xs">Fetching all repositories & branches from GitHub...</span>
                 </div>
               ) : filteredRepos.length > 0 ? (
@@ -703,8 +703,8 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
                       onClick={() => handleToggleRepoSelect(repo)}
                       className={`group p-3 rounded-xl border transition-all flex items-center justify-between gap-3 relative cursor-pointer ${
                         isSelected
-                          ? 'bg-[#1e1b18] border-[#d97757]/50 shadow-xs'
-                          : 'bg-[#181815] hover:bg-[#1f1f1c] border-[#242421] hover:border-[#383832]'
+                          ? 'bg-surface-3 border-teal/50 shadow-xs'
+                          : 'bg-canvas hover:bg-surface border-line-soft hover:border-line'
                       }`}
                     >
                       {/* Checkbox Tick for Multi-Select */}
@@ -715,8 +715,8 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
                         }}
                         className={`w-4 h-4 rounded flex items-center justify-center shrink-0 transition-colors border ${
                           isSelected
-                            ? 'bg-[#d97757] border-[#d97757] text-white'
-                            : 'bg-[#20201d] border-[#383832] group-hover:border-[#52524a]'
+                            ? 'bg-brand border-teal text-white'
+                            : 'bg-surface border-line group-hover:border-line'
                         }`}
                       >
                         {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
@@ -727,9 +727,9 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
                         <div className="flex items-center gap-2 flex-wrap">
                           <span title={repo.private ? 'Private Repo' : 'Public Repo'}>
                             {repo.private ? (
-                              <Lock className="w-3.5 h-3.5 text-[#d97757] shrink-0" />
+                              <Lock className="w-3.5 h-3.5 text-teal shrink-0" />
                             ) : (
-                              <Globe className="w-3.5 h-3.5 text-[#85857a] shrink-0" />
+                              <Globe className="w-3.5 h-3.5 text-fg-muted shrink-0" />
                             )}
                           </span>
                           <a
@@ -737,7 +737,7 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
                             target="_blank"
                             rel="noreferrer"
                             onClick={(e) => e.stopPropagation()}
-                            className="font-semibold text-xs text-[#ecece7] hover:text-[#d97757] transition-colors truncate flex items-center gap-1"
+                            className="font-semibold text-xs text-fg hover:text-teal transition-colors truncate flex items-center gap-1"
                           >
                             {repo.full_name || repo.name}
                             <ExternalLink className="w-3 h-3 opacity-60" />
@@ -751,20 +751,20 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
                         </div>
 
                         {repo.description && (
-                          <p className="text-[11px] text-[#85857a] mt-0.5 line-clamp-1">
+                          <p className="text-[11px] text-fg-muted mt-0.5 line-clamp-1">
                             {repo.description}
                           </p>
                         )}
 
-                        <div className="flex items-center gap-3 mt-1.5 text-[10px] text-[#66665e]">
+                        <div className="flex items-center gap-3 mt-1.5 text-[10px] text-fg-muted">
                           {repo.language && (
-                            <span className="flex items-center gap-1 text-[#b4b4aa]">
-                              <span className="w-1.5 h-1.5 rounded-full bg-[#d97757]" />
+                            <span className="flex items-center gap-1 text-fg-soft">
+                              <span className="w-1.5 h-1.5 rounded-full bg-brand" />
                               {repo.language}
                             </span>
                           )}
                           <span className="flex items-center gap-1">
-                            <Star className="w-2.5 h-2.5 text-[#85857a]" />
+                            <Star className="w-2.5 h-2.5 text-fg-muted" />
                             {repo.stargazers_count || 0}
                           </span>
                         </div>
@@ -776,27 +776,27 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
                         <div className="relative">
                           <button
                             onClick={(e) => handleToggleBranchDropdown(e, repoKey, repo.full_name || repo.name)}
-                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#20201d] hover:bg-[#2a2a26] border border-[#2e2e2a] text-[11px] font-mono text-[#ecece7] transition-colors cursor-pointer"
+                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface hover:bg-surface-2 border border-line-soft text-[11px] font-mono text-fg transition-colors cursor-pointer"
                             title="Select branch"
                           >
-                            <GitBranch className="w-3 h-3 text-[#d97757]" />
+                            <GitBranch className="w-3 h-3 text-teal" />
                             <span className="max-w-[80px] sm:max-w-[110px] truncate">{currentBranch}</span>
-                            <ChevronDown className={`w-3 h-3 text-[#85857a] transition-transform ${isBranchMenuOpen ? 'rotate-180' : ''}`} />
+                            <ChevronDown className={`w-3 h-3 text-fg-muted transition-transform ${isBranchMenuOpen ? 'rotate-180' : ''}`} />
                           </button>
 
                           {/* Branch Popover Menu */}
                           {isBranchMenuOpen && (
                             <div
-                              className="absolute right-0 top-full mt-1.5 w-48 p-1.5 bg-[#1c1c19] border border-[#383832] rounded-xl shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-100 max-h-52 overflow-y-auto"
+                              className="absolute right-0 top-full mt-1.5 w-48 p-1.5 bg-surface border border-line rounded-xl shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-100 max-h-52 overflow-y-auto"
                               onClick={(e) => e.stopPropagation()}
                             >
-                              <div className="px-2 py-1 text-[9px] uppercase font-semibold text-[#85857a] border-b border-[#282824] flex items-center justify-between">
+                              <div className="px-2 py-1 text-[9px] uppercase font-semibold text-fg-muted border-b border-line-soft flex items-center justify-between">
                                 <span>Branches</span>
-                                <span className="font-mono text-[#66665e]">{availableBranches.length}</span>
+                                <span className="font-mono text-fg-muted">{availableBranches.length}</span>
                               </div>
                               {branchLoadingRepo === repoKey ? (
-                                <div className="py-3 text-center text-xs text-[#85857a] flex items-center justify-center gap-1.5">
-                                  <Loader2 className="w-3.5 h-3.5 animate-spin text-[#d97757]" />
+                                <div className="py-3 text-center text-xs text-fg-muted flex items-center justify-center gap-1.5">
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin text-teal" />
                                   <span>Loading...</span>
                                 </div>
                               ) : (
@@ -806,12 +806,12 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
                                     onClick={(e) => handleSelectBranch(e, repoKey, b)}
                                     className={`w-full text-left px-2 py-1.5 rounded-lg text-xs font-mono flex items-center justify-between transition-colors cursor-pointer ${
                                       b === currentBranch
-                                        ? 'bg-[#d97757]/20 text-[#f0a282]'
-                                        : 'text-[#b4b4aa] hover:bg-[#252522] hover:text-[#ecece7]'
+                                        ? 'bg-brand/20 text-teal-fg'
+                                        : 'text-fg-soft hover:bg-surface-2 hover:text-fg'
                                     }`}
                                   >
                                     <span className="truncate">{b}</span>
-                                    {b === currentBranch && <Check className="w-3.5 h-3.5 text-[#d97757]" />}
+                                    {b === currentBranch && <Check className="w-3.5 h-3.5 text-teal" />}
                                   </button>
                                 ))
                               )}
@@ -823,9 +823,9 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
                   );
                 })
               ) : (
-                <div className="py-12 text-center text-[#85857a] flex flex-col items-center justify-center gap-2">
-                  <Github className="w-8 h-8 opacity-30 text-[#d97757]" />
-                  <p className="text-xs font-medium text-[#ecece7]">No repositories found</p>
+                <div className="py-12 text-center text-fg-muted flex flex-col items-center justify-center gap-2">
+                  <Github className="w-8 h-8 opacity-30 text-teal" />
+                  <p className="text-xs font-medium text-fg">No repositories found</p>
                   <p className="text-[11px] max-w-xs">
                     Try searching for any public GitHub repository above or use the "Clone by URL" tab to import directly.
                   </p>
@@ -835,9 +835,9 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
 
             {/* Bottom Selection Footer Bar */}
             {effectiveSelectedRepos.length > 0 && (
-              <div className="p-3 bg-[#181815] border-t border-[#242421] flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2 text-xs text-[#ecece7]">
-                  <span className="w-2 h-2 rounded-full bg-[#d97757]" />
+              <div className="p-3 bg-canvas border-t border-line-soft flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-xs text-fg">
+                  <span className="w-2 h-2 rounded-full bg-brand" />
                   <span>
                     <strong>{effectiveSelectedRepos.length}</strong> {effectiveSelectedRepos.length === 1 ? 'repository' : 'repositories'} selected for AI agent
                   </span>
@@ -845,7 +845,7 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
                 <div className="flex items-center gap-2">
                   <button
                     onClick={onClose}
-                    className="px-4 py-1.5 rounded-xl text-xs font-medium bg-[#d97757] hover:bg-[#e08668] text-white shadow-xs transition-colors cursor-pointer"
+                    className="px-4 py-1.5 rounded-xl text-xs font-medium bg-brand hover:bg-brand-strong text-white shadow-xs transition-colors cursor-pointer"
                   >
                     Done
                   </button>
@@ -859,40 +859,40 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
         {activeTab === 'url_clone' && (
           <form onSubmit={handleCustomClone} className="flex-1 p-5 overflow-y-auto space-y-4 text-xs">
             <div className="space-y-1.5">
-              <label className="block font-medium text-[#ecece7]">Repository URL or identifier</label>
+              <label className="block font-medium text-fg">Repository URL or identifier</label>
               <input
                 type="text"
                 required
                 placeholder="https://github.com/owner/repository or owner/repository"
                 value={cloneUrl}
                 onChange={(e) => setCloneUrl(e.target.value)}
-                className="w-full px-3 py-2 bg-[#181815] border border-[#2b2b27] rounded-lg text-xs text-[#ecece7] placeholder-[#66665e] focus:outline-none focus:border-[#d97757]"
+                className="w-full px-3 py-2 bg-canvas border border-line-soft rounded-lg text-xs text-fg placeholder-fg-muted focus:outline-none focus:border-teal"
               />
-              <p className="text-[11px] text-[#85857a]">
+              <p className="text-[11px] text-fg-muted">
                 Works with any accessible GitHub repository URL without requiring an API key.
               </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="block font-medium text-[#ecece7]">Specific Branch (Optional)</label>
+                <label className="block font-medium text-fg">Specific Branch (Optional)</label>
                 <input
                   type="text"
                   placeholder="e.g. main, master, feat/feature"
                   value={cloneBranch}
                   onChange={(e) => setCloneBranch(e.target.value)}
-                  className="w-full px-3 py-2 bg-[#181815] border border-[#2b2b27] rounded-lg text-xs text-[#ecece7] placeholder-[#66665e] focus:outline-none focus:border-[#d97757]"
+                  className="w-full px-3 py-2 bg-canvas border border-line-soft rounded-lg text-xs text-fg placeholder-fg-muted focus:outline-none focus:border-teal"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="block font-medium text-[#ecece7]">Destination Folder Name (Optional)</label>
+                <label className="block font-medium text-fg">Destination Folder Name (Optional)</label>
                 <input
                   type="text"
                   placeholder="Defaults to repository name"
                   value={cloneFolderName}
                   onChange={(e) => setCloneFolderName(e.target.value)}
-                  className="w-full px-3 py-2 bg-[#181815] border border-[#2b2b27] rounded-lg text-xs text-[#ecece7] placeholder-[#66665e] focus:outline-none focus:border-[#d97757]"
+                  className="w-full px-3 py-2 bg-canvas border border-line-soft rounded-lg text-xs text-fg placeholder-fg-muted focus:outline-none focus:border-teal"
                 />
               </div>
             </div>
@@ -901,7 +901,7 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
               <button
                 type="submit"
                 disabled={cloning}
-                className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-[#d97757] hover:bg-[#e08668] text-white font-medium text-xs shadow-md transition-all cursor-pointer"
+                className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-brand hover:bg-brand-strong text-white font-medium text-xs shadow-md transition-all cursor-pointer"
               >
                 {cloning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                 <span>{cloning ? 'Cloning Repository...' : 'Clone to Workspace'}</span>
@@ -913,13 +913,13 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
         {/* Tab 3: Workspace Repos */}
         {activeTab === 'imported' && (
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-            <div className="p-3 bg-[#181815] border-b border-[#242421] flex items-center justify-between text-xs">
-              <span className="text-[#85857a]">
-                Cloned repositories available on your server filesystem under <code className="text-[#ecece7]">/repos/</code>
+            <div className="p-3 bg-canvas border-b border-line-soft flex items-center justify-between text-xs">
+              <span className="text-fg-muted">
+                Cloned repositories available on your server filesystem under <code className="text-fg">/repos/</code>
               </span>
               <button
                 onClick={loadImportedRepos}
-                className="p-1 rounded-lg text-[#85857a] hover:text-[#ecece7] hover:bg-[#262622] transition-colors"
+                className="p-1 rounded-lg text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors"
                 title="Refresh"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${importedLoading ? 'animate-spin' : ''}`} />
@@ -928,31 +928,31 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
 
             <div className="flex-1 overflow-y-auto p-4 space-y-2.5">
               {importedLoading ? (
-                <div className="py-12 flex flex-col items-center justify-center gap-2 text-[#85857a]">
-                  <Loader2 className="w-5 h-5 animate-spin text-[#d97757]" />
+                <div className="py-12 flex flex-col items-center justify-center gap-2 text-fg-muted">
+                  <Loader2 className="w-5 h-5 animate-spin text-teal" />
                   <span className="text-xs">Loading workspace repositories...</span>
                 </div>
               ) : importedRepos.length > 0 ? (
                 importedRepos.map((repo) => (
                   <div
                     key={repo.name}
-                    className="p-3.5 rounded-xl bg-[#181815] border border-[#242421] hover:border-[#383832] transition-all flex items-center justify-between gap-4"
+                    className="p-3.5 rounded-xl bg-canvas border border-line-soft hover:border-line transition-all flex items-center justify-between gap-4"
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <FolderGit2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                        <span className="font-semibold text-xs text-[#ecece7] truncate">{repo.name}</span>
-                        <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-[#22221e] text-[#85857a] border border-[#2b2b27]">
+                        <span className="font-semibold text-xs text-fg truncate">{repo.name}</span>
+                        <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-surface text-fg-muted border border-line-soft">
                           {repo.branch || 'main'}
                         </span>
                       </div>
-                      <div className="text-[10px] text-[#85857a] mt-1 font-mono truncate">{repo.path}</div>
+                      <div className="text-[10px] text-fg-muted mt-1 font-mono truncate">{repo.path}</div>
                     </div>
 
                     <div className="shrink-0 flex items-center gap-2">
                       <button
                         onClick={() => handleViewTree(repo.name)}
-                        className="p-1.5 rounded-lg text-[#85857a] hover:text-[#ecece7] hover:bg-[#262622] border border-[#2b2b27] transition-colors"
+                        className="p-1.5 rounded-lg text-fg-muted hover:text-fg hover:bg-surface-2 border border-line-soft transition-colors"
                         title="View File Tree"
                       >
                         <Layers className="w-3.5 h-3.5" />
@@ -961,16 +961,16 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
                       <button
                         onClick={() => handleSyncRepo(repo.name)}
                         disabled={syncingRepo === repo.name}
-                        className="p-1.5 rounded-lg text-[#85857a] hover:text-[#ecece7] hover:bg-[#262622] border border-[#2b2b27] transition-colors"
+                        className="p-1.5 rounded-lg text-fg-muted hover:text-fg hover:bg-surface-2 border border-line-soft transition-colors"
                         title="Git Pull / Sync"
                       >
-                        <RefreshCw className={`w-3.5 h-3.5 ${syncingRepo === repo.name ? 'animate-spin text-[#d97757]' : ''}`} />
+                        <RefreshCw className={`w-3.5 h-3.5 ${syncingRepo === repo.name ? 'animate-spin text-teal' : ''}`} />
                       </button>
 
                       <button
                         onClick={() => handleDeleteRepo(repo.name)}
                         disabled={deletingRepo === repo.name}
-                        className="p-1.5 rounded-lg text-[#85857a] hover:text-red-400 hover:bg-[#262622] border border-[#2b2b27] transition-colors"
+                        className="p-1.5 rounded-lg text-fg-muted hover:text-red-400 hover:bg-surface-2 border border-line-soft transition-colors"
                         title="Delete from workspace"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -982,7 +982,7 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
                             onSelectRepoForChat(repo);
                             onClose();
                           }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#d97757] hover:bg-[#e08668] text-white shadow-xs transition-all cursor-pointer"
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-brand hover:bg-brand-strong text-white shadow-xs transition-all cursor-pointer"
                         >
                           <span>Use in Chat</span>
                           <ArrowRight className="w-3 h-3" />
@@ -992,9 +992,9 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
                   </div>
                 ))
               ) : (
-                <div className="py-12 text-center text-[#85857a] flex flex-col items-center justify-center gap-2">
-                  <FolderGit2 className="w-8 h-8 opacity-30 text-[#d97757]" />
-                  <p className="text-xs font-medium text-[#ecece7]">No workspace repositories cloned yet</p>
+                <div className="py-12 text-center text-fg-muted flex flex-col items-center justify-center gap-2">
+                  <FolderGit2 className="w-8 h-8 opacity-30 text-teal" />
+                  <p className="text-xs font-medium text-fg">No workspace repositories cloned yet</p>
                   <p className="text-[11px] max-w-xs">
                     Import one from your authorized GitHub repositories or paste any Git clone URL.
                   </p>
@@ -1006,30 +1006,30 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
 
         {/* Tree Viewer Modal Sub-view */}
         {selectedRepoTree && (
-          <div className="absolute inset-0 bg-[#141412] z-20 flex flex-col">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[#242421] bg-[#181815]">
+          <div className="absolute inset-0 bg-canvas-deep z-20 flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-line-soft bg-canvas">
               <div className="flex items-center gap-2">
-                <FolderGit2 className="w-4 h-4 text-[#d97757]" />
-                <span className="text-sm font-semibold text-[#ecece7]">{selectedRepoTree.name}</span>
-                <span className="text-xs text-[#85857a]">File Tree</span>
+                <FolderGit2 className="w-4 h-4 text-teal" />
+                <span className="text-sm font-semibold text-fg">{selectedRepoTree.name}</span>
+                <span className="text-xs text-fg-muted">File Tree</span>
               </div>
               <button
                 onClick={() => setSelectedRepoTree(null)}
-                className="p-1.5 rounded-lg text-[#85857a] hover:text-[#ecece7] hover:bg-[#262622]"
+                className="p-1.5 rounded-lg text-fg-muted hover:text-fg hover:bg-surface-2"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-4 space-y-1 font-mono text-xs text-[#ecece7]">
+            <div className="flex-1 overflow-y-auto p-4 space-y-1 font-mono text-xs text-fg">
               {selectedRepoTree.tree.length === 0 ? (
-                <div className="text-center py-8 text-[#85857a]">Empty directory</div>
+                <div className="text-center py-8 text-fg-muted">Empty directory</div>
               ) : (
                 selectedRepoTree.tree.map((item, idx) => (
-                  <div key={idx} className="flex items-center gap-2 py-1 px-2 hover:bg-[#1f1f1c] rounded">
+                  <div key={idx} className="flex items-center gap-2 py-1 px-2 hover:bg-surface rounded">
                     {item.type === 'directory' ? (
-                      <Folder className="w-3.5 h-3.5 text-[#d97757]" />
+                      <Folder className="w-3.5 h-3.5 text-teal" />
                     ) : (
-                      <File className="w-3.5 h-3.5 text-[#85857a]" />
+                      <File className="w-3.5 h-3.5 text-fg-muted" />
                     )}
                     <span>{item.name}</span>
                   </div>

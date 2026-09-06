@@ -43,7 +43,7 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = ({
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto divide-y divide-[#22221f]/50"
+        className="flex-1 overflow-y-auto divide-y divide-line-soft/50"
       >
         <div className="pt-2 pb-6">
           {messages.map((message, idx) => {
@@ -68,9 +68,9 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = ({
       {showScrollBottom && (
         <button
           onClick={() => scrollToBottom('smooth')}
-          className="absolute bottom-4 right-6 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#242421] hover:bg-[#2d2d28] border border-[#383832] text-xs text-[#ecece7] shadow-lg transition-all animate-in fade-in zoom-in-95 cursor-pointer"
+          className="absolute bottom-4 right-6 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-2 hover:bg-surface-3 border border-line text-xs text-fg shadow-lg transition-all animate-in fade-in zoom-in-95 cursor-pointer"
         >
-          <ChevronDown className="w-3.5 h-3.5 text-[#d97757]" />
+          <ChevronDown className="w-3.5 h-3.5 text-teal" />
           <span>Latest</span>
         </button>
       )}

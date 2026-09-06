@@ -148,14 +148,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
         }}
         className={`group relative flex items-center justify-between px-3 py-2 rounded-xl text-xs cursor-pointer transition-all ${
           isActive
-            ? 'bg-[#282824] text-[#ecece7] font-medium shadow-sm'
-            : 'text-[#b4b4aa] hover:bg-[#20201d] hover:text-[#ecece7]'
+            ? 'bg-surface-2 text-fg font-medium shadow-sm'
+            : 'text-fg-soft hover:bg-surface hover:text-fg'
         }`}
       >
         <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-1">
           {(() => {
             const ConvoIcon = getDynamicLucideIcon(c.icon);
-            return <ConvoIcon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-[#d97757]' : 'text-[#85857a]'}`} />;
+            return <ConvoIcon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-teal' : 'text-fg-muted'}`} />;
           })()}
           {isEditing ? (
             <input
@@ -169,7 +169,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 if (e.key === 'Enter') handleSaveRename(c.id);
                 if (e.key === 'Escape') setEditingId(null);
               }}
-              className="w-full bg-[#181816] text-[#ecece7] px-1.5 py-0.5 rounded border border-[#d97757] outline-none text-xs"
+              className="w-full bg-canvas text-fg px-1.5 py-0.5 rounded border border-teal outline-none text-xs"
             />
           ) : (
             <span className="truncate text-[13px]">{c.title || 'Untitled Conversation'}</span>
@@ -184,8 +184,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 e.stopPropagation();
                 onTogglePin(c.id);
               }}
-              className={`p-1 rounded hover:bg-[#33332e] text-[#85857a] hover:text-[#ecece7] transition-colors ${
-                c.isPinned ? 'text-[#d97757] opacity-100' : ''
+              className={`p-1 rounded hover:bg-surface-3 text-fg-muted hover:text-fg transition-colors ${
+                c.isPinned ? 'text-teal opacity-100' : ''
               }`}
               title={c.isPinned ? 'Unpin' : 'Pin conversation'}
             >
@@ -193,14 +193,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </button>
             <button
               onClick={(e) => handleStartRename(e, c)}
-              className="p-1 rounded hover:bg-[#33332e] text-[#85857a] hover:text-[#ecece7] transition-colors"
+              className="p-1 rounded hover:bg-surface-3 text-fg-muted hover:text-fg transition-colors"
               title="Rename"
             >
               <Edit2 className="w-3 h-3" />
             </button>
             <button
               onClick={(e) => handleExport(e, c)}
-              className="p-1 rounded hover:bg-[#33332e] text-[#85857a] hover:text-[#ecece7] transition-colors"
+              className="p-1 rounded hover:bg-surface-3 text-fg-muted hover:text-fg transition-colors"
               title="Export as Markdown"
             >
               <Download className="w-3 h-3" />
@@ -210,7 +210,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 e.stopPropagation();
                 onDeleteConversation(c.id);
               }}
-              className="p-1 rounded hover:bg-[#33332e] text-[#85857a] hover:text-red-400 transition-colors"
+              className="p-1 rounded hover:bg-surface-3 text-fg-muted hover:text-red-400 transition-colors"
               title="Delete"
             >
               <Trash2 className="w-3 h-3" />
@@ -234,21 +234,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Sidebar Container */}
       <aside
         id="app-sidebar"
-        className={`fixed md:static inset-y-0 left-0 z-50 flex flex-col w-[290px] sm:w-[310px] bg-[#141412] border-r border-[#262623] transition-transform duration-300 ease-in-out ${
+        className={`fixed md:static inset-y-0 left-0 z-50 flex flex-col w-[290px] sm:w-[310px] bg-canvas-deep border-r border-line-soft transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
         {/* Top Header & New Chat */}
-        <div className="p-3.5 pb-2 border-b border-[#22221f] flex flex-col gap-2.5">
+        <div className="p-3.5 pb-2 border-b border-line-soft flex flex-col gap-2.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <img src="/assets/logo-128.png" alt="Ethco" className="w-6 h-6 rounded-md object-cover" />
-              <span className="font-medium text-sm text-[#ecece7] tracking-tight">Ethco</span>
+              <span className="font-medium text-sm text-fg tracking-tight">Ethco</span>
             </div>
 
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg text-[#85857a] hover:text-[#ecece7] hover:bg-[#222220] md:hidden transition-colors"
+              className="p-1.5 rounded-lg text-fg-muted hover:text-fg hover:bg-surface md:hidden transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
@@ -261,31 +261,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
               onNewChat();
               if (window.innerWidth < 768) onClose();
             }}
-            className="flex items-center justify-between w-full px-3.5 py-2.5 rounded-xl bg-[#20201d] hover:bg-[#282824] border border-[#33332e] text-[#ecece7] text-xs font-medium transition-all shadow-xs group"
+            className="flex items-center justify-between w-full px-3.5 py-2.5 rounded-xl bg-surface hover:bg-surface-2 border border-line text-fg text-xs font-medium transition-all shadow-xs group"
           >
             <div className="flex items-center gap-2">
-              <Plus className="w-4 h-4 text-[#d97757] group-hover:scale-110 transition-transform" />
+              <Plus className="w-4 h-4 text-teal group-hover:scale-110 transition-transform" />
               <span>Start New Chat</span>
             </div>
-            <span className="text-[10px] text-[#85857a] px-1.5 py-0.5 rounded bg-[#181816] border border-[#2b2b27]">
+            <span className="text-[10px] text-fg-muted px-1.5 py-0.5 rounded bg-canvas border border-line-soft">
               ⌘K
             </span>
           </button>
 
           {/* Search Box */}
           <div className="relative">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-[#85857a]" />
+            <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-fg-muted" />
             <input
               type="text"
               placeholder="Search conversations..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 bg-[#1a1a17] border border-[#282824] rounded-lg text-xs text-[#ecece7] placeholder-[#85857a] focus:outline-none focus:border-[#d97757]/60"
+              className="w-full pl-8 pr-3 py-1.5 bg-surface border border-line-soft rounded-lg text-xs text-fg placeholder-fg-muted focus:outline-none focus:border-teal/60"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-2 text-[#85857a] hover:text-[#ecece7]"
+                className="absolute right-2.5 top-2 text-fg-muted hover:text-fg"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -298,8 +298,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* Pinned Section */}
           {pinned.length > 0 && (
             <div>
-              <div className="px-2 py-1 text-[11px] font-semibold tracking-wider text-[#85857a] uppercase flex items-center gap-1.5">
-                <Pin className="w-3 h-3 text-[#d97757]" />
+              <div className="px-2 py-1 text-[11px] font-semibold tracking-wider text-fg-muted uppercase flex items-center gap-1.5">
+                <Pin className="w-3 h-3 text-teal" />
                 <span>Pinned</span>
               </div>
               <div className="space-y-0.5 mt-1">{pinned.map(renderConversationItem)}</div>
@@ -309,7 +309,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* Today */}
           {today.length > 0 && (
             <div>
-              <div className="px-2 py-1 text-[11px] font-semibold tracking-wider text-[#85857a] uppercase">
+              <div className="px-2 py-1 text-[11px] font-semibold tracking-wider text-fg-muted uppercase">
                 Today
               </div>
               <div className="space-y-0.5 mt-1">{today.map(renderConversationItem)}</div>
@@ -319,7 +319,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* Yesterday */}
           {yesterday.length > 0 && (
             <div>
-              <div className="px-2 py-1 text-[11px] font-semibold tracking-wider text-[#85857a] uppercase">
+              <div className="px-2 py-1 text-[11px] font-semibold tracking-wider text-fg-muted uppercase">
                 Yesterday
               </div>
               <div className="space-y-0.5 mt-1">{yesterday.map(renderConversationItem)}</div>
@@ -329,7 +329,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* Previous 7 Days */}
           {prev7Days.length > 0 && (
             <div>
-              <div className="px-2 py-1 text-[11px] font-semibold tracking-wider text-[#85857a] uppercase">
+              <div className="px-2 py-1 text-[11px] font-semibold tracking-wider text-fg-muted uppercase">
                 Previous 7 Days
               </div>
               <div className="space-y-0.5 mt-1">{prev7Days.map(renderConversationItem)}</div>
@@ -339,7 +339,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* Older */}
           {older.length > 0 && (
             <div>
-              <div className="px-2 py-1 text-[11px] font-semibold tracking-wider text-[#85857a] uppercase">
+              <div className="px-2 py-1 text-[11px] font-semibold tracking-wider text-fg-muted uppercase">
                 Older
               </div>
               <div className="space-y-0.5 mt-1">{older.map(renderConversationItem)}</div>
@@ -347,34 +347,34 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
 
           {filteredConversations.length === 0 && (
-            <div className="text-center py-8 px-4 text-xs text-[#85857a]">
+            <div className="text-center py-8 px-4 text-xs text-fg-muted">
               No conversations found.
             </div>
           )}
         </div>
 
         {/* Footer: User Profile & Settings */}
-        <div className="p-3 border-t border-[#22221f] bg-[#171714] space-y-2">
+        <div className="p-3 border-t border-line-soft bg-canvas space-y-2">
           {user && (
-            <div className="flex items-center justify-between p-2.5 rounded-xl border border-[#33332e] bg-[#20201d]">
+            <div className="flex items-center justify-between p-2.5 rounded-xl border border-line bg-surface">
               <div className="flex items-center gap-2.5 overflow-hidden">
                 {user.avatar ? (
-                  <img src={user.avatar} alt="Avatar" className="w-8 h-8 rounded-xl object-cover shrink-0 border border-[#d97757]/40" />
+                  <img src={user.avatar} alt="Avatar" className="w-8 h-8 rounded-xl object-cover shrink-0 border border-teal/40" />
                 ) : (
-                  <div className="w-8 h-8 rounded-xl bg-[#2a2a26] border border-[#d97757]/40 flex items-center justify-center shrink-0 text-[#d97757] font-bold text-xs">
+                  <div className="w-8 h-8 rounded-xl bg-surface-2 border border-teal/40 flex items-center justify-center shrink-0 text-teal font-bold text-xs">
                     {(user.name || user.email || 'U').charAt(0).toUpperCase()}
                   </div>
                 )}
                 <div className="truncate">
-                  <div className="text-xs font-semibold text-[#ecece7] truncate" title={user.name || user.email}>
+                  <div className="text-xs font-semibold text-fg truncate" title={user.name || user.email}>
                     {user.name || user.email}
                   </div>
-                  <div className="text-[10px] text-[#d97757] font-mono truncate">
+                  <div className="text-[10px] text-teal font-mono truncate">
                     @{user.username || user.login || (user.email ? user.email.split('@')[0] : 'user')}
                   </div>
                 </div>
               </div>
-              <button onClick={onLogout} className="p-1.5 text-[#85857a] hover:text-[#ecece7] hover:bg-[#33332e] rounded-md transition-colors cursor-pointer" title="Log out">
+              <button onClick={onLogout} className="p-1.5 text-fg-muted hover:text-fg hover:bg-surface-3 rounded-md transition-colors cursor-pointer" title="Log out">
                 <LogOut className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -388,9 +388,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 onOpenSettings();
                 if (window.innerWidth < 768) onClose();
               }}
-              className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl bg-[#1c1c19] hover:bg-[#252521] border border-[#2c2c28] hover:border-[#404040] text-[#ecece7] text-xs font-medium transition-all shadow-xs cursor-pointer"
+              className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl bg-surface hover:bg-surface-2 border border-line-soft hover:border-line text-fg text-xs font-medium transition-all shadow-xs cursor-pointer"
             >
-              <Settings className="w-4 h-4 text-[#85857a] hover:text-white transition-colors" />
+              <Settings className="w-4 h-4 text-fg-muted hover:text-white transition-colors" />
               <span>Settings</span>
             </button>
           )}
