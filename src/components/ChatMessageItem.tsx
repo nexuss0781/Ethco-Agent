@@ -83,7 +83,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
           ) : (
             <div className="w-7 h-7 rounded-lg overflow-hidden bg-surface border border-line flex items-center justify-center shadow-xs">
               <img
-                src="/assets/Todo.svg"
+                src="/assets/Todo.png"
                 alt="Ethco"
                 className="w-full h-full object-cover"
               />
