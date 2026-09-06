@@ -2,6 +2,7 @@ import React from 'react';
 import { PenLine, GraduationCap, Code2, Coffee, Lightbulb } from 'lucide-react';
 import { PromptSuggestion } from '../types';
 import { PROMPT_SUGGESTIONS } from '../constants/prompts';
+import { EthcoRabbit } from './EthcoRabbit';
 
 interface EmptyStateProps {
   onSelectPrompt: (promptText: string) => void;
@@ -27,6 +28,11 @@ export const EmptyState: React.FC<EmptyStateProps> = ({ onSelectPrompt }) => {
 
   return (
     <div className="flex flex-col items-center justify-center w-full px-3 py-4 sm:pt-6 select-none">
+      {/* Animated Ethco Mascot */}
+      <div className="mb-6 sm:mb-8">
+        <EthcoRabbit />
+      </div>
+
       {/* Centered Heading */}
       <div className="flex items-center justify-center mb-5 sm:mb-7 text-center animate-in fade-in duration-500">
         <h1 className="text-2xl sm:text-4xl md:text-5xl font-serif font-normal text-fg tracking-tight">
