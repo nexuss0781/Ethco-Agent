@@ -620,9 +620,24 @@ export default function App() {
         {/* Center Area: Empty State OR Message Stream */}
         <div className="flex-1 overflow-hidden flex flex-col min-h-0 relative">
           {!hasMessages ? (
-            <div className="flex-1 flex flex-col items-center justify-center min-h-0 overflow-y-auto px-3 sm:px-4 pb-14 sm:pb-20">
-              <div className="w-full max-w-3xl mx-auto flex flex-col items-center">
+            <div className="flex-1 flex flex-col items-center justify-center min-h-0 overflow-y-auto px-3 sm:px-4">
+              <div className="w-full max-w-3xl mx-auto flex flex-col items-center justify-center my-auto py-4">
                 <EmptyState onSelectPrompt={(prompt) => handleSendMessage(prompt, [])} />
+                <ChatInput
+                  key={activeConversationId || 'global'}
+                  activeConversationId={activeConversationId}
+                  onSendMessage={handleSendMessage}
+                  isLoading={isLoading}
+                  onStopGeneration={handleStopGeneration}
+                  thinkingEnabled={thinkingEnabled}
+                  actionMode={actionMode}
+                  onSelectActionMode={setActionMode}
+                  activeTodos={activeTodos}
+                  selectedRepos={selectedRepos}
+                  onRemoveSelectedRepo={handleRemoveSelectedRepo}
+                  onOpenGitHubModal={() => setIsGitHubModalOpen(true)}
+                  isNewConversation={!hasMessages}
+                />
               </div>
             </div>
           ) : (
@@ -633,24 +648,25 @@ export default function App() {
             />
           )}
 
-          {/* Bottom Chat Input Card */}
-          <div className={`shrink-0 w-full z-10 ${!hasMessages ? 'pb-4 sm:pb-6' : ''}`}>
-            <ChatInput
-              key={activeConversationId || 'global'}
-              activeConversationId={activeConversationId}
-              onSendMessage={handleSendMessage}
-              isLoading={isLoading}
-              onStopGeneration={handleStopGeneration}
-              thinkingEnabled={thinkingEnabled}
-              actionMode={actionMode}
-              onSelectActionMode={setActionMode}
-              activeTodos={activeTodos}
-              selectedRepos={selectedRepos}
-              onRemoveSelectedRepo={handleRemoveSelectedRepo}
-              onOpenGitHubModal={() => setIsGitHubModalOpen(true)}
-              isNewConversation={!hasMessages}
-            />
-          </div>
+          {/* Bottom Chat Input Card (only for existing conversations) */}
+          {hasMessages && (
+            <div className="shrink-0 w-full z-10">
+              <ChatInput
+                key={activeConversationId || 'global'}
+                activeConversationId={activeConversationId}
+                onSendMessage={handleSendMessage}
+                isLoading={isLoading}
+                onStopGeneration={handleStopGeneration}
+                thinkingEnabled={thinkingEnabled}
+                actionMode={actionMode}
+                onSelectActionMode={setActionMode}
+                activeTodos={activeTodos}
+                selectedRepos={selectedRepos}
+                onRemoveSelectedRepo={handleRemoveSelectedRepo}
+                onOpenGitHubModal={() => setIsGitHubModalOpen(true)}
+              />
+            </div>
+          )}
         </div>
       </main>
 
