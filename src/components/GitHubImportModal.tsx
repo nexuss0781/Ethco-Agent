@@ -156,7 +156,13 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
     try {
       const status = await GitHubService.getStatus();
       setGhUser(status.user);
-      loadUserRepos();
+      // Only list a user's repositories when GitHub is actually authorized —
+      // otherwise we clearly ask to authorize instead of silently listing public repos.
+      if (status.connected && status.user) {
+        loadUserRepos();
+      } else {
+        setRepos([]);
+      }
     } catch {
       // Ignored
     } finally {
@@ -608,6 +614,35 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
 
         {/* Tab 1: All Repositories List with Multi-Select, Branches Dropdown to Right, Scrollable showing 5 at once */}
         {activeTab === 'my_repos' && (
+          statusLoading && !ghUser ? (
+            /* Checking authorization */
+            <div className="flex-1 flex items-center justify-center gap-2 text-fg-muted">
+              <Loader2 className="w-5 h-5 animate-spin text-teal" />
+              <span className="text-xs">Checking GitHub authorization...</span>
+            </div>
+          ) : !ghUser ? (
+            /* Not authorized — clearly ask to authorize instead of listing public repos */
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-8 gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-surface border border-line flex items-center justify-center">
+                <Lock className="w-5 h-5 text-teal" />
+              </div>
+              <h3 className="text-sm font-semibold text-fg">
+                Authorize GitHub to view your repositories
+              </h3>
+              <p className="text-xs text-fg-muted max-w-sm leading-relaxed">
+                Connect your GitHub account to browse and import your public and private
+                repositories directly into Ethco. Nothing is shared — repos stay private to you.
+              </p>
+              <a
+                id="btn-github-authorize-repos"
+                href={GitHubService.getLoginUrl()}
+                className="mt-1 flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium bg-brand hover:bg-brand-strong text-white transition-all shadow-sm cursor-pointer"
+              >
+                <Github className="w-3.5 h-3.5" />
+                <span>Authorize GitHub</span>
+              </a>
+            </div>
+          ) : (
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
             {/* Search & Filter Header with Multi-Select Actions at Top of Dropdown / List */}
             <div className="p-3 bg-canvas border-b border-line-soft flex flex-wrap items-center justify-between gap-2">
@@ -853,6 +888,7 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
               </div>
             )}
           </div>
+          )
         )}
 
         {/* Tab 2: Clone by URL */}

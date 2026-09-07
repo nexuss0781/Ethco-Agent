@@ -11,6 +11,7 @@ import {
   Sparkles,
   Layers,
   ChevronRight,
+  ChevronUp,
   Shield,
   LogOut,
   LogIn,
@@ -65,6 +66,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
   // Filter conversations
   const filteredConversations = useMemo(() => {
@@ -371,47 +373,93 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </div>
 
-        {/* Footer: User Profile & Settings */}
+        {/* Footer: Projects + Profile dropdown (drops up) */}
         <div className="p-3 border-t border-line-soft bg-canvas space-y-2">
-          {user && (
-            <div className="flex items-center justify-between p-2.5 rounded-xl border border-line bg-surface">
-              <div className="flex items-center gap-2.5 overflow-hidden">
-                {user.avatar ? (
+          {/* Projects */}
+          <button
+            id="btn-sidebar-projects"
+            onClick={() => {
+              if (window.innerWidth < 768) onClose();
+            }}
+            className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl bg-surface hover:bg-hover border border-line-soft hover:border-line text-fg text-xs font-medium transition-all cursor-pointer"
+          >
+            <FolderGit2 className="w-4 h-4 text-teal" />
+            <span className="flex-1 text-left">Projects</span>
+            <span className="text-[10px] text-fg-muted px-1.5 py-0.5 rounded bg-canvas border border-line-soft">
+              Soon
+            </span>
+          </button>
+
+          {/* Profile — touchable, drops up into a settings menu */}
+          <div className="relative">
+            <button
+              id="btn-sidebar-profile"
+              onClick={() => setProfileMenuOpen((open) => !open)}
+              className="flex items-center justify-between w-full p-2.5 rounded-xl bg-surface hover:bg-hover border border-line-soft hover:border-line transition-all cursor-pointer"
+              aria-expanded={profileMenuOpen}
+            >
+              <div className="flex items-center gap-2.5 overflow-hidden min-w-0">
+                {user?.avatar ? (
                   <img src={user.avatar} alt="Avatar" className="w-8 h-8 rounded-xl object-cover shrink-0 border border-teal/40" />
                 ) : (
                   <div className="w-8 h-8 rounded-xl bg-surface-2 border border-teal/40 flex items-center justify-center shrink-0 text-teal font-bold text-xs">
-                    {(user.name || user.email || 'U').charAt(0).toUpperCase()}
+                    {(user?.name || user?.email || 'U').charAt(0).toUpperCase()}
                   </div>
                 )}
-                <div className="truncate">
-                  <div className="text-xs font-semibold text-fg truncate" title={user.name || user.email}>
-                    {user.name || user.email}
+                <div className="truncate text-left">
+                  <div className="text-xs font-semibold text-fg truncate" title={user?.name || user?.email}>
+                    {user?.name || user?.email || 'Account'}
                   </div>
-                  <div className="text-[10px] text-teal font-mono truncate">
-                    @{user.username || user.login || (user.email ? user.email.split('@')[0] : 'user')}
+                  <div className="text-[10px] text-fg-muted font-mono truncate">
+                    {user
+                      ? `@${user?.username || user?.login || (user?.email ? user.email.split('@')[0] : 'user')}`
+                      : 'Signed out'}
                   </div>
                 </div>
               </div>
-              <button onClick={onLogout} className="p-1.5 text-fg-muted hover:text-fg hover:bg-hover rounded-md transition-colors cursor-pointer" title="Log out">
-                <LogOut className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
 
-          {/* Settings Button */}
-          {onOpenSettings && (
-            <button
-              id="btn-sidebar-settings"
-              onClick={() => {
-                onOpenSettings();
-                if (window.innerWidth < 768) onClose();
-              }}
-              className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl bg-surface hover:bg-hover border border-line-soft hover:border-line text-fg text-xs font-medium transition-all shadow-xs cursor-pointer"
-            >
-              <Settings className="w-4 h-4 text-fg-muted hover:text-white transition-colors" />
-              <span>Settings</span>
+              <div className="flex items-center gap-1 shrink-0">
+                {user && (
+                  <span
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onLogout && onLogout();
+                    }}
+                    className="p-1.5 text-fg-muted hover:text-fg hover:bg-hover rounded-md transition-colors cursor-pointer"
+                    title="Log out"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                  </span>
+                )}
+                <ChevronUp
+                  className={`w-3.5 h-3.5 text-fg-muted transition-transform ${profileMenuOpen ? 'rotate-180' : ''}`}
+                />
+              </div>
             </button>
-          )}
+
+            {/* Drop-up menu */}
+            {profileMenuOpen && (
+              <>
+                <div className="fixed inset-0 z-30" onClick={() => setProfileMenuOpen(false)} />
+                <div className="absolute bottom-full mb-2 left-0 right-0 p-1.5 bg-raised border border-line rounded-xl shadow-2xl z-40 animate-in fade-in zoom-in-95 duration-150">
+                  {onOpenSettings && (
+                    <button
+                      id="btn-profile-settings"
+                      onClick={() => {
+                        setProfileMenuOpen(false);
+                        onOpenSettings();
+                        if (window.innerWidth < 768) onClose();
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-surface hover:bg-hover text-fg text-xs font-medium transition-colors cursor-pointer"
+                    >
+                      <Settings className="w-4 h-4 text-fg-muted" />
+                      <span>Settings</span>
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </aside>
     </>
