@@ -24,6 +24,7 @@ import {
   ArrowRight,
   ShieldCheck,
   Mail,
+  Settings,
 } from 'lucide-react';
 import { GitHubService, GitHubUser, GitHubRepo, ImportedRepo, SelectedRepoContext, fixMojibake } from '../lib/github';
 import { getUser } from '../lib/auth';
@@ -31,6 +32,7 @@ import { getUser } from '../lib/auth';
 interface GitHubImportModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onOpenSettings?: () => void;
   onSelectRepoForChat?: (repo: ImportedRepo, initialPrompt?: string) => void;
   selectedReposList?: SelectedRepoContext[];
   onToggleSelectRepo?: (repo: SelectedRepoContext) => void;
@@ -41,6 +43,7 @@ interface GitHubImportModalProps {
 export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
   isOpen,
   onClose,
+  onOpenSettings,
   onSelectRepoForChat,
   selectedReposList = [],
   onToggleSelectRepo,
@@ -648,15 +651,33 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
                 Connect your GitHub account to browse and import your public and private
                 repositories directly into Ethco. Nothing is shared — repos stay private to you.
               </p>
-              <a
-                id="btn-github-authorize-repos"
-                href={GitHubService.getLoginUrl()}
-                className="mt-1 flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium bg-brand hover:bg-brand-strong text-white transition-all shadow-sm cursor-pointer"
-              >
-                <Github className="w-4 h-4" />
-                <span>Authorize GitHub</span>
-              </a>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <a
+                  id="btn-github-authorize-repos"
+                  href={GitHubService.getLoginUrl()}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-brand hover:bg-brand-strong text-white transition-all shadow-sm cursor-pointer"
+                >
+                  <Github className="w-4 h-4" />
+                  <span>Authorize GitHub</span>
+                </a>
+                {onOpenSettings && (
+                  <button
+                    id="btn-github-open-settings"
+                    onClick={() => {
+                      onOpenSettings();
+                      onClose();
+                    }}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-fg bg-surface hover:bg-hover border border-line-soft hover:border-line transition-all cursor-pointer"
+                  >
+                    <Settings className="w-4 h-4 text-fg-muted" />
+                    <span>Open Settings</span>
+                  </button>
+                )}
+              </div>
             </div>
+            <p className="text-[11px] text-fg-muted text-center pb-4">
+              or click <span className="text-fg font-medium">Open Settings</span> and authorize from the GitHub Integration section.
+            </p>
           ) : (
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
             {/* Search & Filter Header with Multi-Select Actions at Top of Dropdown / List */}

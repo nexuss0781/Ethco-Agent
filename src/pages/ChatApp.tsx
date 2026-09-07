@@ -824,6 +824,7 @@ export default function App() {
       <GitHubImportModal
         isOpen={isGitHubModalOpen}
         onClose={() => setIsGitHubModalOpen(false)}
+        onOpenSettings={() => setIsSettingsModalOpen(true)}
         onSelectRepoForChat={handleSelectRepoForChat}
         selectedReposList={selectedRepos}
         onToggleSelectRepo={handleToggleSelectRepo}
