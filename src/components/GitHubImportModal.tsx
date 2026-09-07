@@ -894,12 +894,40 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
                   );
                 })
               ) : (
-                <div className="py-12 text-center text-fg-muted flex flex-col items-center justify-center gap-2">
-                  <Github className="w-8 h-8 opacity-30 text-teal" />
-                  <p className="text-xs font-medium text-fg">No repositories found</p>
-                  <p className="text-[11px] max-w-xs">
-                    Try searching your own repositories above or use the "Clone by URL" tab to import directly.
-                  </p>
+                <div className="py-12 text-center flex flex-col items-center justify-center gap-4">
+                  <div className="w-20 h-20 rounded-3xl bg-surface border border-line flex items-center justify-center shadow-sm">
+                    <Github className="w-10 h-10 text-teal" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-fg">Authorize GitHub to view your repositories</p>
+                    <p className="text-[11px] text-fg-muted max-w-sm mx-auto mt-1">
+                      No repositories could be listed. Connect your GitHub account to browse and
+                      import your repositories directly into Ethco.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    <a
+                      id="btn-github-authorize-repos-empty"
+                      href={GitHubService.getLoginUrl()}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-brand hover:bg-brand-strong text-white transition-all shadow-sm cursor-pointer"
+                    >
+                      <Github className="w-4 h-4" />
+                      <span>Authorize GitHub</span>
+                    </a>
+                    {onOpenSettings && (
+                      <button
+                        id="btn-github-open-settings-empty"
+                        onClick={() => {
+                          onOpenSettings();
+                          onClose();
+                        }}
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-fg bg-surface hover:bg-hover border border-line-soft hover:border-line transition-all cursor-pointer"
+                      >
+                        <Settings className="w-4 h-4 text-fg-muted" />
+                        <span>Open Settings</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
