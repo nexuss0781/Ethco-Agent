@@ -2379,18 +2379,8 @@ app.get("/api/github/repos", async (req, res) => {
     const authUrl = process.env.NEXUSS_AUTH_URL || "https://nexuss-auth.vercel.app";
     const projectId = process.env.NEXUSS_AUTH_PROJECT_ID || "ethco-agents";
 
-    if (query) {
-      // Search repos
-      const searchUrl = `https://api.github.com/search/repositories?q=${encodeURIComponent(query)}&per_page=30&sort=updated`;
-      const searchRes = await fetch(searchUrl, { headers });
-      if (searchRes.ok) {
-        const searchData = await searchRes.json();
-        rawRepos = searchData.items || [];
-      } else {
-        const errText = await searchRes.text();
-        return res.status(searchRes.status).json({ error: "Failed to search GitHub repositories", details: errText });
-      }
-    } else if (tokenInfo?.githubGrantToken) {
+    // Only ever list the user's OWN repositories — never external/public ones.
+    if (tokenInfo?.githubGrantToken) {
       // Fetch repositories from Central Nexuss Auth service using githubGrantToken (Skill Section 12)
       try {
         const centralRes = await fetch(`${authUrl}/v1/github/repositories?project_id=${encodeURIComponent(projectId)}`, {
@@ -2409,7 +2399,7 @@ app.get("/api/github/repos", async (req, res) => {
 
     if (!rawRepos || rawRepos.length === 0) {
       if (tokenInfo?.token) {
-        // List user's repositories with token, fetching all pages if >100 repos
+        // List the user's own repositories with token, fetching all pages if >100 repos
         try {
           let page = 1;
           let keepFetching = true;
@@ -2438,7 +2428,7 @@ app.get("/api/github/repos", async (req, res) => {
           console.warn("Error fetching multi-page user repos:", fetchErr);
         }
       } else if (effectiveUser) {
-        // List user's public repositories by username without requiring API key
+        // List the user's own public repositories by username (no third-party fallback)
         const username = effectiveUser.login || effectiveUser.name?.replace(/\s+/g, '-').toLowerCase() || effectiveUser.email?.split('@')[0];
         if (username) {
           try {
@@ -2468,22 +2458,19 @@ app.get("/api/github/repos", async (req, res) => {
             console.warn("Error fetching public repos:", pubErr);
           }
         }
-        // If user has no public repos under that username, search popular repos for recommendations
-        if (!rawRepos || rawRepos.length === 0) {
-          const popularRes = await fetch(`https://api.github.com/search/repositories?q=stars:>1000+sort:stars&per_page=50`, { headers });
-          if (popularRes.ok) {
-            const data = await popularRes.json();
-            rawRepos = data.items || [];
-          }
-        }
-      } else {
-        // Fallback to top repositories
-        const popularRes = await fetch(`https://api.github.com/search/repositories?q=stars:>5000+sort:stars&per_page=50`, { headers });
-        if (popularRes.ok) {
-          const data = await popularRes.json();
-          rawRepos = data.items || [];
-        }
       }
+    }
+
+    // Search filters within the user's OWN repositories — never a global/external search
+    if (query) {
+      const q = query.toLowerCase();
+      rawRepos = (rawRepos || []).filter((r: any) => {
+        const hay = [r?.name, r?.full_name, r?.description, r?.default_branch]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return hay.includes(q);
+      });
     }
 
     // Check existing imported repos in workspace

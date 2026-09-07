@@ -622,11 +622,11 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
             </div>
           ) : !ghUser ? (
             /* Not authorized — clearly ask to authorize instead of listing public repos */
-            <div className="flex-1 flex flex-col items-center justify-center text-center p-8 gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-surface border border-line flex items-center justify-center">
-                <Lock className="w-5 h-5 text-teal" />
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-8 gap-4">
+              <div className="w-24 h-24 rounded-3xl bg-surface border border-line flex items-center justify-center shadow-sm">
+                <Github className="w-14 h-14 text-teal" />
               </div>
-              <h3 className="text-sm font-semibold text-fg">
+              <h3 className="text-base font-semibold text-fg">
                 Authorize GitHub to view your repositories
               </h3>
               <p className="text-xs text-fg-muted max-w-sm leading-relaxed">
@@ -636,9 +636,9 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
               <a
                 id="btn-github-authorize-repos"
                 href={GitHubService.getLoginUrl()}
-                className="mt-1 flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium bg-brand hover:bg-brand-strong text-white transition-all shadow-sm cursor-pointer"
+                className="mt-1 flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium bg-brand hover:bg-brand-strong text-white transition-all shadow-sm cursor-pointer"
               >
-                <Github className="w-3.5 h-3.5" />
+                <Github className="w-4 h-4" />
                 <span>Authorize GitHub</span>
               </a>
             </div>
@@ -862,7 +862,7 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
                   <Github className="w-8 h-8 opacity-30 text-teal" />
                   <p className="text-xs font-medium text-fg">No repositories found</p>
                   <p className="text-[11px] max-w-xs">
-                    Try searching for any public GitHub repository above or use the "Clone by URL" tab to import directly.
+                    Try searching your own repositories above or use the "Clone by URL" tab to import directly.
                   </p>
                 </div>
               )}
