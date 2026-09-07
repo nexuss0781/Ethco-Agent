@@ -750,6 +750,7 @@ export default function App() {
           onToggleThinking={() => setThinkingEnabled(!thinkingEnabled)}
           onOpenUpgradeModal={() => setIsUpgradeModalOpen(true)}
           onOpenGitHubModal={() => setIsGitHubModalOpen(true)}
+          onOpenSettings={() => setIsSettingsModalOpen(true)}
           onSelectRepoForChat={handleSelectRepoForChat}
           selectedReposList={selectedRepos}
           onToggleSelectRepo={handleToggleSelectRepo}

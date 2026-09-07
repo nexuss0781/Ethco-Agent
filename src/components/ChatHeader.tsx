@@ -4,6 +4,7 @@ import {
   ChevronDown,
   Check,
   FolderGit2,
+  Github,
   Globe,
   Lock,
   Loader2,
@@ -13,6 +14,7 @@ import {
   ExternalLink,
   Download,
   MessageSquare,
+  Settings,
   X,
 } from 'lucide-react';
 import { ModelOption, Conversation } from '../types';
@@ -29,6 +31,7 @@ interface ChatHeaderProps {
   onToggleThinking: () => void;
   onOpenUpgradeModal: () => void;
   onOpenGitHubModal?: () => void;
+  onOpenSettings?: () => void;
   onSelectRepoForChat?: (repo: ImportedRepo, initialPrompt?: string) => void;
   selectedReposList?: SelectedRepoContext[];
   onToggleSelectRepo?: (repo: SelectedRepoContext) => void;
@@ -45,6 +48,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   onToggleThinking,
   onOpenUpgradeModal,
   onOpenGitHubModal,
+  onOpenSettings,
   onSelectRepoForChat,
   selectedReposList = [],
   onToggleSelectRepo,
@@ -56,6 +60,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   const [reposList, setReposList] = useState<GitHubRepo[]>([]);
   const [importedList, setImportedList] = useState<ImportedRepo[]>([]);
   const [reposLoading, setReposLoading] = useState(false);
+  const [githubConnected, setGithubConnected] = useState<boolean | null>(null);
   const [selectedRepoName, setSelectedRepoName] = useState<string | null>(null);
 
   // Search & Branch management
@@ -70,9 +75,18 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
     setReposLoading(true);
     try {
       const [ghRepos, impRepos] = await Promise.all([
-        GitHubService.fetchRepos().catch(() => []),
+        GitHubService.fetchRepos().catch((err: any) => {
+          // Not authorized or clean failure — lead with the authorize prompt
+          if (String(err?.message || '').includes('GITHUB_UNAUTHORIZED')) {
+            setGithubConnected(false);
+          } else {
+            setGithubConnected((prev) => prev ?? false);
+          }
+          return [];
+        }),
         GitHubService.getImportedRepos().catch(() => []),
       ]);
+      if (ghRepos && ghRepos.length > 0) setGithubConnected(true);
       setReposList(ghRepos || []);
       setImportedList(impRepos || []);
 
@@ -95,6 +109,9 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
     setRepoDropdownOpen(nextState);
     if (nextState) {
       loadDropdownRepos();
+      GitHubService.getStatus()
+        .then((status) => setGithubConnected(!!(status.connected && status.user)))
+        .catch(() => {});
     } else {
       setActiveBranchMenuRepo(null);
     }
@@ -348,20 +365,68 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
                       <span className="text-xs">Loading repositories & branches...</span>
                     </div>
                   ) : totalMatching === 0 ? (
-                    <div className="py-8 text-center text-xs text-fg-muted space-y-2">
-                      <p>No matching repositories found.</p>
-                      {onOpenGitHubModal && (
-                        <button
-                          onClick={() => {
-                            setRepoDropdownOpen(false);
-                            onOpenGitHubModal();
-                          }}
-                          className="px-3 py-1 bg-surface hover:bg-hover text-fg rounded-lg border border-line text-[11px] cursor-pointer"
-                        >
-                          Import Repository by URL
-                        </button>
-                      )}
-                    </div>
+                    githubConnected === false || githubConnected === null ? (
+                      <div className="py-8 text-center flex flex-col items-center gap-3 px-4">
+                        <div className="w-14 h-14 rounded-2xl bg-surface border border-line flex items-center justify-center">
+                          <Github className="w-7 h-7 text-teal" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold text-fg">Authorize GitHub to view your repositories</p>
+                          <p className="text-[11px] text-fg-muted mt-1 max-w-xs mx-auto">
+                            Connect your GitHub account to browse and import your repositories into Ethco.
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap items-center justify-center gap-2">
+                          <a
+                            id="btn-header-authorize-github"
+                            href={GitHubService.getLoginUrl()}
+                            className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold bg-brand hover:bg-brand-strong text-white transition-all shadow-xs cursor-pointer"
+                          >
+                            <Github className="w-3.5 h-3.5" />
+                            <span>Authorize GitHub</span>
+                          </a>
+                          {onOpenSettings && (
+                            <button
+                              id="btn-header-open-settings"
+                              onClick={() => {
+                                setRepoDropdownOpen(false);
+                                onOpenSettings();
+                              }}
+                              className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-medium text-fg bg-surface hover:bg-hover border border-line-soft hover:border-line transition-all cursor-pointer"
+                            >
+                              <Settings className="w-3.5 h-3.5 text-fg-muted" />
+                              <span>Open Settings</span>
+                            </button>
+                          )}
+                        </div>
+                        {onOpenGitHubModal && (
+                          <button
+                            onClick={() => {
+                              setRepoDropdownOpen(false);
+                              onOpenGitHubModal();
+                            }}
+                            className="text-[11px] text-teal hover:text-teal-fg hover:underline cursor-pointer mt-1"
+                          >
+                            Manage All Repositories
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="py-8 text-center text-xs text-fg-muted space-y-2">
+                        <p>No matching repositories found.</p>
+                        {onOpenGitHubModal && (
+                          <button
+                            onClick={() => {
+                              setRepoDropdownOpen(false);
+                              onOpenGitHubModal();
+                            }}
+                            className="px-3 py-1 bg-surface hover:bg-hover text-fg rounded-lg border border-line text-[11px] cursor-pointer"
+                          >
+                            Import Repository by URL
+                          </button>
+                        )}
+                      </div>
+                    )
                   ) : (
                     <>
                       {/* Cloned / Workspace Repos */}
