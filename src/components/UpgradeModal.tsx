@@ -15,7 +15,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose }) =
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 p-1.5 rounded-lg text-fg-muted hover:text-fg hover:bg-surface-2 transition-colors"
+          className="absolute right-4 top-4 p-1.5 rounded-lg text-fg-muted hover:text-fg hover:bg-hover transition-colors"
         >
           <X className="w-4 h-4" />
         </button>

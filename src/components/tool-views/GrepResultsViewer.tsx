@@ -50,7 +50,7 @@ export const GrepResultsViewer: React.FC<GrepResultsViewerProps> = ({
           {matches.map((item, idx) => (
             <div
               key={idx}
-              className="p-1.5 rounded hover:bg-surface border border-transparent hover:border-line-soft transition-colors"
+              className="p-1.5 rounded hover:bg-hover border border-transparent hover:border-line-soft transition-colors"
             >
               <div className="flex items-center gap-1.5 text-fg-muted mb-0.5">
                 <span className="text-teal-400 font-medium">{item.path}</span>

@@ -727,7 +727,7 @@ export default function App() {
         <div className="flex-1 overflow-hidden flex flex-col min-h-0 relative">
           {!hasMessages ? (
             <div className="flex-1 flex flex-col items-center justify-center min-h-0 overflow-y-auto px-3 sm:px-4">
-              <div className="w-full max-w-3xl mx-auto flex flex-col items-center justify-center py-4 mb-10 sm:mb-16">
+              <div className="w-full max-w-4xl mx-auto flex flex-col items-center justify-center py-4 mb-10 sm:mb-16">
                 <EmptyState onSelectPrompt={(prompt) => setPromptDraft(prompt)} />
                 <ChatInput
                   key={activeConversationId || 'global'}

@@ -151,12 +151,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
             onClose();
           }
         }}
-        className={`group relative flex items-center justify-between px-3 py-2 rounded-xl text-xs cursor-pointer transition-all ${
+        className={`group relative flex items-center justify-between px-3 py-2 rounded-lg text-xs cursor-pointer transition-all ${
           isActive
-            ? 'bg-surface-2 text-fg font-medium shadow-sm'
-            : 'text-fg-soft hover:bg-surface hover:text-fg'
+            ? 'bg-surface-2 text-fg font-medium'
+            : 'text-fg-soft hover:bg-hover hover:text-fg'
         }`}
       >
+        <span
+          aria-hidden
+          className={`absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-teal transition-opacity ${
+            isActive ? 'opacity-100' : 'opacity-0'
+          }`}
+        />
         <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-1">
           {(() => {
             const ConvoIcon = getDynamicLucideIcon(c.icon);
@@ -189,7 +195,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 e.stopPropagation();
                 onTogglePin(c.id);
               }}
-              className={`p-1 rounded hover:bg-surface-3 text-fg-muted hover:text-fg transition-colors ${
+              className={`p-1 rounded hover:bg-hover text-fg-muted hover:text-fg transition-colors ${
                 c.isPinned ? 'text-teal opacity-100' : ''
               }`}
               title={c.isPinned ? 'Unpin' : 'Pin conversation'}
@@ -198,14 +204,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </button>
             <button
               onClick={(e) => handleStartRename(e, c)}
-              className="p-1 rounded hover:bg-surface-3 text-fg-muted hover:text-fg transition-colors"
+              className="p-1 rounded hover:bg-hover text-fg-muted hover:text-fg transition-colors"
               title="Rename"
             >
               <Edit2 className="w-3 h-3" />
             </button>
             <button
               onClick={(e) => handleExport(e, c)}
-              className="p-1 rounded hover:bg-surface-3 text-fg-muted hover:text-fg transition-colors"
+              className="p-1 rounded hover:bg-hover text-fg-muted hover:text-fg transition-colors"
               title="Export as Markdown"
             >
               <Download className="w-3 h-3" />
@@ -215,7 +221,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 e.stopPropagation();
                 onDeleteConversation(c.id);
               }}
-              className="p-1 rounded hover:bg-surface-3 text-fg-muted hover:text-red-400 transition-colors"
+              className="p-1 rounded hover:bg-hover text-fg-muted hover:text-red-400 transition-colors"
               title="Delete"
             >
               <Trash2 className="w-3 h-3" />
@@ -253,7 +259,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg text-fg-muted hover:text-fg hover:bg-surface md:hidden transition-colors"
+              className="p-1.5 rounded-lg text-fg-muted hover:text-fg hover:bg-hover md:hidden transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
@@ -266,7 +272,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               onNewChat();
               if (window.innerWidth < 768) onClose();
             }}
-            className="flex items-center justify-between w-full px-3.5 py-2.5 rounded-xl bg-surface hover:bg-surface-2 border border-line text-fg text-xs font-medium transition-all shadow-xs group"
+            className="flex items-center justify-between w-full px-3.5 py-2.5 rounded-xl bg-surface hover:bg-hover border border-line-soft text-fg text-xs font-medium transition-all group cursor-pointer"
           >
             <div className="flex items-center gap-2">
               <Plus className="w-4 h-4 text-teal group-hover:scale-110 transition-transform" />
@@ -285,7 +291,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               placeholder="Search conversations..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 bg-surface border border-line-soft rounded-lg text-xs text-fg placeholder-fg-muted focus:outline-none focus:border-teal/60"
+              className="w-full pl-8 pr-3 py-1.5 bg-surface hover:bg-hover border border-line-soft rounded-lg text-xs text-fg placeholder-fg-muted focus:outline-none focus:border-teal/60 focus:ring-1 focus:ring-teal/20 transition-colors"
             />
             {searchQuery && (
               <button
@@ -379,7 +385,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </div>
                 </div>
               </div>
-              <button onClick={onLogout} className="p-1.5 text-fg-muted hover:text-fg hover:bg-surface-3 rounded-md transition-colors cursor-pointer" title="Log out">
+              <button onClick={onLogout} className="p-1.5 text-fg-muted hover:text-fg hover:bg-hover rounded-md transition-colors cursor-pointer" title="Log out">
                 <LogOut className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -393,7 +399,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 onOpenSettings();
                 if (window.innerWidth < 768) onClose();
               }}
-              className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl bg-surface hover:bg-surface-2 border border-line-soft hover:border-line text-fg text-xs font-medium transition-all shadow-xs cursor-pointer"
+              className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl bg-surface hover:bg-hover border border-line-soft hover:border-line text-fg text-xs font-medium transition-all shadow-xs cursor-pointer"
             >
               <Settings className="w-4 h-4 text-fg-muted hover:text-white transition-colors" />
               <span>Settings</span>

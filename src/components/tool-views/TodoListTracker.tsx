@@ -75,7 +75,7 @@ export const TodoListTracker: React.FC<TodoListTrackerProps> = ({
           /* Frozen Completed State matching Manus */
           <div
             onClick={() => setIsExpanded(true)}
-            className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-surface-2 transition-colors cursor-pointer text-left"
+            className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-hover transition-colors cursor-pointer text-left"
           >
             <TerminalMockup />
 
@@ -91,7 +91,7 @@ export const TodoListTracker: React.FC<TodoListTrackerProps> = ({
           <button
             type="button"
             onClick={() => setIsExpanded(true)}
-            className="w-full flex items-center justify-between gap-2.5 px-3.5 py-2.5 hover:bg-surface-2 transition-colors cursor-pointer text-left"
+            className="w-full flex items-center justify-between gap-2.5 px-3.5 py-2.5 hover:bg-hover transition-colors cursor-pointer text-left"
           >
             <TerminalMockup />
 

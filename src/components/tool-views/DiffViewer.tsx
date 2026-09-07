@@ -74,7 +74,7 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
 
           <button
             onClick={handleCopy}
-            className="flex items-center gap-1 px-2 py-1 rounded bg-surface-2 hover:bg-surface-3 text-fg-soft hover:text-fg border border-line transition-colors text-[10px]"
+            className="flex items-center gap-1 px-2 py-1 rounded bg-surface-2 hover:bg-hover text-fg-soft hover:text-fg border border-line transition-colors text-[10px]"
             title="Copy new code"
           >
             {copied ? (

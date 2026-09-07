@@ -100,7 +100,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
         isUser ? 'flex justify-end' : 'flex justify-start'
       }`}
     >
-      <div className={`w-full max-w-3xl flex gap-3 sm:gap-4 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+      <div className={`w-full max-w-4xl flex gap-3 sm:gap-4 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
         {/* Avatar */}
         <div className="shrink-0 mt-0.5">
           {isUser ? (
@@ -150,7 +150,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
             <div className="w-full mb-3 rounded-xl bg-surface border border-line-soft overflow-hidden text-xs">
               <button
                 onClick={() => setThinkingExpanded(!thinkingExpanded)}
-                className="w-full px-3 py-2 flex items-center justify-between text-fg-muted hover:text-fg hover:bg-surface transition-colors cursor-pointer"
+                className="w-full px-3 py-2 flex items-center justify-between text-fg-muted hover:text-fg hover:bg-hover transition-colors cursor-pointer"
               >
                 <div className="flex items-center gap-2">
                   <Brain className="w-3.5 h-3.5 text-teal" />
@@ -200,7 +200,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                 </button>
                 <button
                   onClick={() => setEditing(false)}
-                  className="text-xs px-3 py-1.5 rounded-lg bg-surface-2 border border-line text-fg-soft hover:text-fg cursor-pointer"
+                  className="text-xs px-3 py-1.5 rounded-lg bg-surface-2 border border-line text-fg-soft hover:text-fg hover:bg-hover transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -237,7 +237,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                               </span>
                               <button
                                 onClick={() => handleCopyCode(codeString, codeId)}
-                                className="flex items-center gap-1 hover:text-fg transition-colors p-1 rounded"
+                                className="flex items-center gap-1 hover:text-fg hover:bg-hover transition-colors p-1 rounded"
                                 title="Copy code"
                               >
                                 {copiedCodeId === codeId ? (
@@ -307,11 +307,11 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
 
           {/* Action Toolbar for User prompts: Edit / Copy / Retry */}
           {isUser && !editing && (
-            <div className="flex items-center gap-2 mt-2 pt-1 opacity-0 group-hover:opacity-100 transition-opacity text-fg-muted">
+            <div className="flex items-center gap-1 mt-2 pt-1 opacity-0 group-hover:opacity-100 transition-opacity text-fg-muted">
               {onEditMessage && (
                 <button
                   onClick={startEdit}
-                  className="flex items-center gap-1 text-xs hover:text-fg p-1.5 rounded-md hover:bg-surface transition-colors"
+                  className="flex items-center gap-1 text-xs hover:text-fg p-1.5 rounded-md hover:bg-hover active:scale-95 transition-all"
                   title="Edit prompt"
                 >
                   <Pencil className="w-3.5 h-3.5" />
@@ -320,7 +320,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
               )}
               <button
                 onClick={handleCopyMessage}
-                className="flex items-center gap-1 text-xs hover:text-fg p-1.5 rounded-md hover:bg-surface transition-colors"
+                className="flex items-center gap-1 text-xs hover:text-fg p-1.5 rounded-md hover:bg-hover active:scale-95 transition-all"
                 title="Copy prompt"
               >
                 {copied ? (
@@ -338,7 +338,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
               {onRetryMessage && (
                 <button
                   onClick={() => onRetryMessage(message.id)}
-                  className="flex items-center gap-1 text-xs hover:text-fg p-1.5 rounded-md hover:bg-surface transition-colors"
+                  className="flex items-center gap-1 text-xs hover:text-fg p-1.5 rounded-md hover:bg-hover active:scale-95 transition-all"
                   title="Retry prompt"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
@@ -350,11 +350,11 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
 
           {/* Action Toolbar for Assistant Response */}
           {!isUser && !message.isStreaming && message.content && (
-            <div className="flex items-center gap-2 mt-2 pt-1 opacity-80 hover:opacity-100 transition-opacity text-fg-muted">
+            <div className="inline-flex items-center gap-1 mt-2.5 pt-1 rounded-lg bg-surface/60 ring-1 ring-line/60 px-1.5 py-1 text-fg-muted opacity-90 hover:opacity-100 hover:ring-line transition-all">
               {/* Copy Message */}
               <button
                 onClick={handleCopyMessage}
-                className="flex items-center gap-1 text-xs hover:text-fg p-1.5 rounded-md hover:bg-surface transition-colors"
+                className="flex items-center gap-1 text-xs hover:text-fg p-1.5 rounded-md hover:bg-hover active:scale-95 transition-all"
                 title="Copy full response"
               >
                 {copied ? (
@@ -373,7 +373,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
               {/* Text to Speech */}
               <button
                 onClick={handleToggleSpeech}
-                className={`flex items-center gap-1 text-xs p-1.5 rounded-md hover:bg-surface transition-colors ${
+                className={`flex items-center gap-1 text-xs p-1.5 rounded-md hover:bg-hover active:scale-95 transition-all ${
                   isSpeaking ? 'text-teal' : 'hover:text-fg'
                 }`}
                 title={isSpeaking ? 'Stop speech' : 'Read aloud'}
@@ -395,7 +395,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
               {isLatestAssistant && onRegenerate && (
                 <button
                   onClick={onRegenerate}
-                  className="flex items-center gap-1 text-xs hover:text-fg p-1.5 rounded-md hover:bg-surface transition-colors"
+                  className="flex items-center gap-1 text-xs text-fg-soft hover:text-fg p-1.5 rounded-md hover:bg-hover active:scale-95 transition-all"
                   title="Regenerate response"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />

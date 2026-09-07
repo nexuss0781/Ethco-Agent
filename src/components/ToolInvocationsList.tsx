@@ -368,7 +368,7 @@ export const ToolInvocationsList: React.FC<ToolInvocationsListProps> = ({ tools 
             {/* Header / Click to Expand */}
             <button
               onClick={() => setExpandedId(isExpanded ? null : tool.id)}
-              className="w-full px-3 py-2 flex items-center justify-between hover:bg-surface text-left transition-colors cursor-pointer"
+              className="w-full px-3 py-2 flex items-center justify-between hover:bg-hover text-left transition-colors cursor-pointer"
             >
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="p-1 rounded-md bg-surface-2 border border-line shrink-0">

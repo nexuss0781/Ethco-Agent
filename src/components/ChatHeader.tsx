@@ -186,7 +186,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
         <button
           id="btn-toggle-sidebar"
           onClick={onToggleSidebar}
-          className="md:hidden relative p-2 rounded-lg text-fg-soft hover:text-fg hover:bg-surface-2 transition-colors focus:outline-none cursor-pointer"
+          className="md:hidden relative p-2 rounded-lg text-fg-soft hover:text-fg hover:bg-hover transition-colors focus:outline-none cursor-pointer"
           title="Toggle Navigation"
         >
           <Menu className="w-5 h-5" />
@@ -199,7 +199,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           <button
             id="btn-ethco-tier-dropdown"
             onClick={() => setModelDropdownOpen((open) => !open)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold bg-surface hover:bg-surface-2 border border-teal/40 text-teal-fg transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold bg-surface hover:bg-hover border border-teal/40 text-teal-fg transition-colors cursor-pointer"
             title="Choose Ethco model tier"
           >
             <span className="max-w-[125px] sm:max-w-none truncate">{selectedModel.name}</span>
@@ -209,7 +209,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           {modelDropdownOpen && (
             <>
               <div className="fixed inset-0 z-30" onClick={() => setModelDropdownOpen(false)} />
-              <div id="ethco-tier-dropdown-menu" className="absolute left-0 mt-2 w-64 p-1.5 bg-canvas border border-line-soft rounded-2xl shadow-2xl z-40 animate-in fade-in zoom-in-95 duration-150">
+              <div id="ethco-tier-dropdown-menu" className="absolute left-0 mt-2 w-64 p-1.5 bg-raised border border-line rounded-2xl shadow-2xl z-40 animate-in fade-in zoom-in-95 duration-150">
                 <div className="px-2.5 py-2 text-[10px] uppercase tracking-wider font-semibold text-fg-muted">Ethco model tier</div>
                 {AVAILABLE_MODELS.map((model) => (
                   <button
@@ -219,7 +219,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
                       setModelDropdownOpen(false);
                     }}
                     className={`w-full text-left px-2.5 py-2 rounded-xl flex items-center justify-between gap-3 transition-colors cursor-pointer font-mono ${
-                      model.id === selectedModel.id ? 'bg-brand/15 text-teal-fg' : 'text-fg-soft hover:bg-surface-2 hover:text-fg'
+                      model.id === selectedModel.id ? 'bg-brand/15 text-teal-fg' : 'text-fg-soft hover:bg-hover hover:text-fg'
                     }`}
                   >
                     <span className="min-w-0">
@@ -235,15 +235,15 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
         </div>
       </div>
 
-      {/* Center: Active Conversation Title & Contextual Lucide Icon */}
-      <div className="hidden md:flex items-center">
+      {/* Center: Active Conversation Title & Contextual Lucide Icon (context, not control) */}
+      <div className="hidden md:flex items-center min-w-0 px-2">
         {activeConversation && activeConversation.title && activeConversation.title !== 'New Chat' && activeConversation.title !== 'New Conversation' && (
-          <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-surface border border-line-soft text-xs text-fg max-w-xs shadow-xs animate-in fade-in duration-200">
+          <div className="flex items-center gap-2 min-w-0 max-w-xs text-fg-soft animate-in fade-in duration-200">
             {(() => {
               const ActiveIcon = getDynamicLucideIcon(activeConversation.icon);
-              return <ActiveIcon className="w-3.5 h-3.5 text-teal shrink-0" />;
+              return <ActiveIcon className="w-3.5 h-3.5 text-teal/80 shrink-0" />;
             })()}
-            <span className="truncate font-medium text-[12px]">{activeConversation.title}</span>
+            <span className="truncate text-[13px] leading-tight">{activeConversation.title}</span>
           </div>
         )}
       </div>
@@ -255,7 +255,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           <button
             id="btn-git-repos-dropdown"
             onClick={handleToggleRepoDropdown}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-surface hover:bg-surface-2 border border-line text-fg-soft hover:text-fg transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-surface hover:bg-hover border border-line text-fg-soft hover:text-fg transition-colors cursor-pointer"
             title="Git Repositories"
           >
             <FolderGit2 className="w-3.5 h-3.5 text-teal" />
@@ -276,7 +276,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
               />
               <div
                 id="git-repos-dropdown-menu"
-                className="absolute right-0 mt-2 w-[340px] sm:w-[420px] bg-canvas border border-line-soft rounded-2xl shadow-2xl z-40 overflow-hidden animate-in fade-in zoom-in-95 duration-150 flex flex-col"
+                className="absolute right-0 mt-2 w-[340px] sm:w-[420px] bg-raised border border-line rounded-2xl shadow-2xl z-40 overflow-hidden animate-in fade-in zoom-in-95 duration-150 flex flex-col"
               >
                 {/* 1. Header Bar with Manage / Import link */}
                 <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-line-soft bg-surface">
@@ -344,7 +344,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
                             setRepoDropdownOpen(false);
                             onOpenGitHubModal();
                           }}
-                          className="px-3 py-1 bg-surface hover:bg-surface-2 text-fg rounded-lg border border-line text-[11px] cursor-pointer"
+                          className="px-3 py-1 bg-surface hover:bg-hover text-fg rounded-lg border border-line text-[11px] cursor-pointer"
                         >
                           Import Repository by URL
                         </button>
@@ -367,7 +367,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
                             return (
                               <div
                                 key={`imp-${imp.path || imp.name}`}
-                                className="group p-2.5 rounded-xl bg-surface hover:bg-surface border border-line-soft hover:border-line transition-all flex items-center justify-between gap-2.5 relative"
+                                className="group p-2.5 rounded-xl bg-surface hover:bg-hover border border-line-soft hover:border-line transition-all flex items-center justify-between gap-2.5 relative"
                               >
                                 {/* Left Info */}
                                 <div
@@ -400,7 +400,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
                                   <div className="relative">
                                     <button
                                       onClick={(e) => handleToggleBranchDropdown(e, repoKey, imp.name)}
-                                      className="flex items-center gap-1 px-2 py-1 rounded-lg bg-surface hover:bg-surface-2 border border-line text-[10px] font-mono text-fg-soft hover:text-fg transition-colors cursor-pointer"
+                                      className="flex items-center gap-1 px-2 py-1 rounded-lg bg-surface hover:bg-hover border border-line text-[10px] font-mono text-fg-soft hover:text-fg transition-colors cursor-pointer"
                                       title="Switch branch"
                                     >
                                       <GitBranch className="w-2.5 h-2.5 text-teal" />
@@ -429,7 +429,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
                                               className={`w-full text-left px-2 py-1 rounded-md text-[11px] font-mono flex items-center justify-between transition-colors cursor-pointer ${
                                                 b === currentBranch
                                                   ? 'bg-brand/20 text-teal-fg'
-                                                  : 'text-fg-soft hover:bg-surface-2 hover:text-fg'
+                                                  : 'text-fg-soft hover:bg-hover hover:text-fg'
                                               }`}
                                             >
                                               <span className="truncate">{b}</span>
@@ -484,7 +484,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
                                 className={`group p-2.5 rounded-xl border transition-all flex items-center justify-between gap-2.5 relative cursor-pointer ${
                                   selectedReposList.some((r) => r.name === repo.name || r.fullName === (repo.full_name || repo.name))
                                     ? 'bg-surface-3 border-teal/50 shadow-xs'
-                                    : 'bg-canvas hover:bg-surface border-line-soft hover:border-line'
+                                    : 'bg-canvas hover:bg-hover border-line-soft hover:border-line'
                                 }`}
                               >
                                 {/* Left Info */}
@@ -539,7 +539,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
                                   <div className="relative">
                                     <button
                                       onClick={(e) => handleToggleBranchDropdown(e, repoKey, repo.full_name || repo.name)}
-                                      className="flex items-center gap-1 px-2 py-1 rounded-lg bg-surface hover:bg-surface-2 border border-line-soft text-[10px] font-mono text-fg-soft hover:text-fg transition-colors cursor-pointer"
+                                      className="flex items-center gap-1 px-2 py-1 rounded-lg bg-surface hover:bg-hover border border-line-soft text-[10px] font-mono text-fg-soft hover:text-fg transition-colors cursor-pointer"
                                       title="Change branch"
                                     >
                                       <GitBranch className="w-2.5 h-2.5 text-fg-muted" />
@@ -568,7 +568,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
                                               className={`w-full text-left px-2 py-1 rounded-md text-[11px] font-mono flex items-center justify-between transition-colors cursor-pointer ${
                                                 b === currentBranch
                                                   ? 'bg-brand/20 text-teal-fg'
-                                                  : 'text-fg-soft hover:bg-surface-2 hover:text-fg'
+                                                  : 'text-fg-soft hover:bg-hover hover:text-fg'
                                               }`}
                                             >
                                               <span className="truncate">{b}</span>

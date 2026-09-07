@@ -113,7 +113,7 @@ export const DirectoryExplorer: React.FC<DirectoryExplorerProps> = ({
         <div
           onClick={() => isFolder && toggleFolder(node.path)}
           className={`flex items-center justify-between px-2.5 py-1 rounded-md text-[11px] font-mono transition-colors ${
-            isFolder ? 'cursor-pointer hover:bg-surface-2' : 'hover:bg-surface'
+            isFolder ? 'cursor-pointer hover:bg-hover' : 'hover:bg-hover'
           }`}
           style={{ paddingLeft: `${depth * 14 + 10}px` }}
         >

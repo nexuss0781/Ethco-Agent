@@ -44,7 +44,7 @@ export const QuestionInteractiveViewer: React.FC<QuestionInteractiveViewerProps>
                 {q.options.map((opt, optIdx) => (
                   <div
                     key={optIdx}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface border border-line text-fg text-[11px] hover:border-amber-500/50 hover:bg-surface-2 transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface border border-line text-fg text-[11px] hover:border-amber-500/50 hover:bg-hover transition-colors cursor-pointer"
                   >
                     {q.multiple ? (
                       <Square className="w-3 h-3 text-fg-muted" />

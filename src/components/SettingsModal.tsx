@@ -147,7 +147,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 rounded-lg text-fg-muted hover:text-fg hover:bg-surface transition-colors cursor-pointer"
+          className="absolute top-4 right-4 p-1.5 rounded-lg text-fg-muted hover:text-fg hover:bg-hover transition-colors cursor-pointer"
           aria-label="Close"
         >
           <X className="w-4 h-4" />
@@ -288,7 +288,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <a
                     id="btn-reconfigure-github"
                     href={GitHubService.getLoginUrl()}
-                    className="flex-1 py-2 px-3 rounded-xl text-xs font-semibold bg-surface hover:bg-surface-2 text-fg transition-all flex items-center justify-center gap-1.5 cursor-pointer border border-line"
+                    className="flex-1 py-2 px-3 rounded-xl text-xs font-semibold bg-surface hover:bg-hover text-fg transition-all flex items-center justify-center gap-1.5 cursor-pointer border border-line"
                   >
                     <RefreshCw className="w-3.5 h-3.5 text-teal" />
                     <span>Re-authorize</span>
@@ -296,7 +296,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <button
                     id="btn-disconnect-github"
                     onClick={handleDisconnect}
-                    className="py-2 px-3.5 rounded-xl text-xs font-medium text-fg-muted hover:text-red-400 hover:bg-surface border border-line-soft hover:border-red-500/30 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="py-2 px-3.5 rounded-xl text-xs font-medium text-fg-muted hover:text-red-400 hover:bg-hover border border-line-soft hover:border-red-500/30 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <LogOut className="w-3.5 h-3.5" />
                     <span>Disconnect</span>

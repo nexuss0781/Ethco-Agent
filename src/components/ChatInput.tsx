@@ -252,7 +252,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
   return (
     <div
-      className={`relative w-full max-w-3xl mx-auto px-3 sm:px-4 transition-all ${
+      className={`relative w-full max-w-4xl mx-auto px-3 sm:px-4 transition-all ${
         isNewConversation ? 'pb-5 sm:pb-8' : 'pb-2.5 sm:pb-5'
       }`}
       onDragOver={handleDragOver}
@@ -282,10 +282,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
       {/* Main Input Card (Identical layout to screenshot) */}
       <div
-        className={`relative flex flex-col rounded-2xl bg-surface border transition-all shadow-lg ${
+        className={`relative flex flex-col rounded-2xl bg-surface border transition-all duration-200 ${
           isDragging
-            ? 'border-teal ring-2 ring-teal/30'
-            : 'border-line hover:border-line focus-within:border-line'
+            ? 'border-teal ring-2 ring-teal/30 shadow-lg'
+            : 'border-line shadow-sm hover:border-fg/20 hover:shadow-md focus-within:border-teal/40 focus-within:ring-2 focus-within:ring-teal/10 focus-within:shadow-lg'
         }`}
       >
         {/* Attachment Previews */}
@@ -308,7 +308,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 <span className="max-w-[120px] truncate text-[11px] font-medium">{att.name}</span>
                 <button
                   onClick={() => removeAttachment(att.id)}
-                  className="p-0.5 rounded-full hover:bg-surface-3 text-fg-muted hover:text-fg"
+                  className="p-0.5 rounded-full hover:bg-hover text-fg-muted hover:text-fg"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -341,7 +341,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             <button
               id="btn-attach-file"
               onClick={() => fileInputRef.current?.click()}
-              className="p-1.5 rounded-lg hover:bg-surface-2 text-fg-muted hover:text-fg transition-colors"
+              className="p-1.5 rounded-lg hover:bg-hover text-fg-muted hover:text-fg transition-colors"
               title="Add file or image"
             >
               <Plus className="w-4 h-4" />
@@ -358,7 +358,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                     ? 'bg-brand/15 border-teal/40 text-teal-fg hover:bg-brand/20'
                     : activeMode === 'build'
                     ? 'bg-teal-deep/15 border-teal-deep/40 text-teal-fg hover:bg-teal-deep/20'
-                    : 'bg-canvas border-line text-fg-soft hover:bg-surface-2 hover:text-fg'
+                    : 'bg-canvas border-line text-fg-soft hover:bg-hover hover:text-fg'
                 }`}
                 title="Select Planning, Build, or Chat mode"
               >
@@ -376,7 +376,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                     className="fixed inset-0 z-30"
                     onClick={() => setModeDropdownOpen(false)}
                   />
-                  <div className="absolute left-0 bottom-full mb-2 w-64 p-1.5 bg-surface border border-line rounded-xl shadow-2xl z-40 animate-in fade-in zoom-in-95 duration-100 divide-y divide-line-soft">
+                  <div className="absolute left-0 bottom-full mb-2 w-64 p-1.5 bg-raised border border-line rounded-xl shadow-2xl z-40 animate-in fade-in zoom-in-95 duration-100 divide-y divide-line-soft">
                     <div className="p-1 space-y-1">
                       {/* Planning Mode Option */}
                       <button
@@ -385,7 +385,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                         className={`w-full text-left px-2.5 py-2 rounded-lg text-xs flex items-start gap-2.5 transition-colors cursor-pointer ${
                           activeMode === 'planning'
                             ? 'bg-surface-2 text-fg'
-                            : 'text-fg-soft hover:bg-surface-2 hover:text-fg'
+                            : 'text-fg-soft hover:bg-hover hover:text-fg'
                         }`}
                       >
                         <div className="p-1.5 rounded-md bg-brand/15 text-teal shrink-0 mt-0.5 border border-teal/30">
@@ -411,7 +411,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                         className={`w-full text-left px-2.5 py-2 rounded-lg text-xs flex items-start gap-2.5 transition-colors cursor-pointer ${
                           activeMode === 'build'
                             ? 'bg-surface-2 text-fg'
-                            : 'text-fg-soft hover:bg-surface-2 hover:text-fg'
+                            : 'text-fg-soft hover:bg-hover hover:text-fg'
                         }`}
                       >
                         <div className="p-1.5 rounded-md bg-teal-deep/15 text-teal shrink-0 mt-0.5 border border-teal-deep/30">
@@ -437,7 +437,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                         className={`w-full text-left px-2.5 py-2 rounded-lg text-xs flex items-start gap-2.5 transition-colors cursor-pointer ${
                           activeMode === 'chat'
                             ? 'bg-surface-2 text-fg'
-                            : 'text-fg-soft hover:bg-surface-2 hover:text-fg'
+                            : 'text-fg-soft hover:bg-hover hover:text-fg'
                         }`}
                       >
                         <div className="p-1.5 rounded-md bg-surface-2 text-fg-muted shrink-0 mt-0.5 border border-line">
@@ -468,10 +468,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             <button
               id="btn-voice-dictation"
               onClick={toggleSpeechRecognition}
-              className={`relative p-1.5 rounded-lg transition-colors flex items-center gap-1 ${
+              className={`relative p-1.5 rounded-lg transition-all flex items-center gap-1 active:scale-[.96] ${
                 isRecording
                   ? 'bg-red-500/20 text-red-400 animate-pulse'
-                  : 'hover:bg-surface-2 text-fg-muted hover:text-fg'
+                  : 'hover:bg-hover text-fg-muted hover:text-fg'
               }`}
               title={isRecording ? 'Stop listening' : 'Dictate message'}
             >
@@ -484,12 +484,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               id="btn-submit-message"
               onClick={handleSubmit}
               disabled={!canSubmit && !isLoading}
-              className={`p-2 rounded-xl transition-all ${
+              className={`p-2 rounded-xl transition-all active:scale-[.95] disabled:active:scale-100 ${
                 isLoading
-                  ? 'bg-brand text-white hover:bg-brand-strong'
+                  ? 'bg-brand text-white hover:bg-brand-strong shadow-md'
                   : canSubmit
-                  ? 'bg-brand text-white hover:bg-brand-strong shadow-sm'
-                  : 'bg-surface-2 text-fg-muted cursor-not-allowed'
+                  ? 'bg-brand text-white hover:bg-brand-strong hover:shadow-md shadow-sm'
+                  : 'bg-surface-2 text-fg-disabled cursor-not-allowed'
               }`}
               title={isLoading ? 'Stop response' : 'Send message (Enter)'}
             >

@@ -43,7 +43,7 @@ export const GlobResultsViewer: React.FC<GlobResultsViewerProps> = ({
             return (
               <div
                 key={idx}
-                className="flex items-center gap-2 px-2 py-1 rounded hover:bg-surface transition-colors font-mono text-[11px] text-fg"
+                className="flex items-center gap-2 px-2 py-1 rounded hover:bg-hover transition-colors font-mono text-[11px] text-fg"
               >
                 <File className="w-3.5 h-3.5 text-fg-muted shrink-0" />
                 <span className="truncate">

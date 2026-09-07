@@ -28,10 +28,13 @@ export const EmptyState: React.FC<EmptyStateProps> = ({ onSelectPrompt }) => {
   return (
     <div className="flex flex-col items-center justify-center w-full px-3 py-4 sm:pt-6 select-none">
       {/* Centered Heading */}
-      <div className="flex items-center justify-center mb-5 sm:mb-7 text-center animate-in fade-in duration-500">
-        <h1 className="text-2xl sm:text-4xl md:text-5xl font-serif font-normal text-fg tracking-tight">
+      <div className="flex flex-col items-center justify-center mb-4 sm:mb-6 text-center animate-in fade-in duration-500">
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-serif font-normal text-fg tracking-tight leading-tight">
           What shall we think through?
         </h1>
+        <p className="mt-3 text-sm sm:text-[15px] text-fg-muted max-w-md leading-relaxed">
+          A thinking partner for architecture, code, and the hard questions in between.
+        </p>
       </div>
 
       {/* Suggestion Chips */}
@@ -41,7 +44,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({ onSelectPrompt }) => {
             key={item.id}
             id={`chip-prompt-${item.id}`}
             onClick={() => onSelectPrompt(item.prompt)}
-            className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-surface hover:bg-surface-2 active:bg-surface-3 border border-line text-fg-soft hover:text-fg text-xs sm:text-sm font-medium transition-all shadow-2xs hover:scale-[1.02] cursor-pointer group"
+            className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-surface hover:bg-hover active:bg-raised border border-line-soft text-fg-soft hover:text-fg active:text-fg text-xs sm:text-sm font-medium transition-all hover:scale-[1.02] active:scale-[.98] hover:shadow-sm cursor-pointer group"
           >
             <span className="text-fg-muted group-hover:text-teal transition-colors">
               {getIcon(item.iconName)}

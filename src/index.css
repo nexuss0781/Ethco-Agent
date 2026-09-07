@@ -7,17 +7,26 @@
    ============================================================ */
 
 :root {
-  /* Dark theme (default) */
+  /* Dark theme (default)
+     Surface ladder (4 levels):
+       canvas        dark page backdrop
+       surface       base card / chrome
+       hover         interactive hover (rows, icon buttons)
+       raised        elevated: menus, popovers, active fills
+     surface-2 / surface-3 are legacy secondary fills (attachments, chips). */
   --ethco-canvas: #161513;
   --ethco-canvas-deep: #0f0e0d;
   --ethco-surface: #1e1c1a;
-  --ethco-surface-2: #292420;
-  --ethco-surface-3: #332c26;
+  --ethco-hover: #26231f;
+  --ethco-raised: #2d2924;
+  --ethco-surface-2: #2a2622;
+  --ethco-surface-3: #352e28;
   --ethco-line: #36312b;
   --ethco-line-soft: #2b2723;
   --ethco-fg: #f2eee8;
   --ethco-fg-soft: #bcb4a9;
   --ethco-fg-muted: #8d857b;
+  --ethco-fg-disabled: #6b6355;
   --ethco-brand: #88393c;
   --ethco-brand-strong: #a54a4c;
   --ethco-brand-fg: #d99a99;
@@ -34,6 +43,8 @@
     --ethco-canvas: #faf8f4;
     --ethco-canvas-deep: #f1ede5;
     --ethco-surface: #ffffff;
+    --ethco-hover: #efeae0;
+    --ethco-raised: #e9e3d8;
     --ethco-surface-2: #f3efe7;
     --ethco-surface-3: #e9e3d8;
     --ethco-line: #dcd5c8;
@@ -41,6 +52,7 @@
     --ethco-fg: #241f1b;
     --ethco-fg-soft: #6b6155;
     --ethco-fg-muted: #9a8f80;
+    --ethco-fg-disabled: #b7ada0;
     --ethco-brand: #88393c;
     --ethco-brand-strong: #6d2b2e;
     --ethco-brand-fg: #88393c;
@@ -61,6 +73,8 @@
   --color-canvas: var(--ethco-canvas);
   --color-canvas-deep: var(--ethco-canvas-deep);
   --color-surface: var(--ethco-surface);
+  --color-hover: var(--ethco-hover);
+  --color-raised: var(--ethco-raised);
   --color-surface-2: var(--ethco-surface-2);
   --color-surface-3: var(--ethco-surface-3);
   --color-line: var(--ethco-line);
@@ -68,6 +82,7 @@
   --color-fg: var(--ethco-fg);
   --color-fg-soft: var(--ethco-fg-soft);
   --color-fg-muted: var(--ethco-fg-muted);
+  --color-fg-disabled: var(--ethco-fg-disabled);
   --color-brand: var(--ethco-brand);
   --color-brand-strong: var(--ethco-brand-strong);
   --color-brand-fg: var(--ethco-brand-fg);
@@ -105,11 +120,12 @@
 .markdown-body {
   color: var(--ethco-fg);
   font-size: 0.95rem;
-  line-height: 1.65;
+  line-height: 1.72;
+  letter-spacing: 0.005em;
 }
 
 .markdown-body p {
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.9rem;
 }
 
 .markdown-body p:last-child {
@@ -119,28 +135,30 @@
 .markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 {
   color: var(--ethco-fg);
   font-weight: 600;
-  margin-top: 1.25rem;
-  margin-bottom: 0.5rem;
+  margin-top: 1.4rem;
+  margin-bottom: 0.55rem;
+  line-height: 1.35;
 }
 
-.markdown-body h1 { font-size: 1.35rem; }
-.markdown-body h2 { font-size: 1.2rem; }
-.markdown-body h3 { font-size: 1.05rem; }
+.markdown-body h1 { font-size: 1.4rem; }
+.markdown-body h2 { font-size: 1.24rem; }
+.markdown-body h3 { font-size: 1.1rem; }
 
 .markdown-body ul {
   list-style-type: disc;
   padding-left: 1.35rem;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.9rem;
 }
 
 .markdown-body ol {
   list-style-type: decimal;
   padding-left: 1.35rem;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.9rem;
 }
 
 .markdown-body li {
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.3rem;
+  line-height: 1.65;
 }
 
 .markdown-body code {
@@ -172,10 +190,17 @@
 
 .markdown-body blockquote {
   border-left: 3px solid var(--ethco-brand);
-  padding-left: 0.85rem;
+  background-color: var(--ethco-brand-glow);
+  border-radius: 0.5rem;
+  padding: 0.55rem 0.9rem;
   color: var(--ethco-fg-soft);
-  margin: 0.75rem 0;
-  font-style: italic;
+  margin: 0.9rem 0;
+  font-style: normal;
+}
+
+.markdown-body blockquote strong {
+  color: var(--ethco-brand-fg);
+  font-weight: 600;
 }
 
 .markdown-body a {

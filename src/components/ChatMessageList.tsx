@@ -77,7 +77,7 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = ({
       {showScrollBottom && (
         <button
           onClick={() => scrollToBottom('smooth')}
-          className="absolute bottom-4 right-6 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-2 hover:bg-surface-3 border border-line text-xs text-fg shadow-lg transition-all animate-in fade-in zoom-in-95 cursor-pointer"
+          className="absolute bottom-4 right-6 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-2 hover:bg-hover border border-line text-xs text-fg shadow-lg transition-all animate-in fade-in zoom-in-95 cursor-pointer"
         >
           <ChevronDown className="w-3.5 h-3.5 text-teal" />
           <span>Latest</span>
