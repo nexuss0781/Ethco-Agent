@@ -674,10 +674,10 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
                   </button>
                 )}
               </div>
+              <p className="text-[11px] text-fg-muted text-center pb-3">
+                or click <span className="text-fg font-medium">Open Settings</span> and authorize from the GitHub Integration section.
+              </p>
             </div>
-            <p className="text-[11px] text-fg-muted text-center pb-4">
-              or click <span className="text-fg font-medium">Open Settings</span> and authorize from the GitHub Integration section.
-            </p>
           ) : (
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
             {/* Search & Filter Header with Multi-Select Actions at Top of Dropdown / List */}
