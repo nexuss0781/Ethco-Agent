@@ -196,9 +196,6 @@ export default function App() {
       content: '',
       timestamp: Date.now(),
       isStreaming: true,
-      thinkingContent: thinkingEnabled
-        ? `Reasoning step (${currentMode.toUpperCase()} mode): Analyzing inquiry in depth, evaluating core nuances, and formulating structured response...`
-        : undefined,
       model: selectedModel.geminiModel,
     };
 
