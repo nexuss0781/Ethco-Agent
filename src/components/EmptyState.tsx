@@ -32,9 +32,6 @@ export const EmptyState: React.FC<EmptyStateProps> = ({ onSelectPrompt }) => {
         <h1 className="text-3xl sm:text-4xl md:text-5xl font-serif font-normal text-fg tracking-tight leading-tight">
           What shall we think through?
         </h1>
-        <p className="mt-3 text-sm sm:text-[15px] text-fg-muted max-w-md leading-relaxed">
-          A thinking partner for architecture, code, and the hard questions in between.
-        </p>
       </div>
 
       {/* Suggestion Chips */}
