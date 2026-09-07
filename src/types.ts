@@ -53,6 +53,7 @@ export interface ModelOption {
   description: string;
   thinkingSupported: boolean;
   geminiModel: string;
+  icon: string; // Lucide icon name (brand mascot / tier emblem)
 }
 
 export interface PromptSuggestion {

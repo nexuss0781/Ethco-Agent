@@ -202,6 +202,10 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold bg-surface hover:bg-hover border border-teal/40 text-teal-fg transition-colors cursor-pointer"
             title="Choose Ethco model tier"
           >
+            {(() => {
+              const ModelIcon = getDynamicLucideIcon(selectedModel.icon);
+              return <ModelIcon className="w-3.5 h-3.5 text-teal shrink-0" />;
+            })()}
             <span className="max-w-[125px] sm:max-w-none truncate">{selectedModel.name}</span>
             <ChevronDown className={`w-3 h-3 transition-transform ${modelDropdownOpen ? 'rotate-180' : ''}`} />
           </button>
@@ -222,10 +226,18 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
                       model.id === selectedModel.id ? 'bg-brand/15 text-teal-fg' : 'text-fg-soft hover:bg-hover hover:text-fg'
                     }`}
                   >
-                    <span className="min-w-0">
-                      <span className="block text-xs font-semibold truncate">{model.name}</span>
-                      <span className="block text-[10px] font-sans text-fg-muted truncate">{model.description}</span>
-                    </span>
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="p-1.5 rounded-md bg-brand/15 text-teal shrink-0 border border-teal/30">
+                        {(() => {
+                          const ModelIcon = getDynamicLucideIcon(model.icon);
+                          return <ModelIcon className="w-3.5 h-3.5" />;
+                        })()}
+                      </div>
+                      <span className="min-w-0">
+                        <span className="block text-xs font-semibold truncate">{model.name}</span>
+                        <span className="block text-[10px] font-sans text-fg-muted truncate">{model.description}</span>
+                      </span>
+                    </div>
                     {model.id === selectedModel.id && <Check className="w-3.5 h-3.5 text-teal shrink-0" />}
                   </button>
                 ))}

@@ -8,6 +8,7 @@ export const AVAILABLE_MODELS: ModelOption[] = [
     description: 'Escalates through quality candidates for the strongest responses.',
     thinkingSupported: true,
     geminiModel: 'omniroute/quality',
+    icon: 'Rabbit',
   },
   {
     id: 'ethco-1.0',
@@ -16,6 +17,7 @@ export const AVAILABLE_MODELS: ModelOption[] = [
     description: 'Balanced provider startup time and model quality.',
     thinkingSupported: true,
     geminiModel: 'omniroute/agent-balanced',
+    icon: 'Feather',
   },
   {
     id: 'ethco-1.0-lite',
@@ -24,5 +26,6 @@ export const AVAILABLE_MODELS: ModelOption[] = [
     description: 'Earliest possible first token via OmniRouter fast routing.',
     thinkingSupported: true,
     geminiModel: 'omniroute/agent-fast',
+    icon: 'Zap',
   },
 ];
