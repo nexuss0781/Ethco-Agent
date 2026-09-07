@@ -184,6 +184,12 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
       setSelectedRepoBranches((prev) => ({ ...branchMap, ...prev }));
     } catch (err: any) {
       console.warn('Failed to load repos:', err);
+      // If GitHub isn't actually authorized, flip back to the authorize prompt instead
+      // of leaving a misleading empty "No matching repositories found" list.
+      if (String(err?.message || '').includes('GITHUB_UNAUTHORIZED')) {
+        setGhUser(null);
+        setRepos([]);
+      }
     } finally {
       setReposLoading(false);
     }
@@ -632,30 +638,24 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
               <span className="text-xs">Checking GitHub authorization...</span>
             </div>
           ) : !ghUser ? (
-            /* Not authorized — the Settings "GitHub Integration" card, brought directly here */
-            <div className="flex-1 flex items-center justify-center p-6">
-              <div className="w-full max-w-md rounded-2xl bg-canvas-deep border border-line-soft p-8 flex flex-col items-center text-center gap-4">
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/10 border border-amber-500/20 text-amber-400 mt-1">
-                  <Lock className="w-3 h-3" /> Not connected
-                </span>
-                <div className="w-16 h-16 rounded-2xl bg-surface border border-line flex items-center justify-center shadow-sm">
-                  <Github className="w-8 h-8 text-teal" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-fg">Connect GitHub Account</h3>
-                  <p className="text-xs text-fg-muted max-w-sm leading-relaxed mt-1">
-                    Authorize to explore and clone all your public & private repositories directly into your workspace.
-                  </p>
-                </div>
-                <a
-                  id="btn-github-authorize-repos"
-                  href={GitHubService.getLoginUrl()}
-                  className="w-full max-w-xs py-2.5 px-4 rounded-xl text-xs font-semibold bg-brand hover:bg-brand-strong text-white transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer"
-                >
-                  <Github className="w-4 h-4" />
-                  <span>Authorize GitHub</span>
-                </a>
+            /* Not authorized — this modal's own authorize prompt (not copied from Settings) */
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-8 gap-4">
+              <div className="w-24 h-24 rounded-3xl bg-surface border border-line flex items-center justify-center shadow-sm mt-4">
+                <Github className="w-14 h-14 text-teal" />
               </div>
+              <h3 className="text-base font-semibold text-fg">Authorize GitHub to view your repositories</h3>
+              <p className="text-xs text-fg-muted max-w-sm leading-relaxed">
+                Connect your GitHub account to browse and import your public and private
+                repositories directly into Ethco. Nothing is shared — repos stay private to you.
+              </p>
+              <a
+                id="btn-github-authorize-repos"
+                href={GitHubService.getLoginUrl()}
+                className="mt-1 flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium bg-brand hover:bg-brand-strong text-white transition-all shadow-sm cursor-pointer"
+              >
+                <Github className="w-4 h-4" />
+                <span>Authorize GitHub</span>
+              </a>
             </div>
           ) : (
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">

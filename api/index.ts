@@ -2473,6 +2473,12 @@ app.get("/api/github/repos", async (req, res) => {
       });
     }
 
+    // No valid GitHub authorization and nothing to list → explicit UNAUTHORIZED so the
+    // UI shows the authorize prompt instead of an empty "No repositories" state.
+    if ((!rawRepos || rawRepos.length === 0) && !tokenInfo?.token && !tokenInfo?.githubGrantToken) {
+      return res.status(401).json({ error: "GITHUB_UNAUTHORIZED", detail: "Authorize GitHub to list repositories" });
+    }
+
     // Check existing imported repos in workspace
     const reposDir = path.join(process.cwd(), "repos");
     const existingDirs = fs.existsSync(reposDir) ? fs.readdirSync(reposDir) : [];
