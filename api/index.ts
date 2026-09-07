@@ -2988,7 +2988,7 @@ Return ONLY a valid JSON object:
           ? rawBase
           : `${rawBase}/api/v1/chat/completions`;
 
-        const omniRes = await fetch(targetUrl, {
+        const omniRes = await fetchOmniRouteWithRetry(targetUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -3064,6 +3064,69 @@ function convertToOpenAiTools(decls: any[]) {
 }
 
 // Unified multi-turn tool calling and streaming over OmniRoute
+
+const OMNIROUTE_RETRYABLE_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
+
+function omniSleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function omniRetryDelayMs(attempt: number, retryAfterSeconds?: number): number {
+  if (typeof retryAfterSeconds === "number" && Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0) {
+    return Math.min(Math.max(retryAfterSeconds * 1000, 300), 20_000);
+  }
+  const base = Math.pow(2, Math.max(attempt - 1, 0)) * 300;
+  return Math.min(base + Math.random() * 250, 20_000);
+}
+
+function omniRetryCount(): number {
+  const value = Number(process.env.OMNIROUTE_MAX_RETRIES || 5);
+  return Number.isFinite(value) && value >= 1 ? Math.min(Math.floor(value), 20) : 5;
+}
+
+function omniIsRetryable(response: Response): boolean {
+  return response.status === 429 || response.status >= 500 || OMNIROUTE_RETRYABLE_STATUS.has(response.status);
+}
+
+// Keeps retrying the gateway on transient failures (429/5xx/network errors).
+// Retries "again and again" up to OMNIROUTE_MAX_RETRIES with exponential backoff,
+// honoring the upstream Retry-After header. Hard client errors (4xx) fail fast —
+// retrying those can never succeed. Never throws for a completed HTTP exchange so
+// the caller can degrade gracefully instead of crashing.
+async function fetchOmniRouteWithRetry(targetUrl: string, init: RequestInit): Promise<Response> {
+  const maxAttempts = omniRetryCount();
+  let lastNetworkError: Error | null = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    let response: Response;
+    try {
+      response = await fetch(targetUrl, { ...init });
+    } catch (error: any) {
+      lastNetworkError = error;
+      console.warn(`OmniRoute fetch attempt ${attempt}/${maxAttempts} failed (network): ${error?.message || error}`);
+      if (attempt < maxAttempts) await omniSleep(omniRetryDelayMs(attempt));
+      continue;
+    }
+    if (response.ok) return response;
+    if (!omniIsRetryable(response) || attempt === maxAttempts) return response;
+    // Release the upstream socket before backing off.
+    await (response.body?.cancel?.().catch(() => undefined));
+    const backoff = omniRetryDelayMs(attempt, parseRetryAfterSeconds(response.headers.get("retry-after")));
+    console.warn(`OmniRoute returned ${response.status} on attempt ${attempt}/${maxAttempts}; retrying after ${backoff}ms`);
+    await omniSleep(backoff);
+  }
+  if (lastNetworkError) throw lastNetworkError;
+  throw new Error(`OmniRoute request failed after ${maxAttempts} attempts`);
+}
+
+function parseRetryAfterSeconds(value: string | null): number | undefined {
+  if (!value) return undefined;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds) && seconds >= 0) return seconds;
+  const timestamp = Date.parse(value);
+  if (Number.isFinite(timestamp)) return Math.max(0, (timestamp - Date.now()) / 1000);
+  return undefined;
+}
+
 async function executeOmniRouteTurn(
   modelName: string, // e.g. "omniroute/auto"
   messages: any[], // Raw original messages from req.body
@@ -3155,7 +3218,7 @@ async function executeOmniRouteTurn(
   while (iteration < maxToolIterations) {
     iteration++;
 
-    const response = await fetch(targetUrl, {
+    const response = await fetchOmniRouteWithRetry(targetUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -3181,7 +3244,10 @@ async function executeOmniRouteTurn(
           detail = parsed.error.message;
         }
       } catch {}
-      throw new Error(`OmniRoute API Error (${response.status}): ${detail}`);
+      const err: any = new Error(`OmniRoute API Error (${response.status}): ${detail}`);
+      err.status = response.status;
+      err.retryable = omniIsRetryable(response);
+      throw err;
     }
 
     const data = await response.json();
@@ -3197,7 +3263,11 @@ async function executeOmniRouteTurn(
     if (!onToolEvent || !toolCalls || toolCalls.length === 0) {
       const finalText = assistantMessage.content || "";
       if (finalText) {
-        onChunk(finalText);
+        try {
+          onChunk(finalText);
+        } catch (emitErr) {
+          console.warn("Failed to emit chat chunk:", emitErr);
+        }
       }
       return { success: true };
     }
@@ -3220,21 +3290,40 @@ async function executeOmniRouteTurn(
         console.warn(`Failed to parse arguments for tool ${toolName}:`, toolCall.function.arguments);
       }
 
-      onToolEvent({
-        type: "tool_start",
-        id: callId,
-        name: toolName,
-        args: toolArgs,
-      });
+      try {
+        onToolEvent({
+          type: "tool_start",
+          id: callId,
+          name: toolName,
+          args: toolArgs,
+        });
+      } catch (emitErr) {
+        console.warn("Failed to emit tool_start:", emitErr);
+      }
 
-      const result = await executeWorkspaceTool(toolName, toolArgs);
+      let result: any;
+      try {
+        result = await executeWorkspaceTool(toolName, toolArgs);
+      } catch (toolErr: any) {
+        // A crashing tool must never crash the whole turn: feed the failure back
+        // to the model so it can recover.
+        console.error(`Tool ${toolName} crashed:`, toolErr);
+        result = { error: `Tool "${toolName}" crashed: ${toolErr?.message || toolErr}` };
+      }
+      if (result === undefined || result === null) {
+        result = { success: true, result: null };
+      }
 
-      onToolEvent({
-        type: "tool_finish",
-        id: callId,
-        name: toolName,
-        result,
-      });
+      try {
+        onToolEvent({
+          type: "tool_finish",
+          id: callId,
+          name: toolName,
+          result,
+        });
+      } catch (emitErr) {
+        console.warn("Failed to emit tool_finish:", emitErr);
+      }
 
       openAiMessages.push({
         role: "tool",
@@ -3324,17 +3413,33 @@ Please take the correct action based purely on the context of the user's message
   } catch (error: any) {
     console.error("OmniRoute API stream error:", error);
 
-    let readableError = "The model is currently experiencing high demand. Please try sending your message again in a moment.";
-    const errMsg = error?.message || "";
-    if (errMsg && !errMsg.includes("503") && !errMsg.includes("UNAVAILABLE") && !errMsg.includes("high demand")) {
-      readableError = errMsg;
-    }
+    const errMsg = (error?.message || "").toString();
+    const isTransient =
+      !errMsg ||
+      error?.retryable === true ||
+      errMsg.includes("503") ||
+      errMsg.includes("UNAVAILABLE") ||
+      errMsg.includes("high demand") ||
+      errMsg.includes("ECONNRESET") ||
+      errMsg.includes("timeout") ||
+      errMsg.includes("fetch failed") ||
+      errMsg.includes("request failed after");
 
-    res.write(
-      `data: ${JSON.stringify({
-        error: readableError,
-      })}\n\n`
-    );
+    if (isTransient) {
+      res.write(
+        `data: ${JSON.stringify({
+          error: "The model is currently experiencing high demand or a transient failure. The request will be retried automatically — please stand by, or try again in a moment.",
+          retryable: true,
+        })}\n\n`
+      );
+    } else {
+      res.write(
+        `data: ${JSON.stringify({
+          error: errMsg.length > 400 ? errMsg.slice(0, 400) : errMsg,
+          retryable: false,
+        })}\n\n`
+      );
+    }
     res.end();
   }
 });
