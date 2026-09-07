@@ -25,7 +25,6 @@ export default function App() {
   const [thinkingEnabled, setThinkingEnabled] = useState(true);
   const [actionMode, setActionMode] = useState<ActionMode>('planning');
   const [selectedModel, setSelectedModel] = useState<ModelOption>(AVAILABLE_MODELS[1]);
-  const [isLoading, setIsLoading] = useState(false);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [isGitHubModalOpen, setIsGitHubModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
@@ -40,7 +39,7 @@ export default function App() {
 
   const [promptDraft, setPromptDraft] = useState<string>('');
 
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const abortControllersRef = useRef<Record<string, AbortController | null>>({});
 
   const handleToggleSelectRepo = (repo: SelectedRepoContext) => {
     setSelectedRepos((prev) => {
@@ -122,6 +121,15 @@ export default function App() {
   // Get active conversation object
   const activeConversation = conversations.find((c) => c.id === activeConversationId);
 
+  // Whether the ACTIVE conversation is currently generating (per-chat, not global)
+  const activeConversationIsLoading = activeConversation?.messages.some((m) => m.isStreaming) ?? false;
+
+  // Which conversations have an in-flight generation right now (for sidebar indicator)
+  const streamingConversationIds = React.useMemo(
+    () => new Set(conversations.filter((c) => c.messages.some((m) => m.isStreaming)).map((c) => c.id)),
+    [conversations]
+  );
+
   // Start new chat — reuse an existing empty "New Chat" conversation so we never
   // accumulate duplicate blank entries; only create one if none already exists.
   const handleNewChat = () => {
@@ -166,13 +174,14 @@ export default function App() {
     setConversations([...updated]);
   };
 
-  // Stop active streaming generation
+  // Stop active streaming generation (only the active conversation's stream)
   const handleStopGeneration = () => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
+    if (!activeConversationId) return;
+    const ctrl = abortControllersRef.current[activeConversationId];
+    if (ctrl) {
+      ctrl.abort();
+      abortControllersRef.current[activeConversationId] = null;
     }
-    setIsLoading(false);
   };
 
   // Send message flow
@@ -236,7 +245,6 @@ export default function App() {
     // Update local state immediately
     const updatedList = StorageService.updateConversation(targetConvo.id, updatedConvo);
     setConversations([...updatedList]);
-    setIsLoading(true);
 
     // At the second prompt: give the entire history (first prompt, model response, and second prompt)
     // + chat titling prompt to external AI and tell it to name conversation title + Lucide icon based on context
@@ -272,12 +280,16 @@ export default function App() {
         .catch((e) => console.warn('Second prompt contextual titling error:', e));
     }
 
-    // Abort previous if any
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
+    // Abort a previous stream for THIS conversation only, so generating in other chats keeps running
+    const prevController = abortControllersRef.current[targetConvo.id];
+    if (prevController) {
+      prevController.abort();
     }
     const abortController = new AbortController();
-    abortControllerRef.current = abortController;
+    abortControllersRef.current[targetConvo.id] = abortController;
+
+    let accumulatedText = '';
+    let accumulatedTools: ToolInvocation[] = [];
 
     try {
       // Send conversation context to streaming API with selected repositories context
@@ -331,8 +343,6 @@ export default function App() {
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder('utf-8');
-      let accumulatedText = '';
-      let accumulatedTools: ToolInvocation[] = [];
 
       if (reader) {
         let done = false;
@@ -437,6 +447,10 @@ export default function App() {
       );
 
       const currentStored = StorageService.getLocalConversations().find((c) => c.id === targetConvo.id) || targetConvo;
+      // If a newer send replaced this placeholder, don't clobber the live stream.
+      if (!currentStored.messages.some((m) => m.id === assistantPlaceholderId)) {
+        return;
+      }
       const finalizedConvo: Conversation = {
         ...currentStored,
         messages: finalizedMessages,
@@ -501,6 +515,23 @@ export default function App() {
     } catch (error: any) {
       if (error.name === 'AbortError') {
         console.log('Stream generation aborted by user.');
+        // Persist whatever streamed so far — leaving the chat (or Stop) keeps the partial response
+        const storedAbort = StorageService.getLocalConversations().find((c) => c.id === targetConvo.id) || targetConvo;
+        if (storedAbort.messages.some((m) => m.id === assistantPlaceholderId)) {
+          const abortedMessages = storedAbort.messages.map((m) =>
+            m.id === assistantPlaceholderId
+              ? {
+                  ...m,
+                  content: accumulatedText || 'Stopped.',
+                  toolInvocations: accumulatedTools.length > 0 ? accumulatedTools : undefined,
+                  isStreaming: false,
+                }
+              : m
+          );
+          const abortedConvo: Conversation = { ...storedAbort, messages: abortedMessages, updatedAt: Date.now() };
+          StorageService.updateConversation(targetConvo.id, abortedConvo);
+          setConversations(StorageService.getLocalConversations());
+        }
       } else {
         console.error('Chat error:', error);
         // Display friendly error in assistant bubble
@@ -523,8 +554,9 @@ export default function App() {
         );
       }
     } finally {
-      setIsLoading(false);
-      abortControllerRef.current = null;
+      if (abortControllersRef.current[targetConvo.id] === abortController) {
+        abortControllersRef.current[targetConvo.id] = null;
+      }
     }
   };
 
@@ -693,6 +725,7 @@ export default function App() {
         activeConversationId={activeConversationId}
         onSelectConversation={handleSelectConversation}
         onNewChat={handleNewChat}
+        streamingConversationIds={streamingConversationIds}
         onDeleteConversation={handleDeleteConversation}
         onTogglePin={handleTogglePin}
         onRenameConversation={handleRenameConversation}
@@ -733,7 +766,7 @@ export default function App() {
                   key={activeConversationId || 'global'}
                   activeConversationId={activeConversationId}
                   onSendMessage={handleSendMessage}
-                  isLoading={isLoading}
+                  isLoading={activeConversationIsLoading}
                   onStopGeneration={handleStopGeneration}
                   thinkingEnabled={thinkingEnabled}
                   actionMode={actionMode}
@@ -752,7 +785,7 @@ export default function App() {
             <ChatMessageList
               messages={activeConversation?.messages || []}
               onRegenerate={handleRegenerate}
-              isLoading={isLoading}
+              isLoading={activeConversationIsLoading}
               onEditMessage={handleEditMessage}
               onRetryMessage={handleRetryMessage}
               onBranchVersion={handleBranchVersion}
@@ -766,7 +799,7 @@ export default function App() {
                 key={activeConversationId || 'global'}
                 activeConversationId={activeConversationId}
                 onSendMessage={handleSendMessage}
-                isLoading={isLoading}
+                isLoading={activeConversationIsLoading}
                 onStopGeneration={handleStopGeneration}
                 thinkingEnabled={thinkingEnabled}
                 actionMode={actionMode}

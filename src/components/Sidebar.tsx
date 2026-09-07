@@ -16,7 +16,8 @@ import {
   LogIn,
   Github,
   FolderGit2,
-  Settings
+  Settings,
+  Loader2,
 } from 'lucide-react';
 import { Conversation } from '../types';
 import { StorageService } from '../lib/storage';
@@ -29,6 +30,7 @@ interface SidebarProps {
   activeConversationId: string | null;
   onSelectConversation: (id: string) => void;
   onNewChat: () => void;
+  streamingConversationIds?: Set<string>;
   onDeleteConversation: (id: string) => void;
   onTogglePin: (id: string) => void;
   onRenameConversation: (id: string, newTitle: string) => void;
@@ -48,6 +50,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeConversationId,
   onSelectConversation,
   onNewChat,
+  streamingConversationIds,
   onDeleteConversation,
   onTogglePin,
   onRenameConversation,
@@ -164,10 +167,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
           }`}
         />
         <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-1">
-          {(() => {
-            const ConvoIcon = getDynamicLucideIcon(c.icon);
-            return <ConvoIcon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-teal' : 'text-fg-muted'}`} />;
-          })()}
+          {streamingConversationIds?.has(c.id) ? (
+            <Loader2 className="w-3.5 h-3.5 shrink-0 text-teal animate-spin" />
+          ) : (
+            (() => {
+              const ConvoIcon = getDynamicLucideIcon(c.icon);
+              return <ConvoIcon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-teal' : 'text-fg-muted'}`} />;
+            })()
+          )}
           {isEditing ? (
             <input
               type="text"

@@ -14,6 +14,7 @@ import {
   Brain,
   FileText,
   User,
+  Loader2,
 } from 'lucide-react';
 import { Message } from '../types';
 import { ToolInvocationsList } from './ToolInvocationsList';
@@ -109,11 +110,17 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
             </div>
           ) : (
             <div className="relative w-7 h-7 flex items-center justify-center">
-              <img
-                src="/assets/Todo.png"
-                alt="Ethco"
-                className="w-8 h-8 object-contain -ml-0.5"
-              />
+              {message.isStreaming ? (
+                <div className="w-8 h-8 flex items-center justify-center bg-surface-2 border border-line-soft rounded-xl">
+                  <Loader2 className="w-4 h-4 text-teal animate-spin" />
+                </div>
+              ) : (
+                <img
+                  src="/assets/Todo.png"
+                  alt="Ethco"
+                  className="w-8 h-8 object-contain -ml-0.5"
+                />
+              )}
             </div>
           )}
         </div>
