@@ -2900,6 +2900,29 @@ function inferFallbackIconAndTitle(p1: string, p2: string): { title: string; ico
 }
 
 // 5. Auto-generate Conversation Title & Dynamic Lucide Icon
+// Curated, verified Lucide icon catalog (grouped by domain) so the titling model
+// picks context-specific icons instead of defaulting to generic "AI" icons.
+const LUCIDE_ICON_CATALOG = `
+Software & Code: Code, CodeXml, Braces, FileCode, FileTerminal, Terminal, Binary, CircuitBoard, GitBranch, GitCommit, GitPullRequest, GitMerge, GitFork, FolderGit2, Bug, Wrench, Hammer, Blocks, Puzzle, Workflow, Waypoints, Network, Server, Database, Cpu, HardDrive, Cloud, Package, Box, Layers, Gauge, Activity, Radar
+Design & Creative: Palette, Brush, PaintBucket, PenTool, PencilRuler, Ruler, DraftingCompass, SwatchBook, Wand2, Type, Highlighter, Image, Camera, Video, Film, Music, Music2, AudioLines, LayoutGrid, Columns3, Rows3
+Research & Learning: BookOpen, BookMarked, Library, LibraryBig, GraduationCap, Backpack, Search, ScanSearch, Lightbulb, FlaskConical, Atom, Dna, Microscope, TestTube, School, Telescope
+Business & Finance: Briefcase, Building2, Landmark, Banknote, CreditCard, Wallet, PiggyBank, Coins, DollarSign, Percent, TrendingUp, BarChart3, PieChart, LineChart, Receipt, Ticket, Stamp, Scale, Gavel, Store, Warehouse, Factory
+Travel & Places: Map, MapPinned, MapPin, Route, Navigation, Compass, Plane, PlaneTakeoff, Ship, Anchor, Sailboat, Car, CarFront, Truck, Bus, Bike, TrainFront, Tent, Mountain, MountainSnow, TreePine, Waves, Umbrella, Globe, Sun, Moon, CloudSun, Palmtree
+Health & Wellness: Heart, HeartPulse, Stethoscope, Pill, Syringe, Dna, Dumbbell, Salad, Apple, CupSoda, Activity
+Home & People: Users, UserRound, UsersRound, HeartHandshake, Handshake, Baby, Home, House, KeyRound, Lock, ShieldCheck, Cake, Gift, PartyPopper
+Entertainment & Media: Dices, Trophy, Medal, Target, Gamepad2, Mic, Speech, Headphones, Speaker, Bell, BellRing, Megaphone, Mail, Inbox, Send, MessagesSquare, Quote, Film, Music, Video
+Abstract & Reflective: Compass, Route, Waypoints, Layers, Gem, Star, Flag, Orbit, CircleDot, Rabbit, Feather, Zap, Lightbulb, Workflow, Radar
+`;
+
+const LUCIDE_ICON_RULES = `
+ICON RULES:
+- Pick the single icon whose MEANING matches the ACTUAL SUBJECT of this conversation using the catalog above.
+- Prefer SPECIFIC, thematic icons (e.g. GitBranch for version control, Pill for medicine, Plane for travel) over generic ones.
+- NEVER use Brain, Bot, Robot, Cpu, Sparkles, or Rocket unless the conversation is literally about AI, robotics, hardware, or space — these read as generic and must be avoided by default.
+- For abstract planning / thinking / philosophy topics, prefer the mascot or wayfinding set: Rabbit, Feather, Zap, Compass, Route, Lightbulb.
+- Give every conversation a materially DIFFERENT icon; never reuse an icon just because it felt "safe".
+- Return exactly one icon name in PascalCase, taken ONLY from the catalog.`;
+
 app.post("/api/chat/title", async (req, res) => {
   let p1 = String(req.body?.firstPrompt || "").trim();
   let r1 = String(req.body?.modelResponse || req.body?.assistantMessage || "").trim();
@@ -2939,8 +2962,12 @@ Second prompt (User):
 
 Task:
 1. Name conversation title: Formulate a concise, intelligent, and natural title (2 to 5 words, without quotation marks) summarizing what this conversation is about based on both prompts and the response.
-2. Select Lucide icon: Choose the single best Lucide icon name (PascalCase) that accurately represents the context, domain, or theme of this conversation. Examples of valid Lucide icon names:
-Code, Terminal, Cpu, Bug, GitBranch, GitPullRequest, GitCommit, FileText, FileCode, Database, Sparkles, Brain, Compass, BookOpen, Search, Folder, Settings, Shield, Workflow, Zap, PenTool, Palette, Layers, Globe, Server, MessageSquare, Bot, Key, Lock, Wrench, Package, Rocket, Activity, HelpCircle, Flame, Lightbulb, Music, Video, Image, ListTodo, CheckSquare, BarChart, TrendingUp, Cloud, Wifi, Monitor, Smartphone, Hammer, Box, Coffee, ShoppingCart, DollarSign, HeartPulse, Stethoscope, Briefcase, GraduationCap, MapPin, Calculator, Mail, Atom, Gauge, Sun, Moon, ShieldCheck, TerminalSquare
+2. Select Lucide icon: Choose the single best Lucide icon name (PascalCase) that represents the context, domain, or theme of this conversation.
+
+Available Lucide icon catalog by domain:
+"""${LUCIDE_ICON_CATALOG}"""
+
+${LUCIDE_ICON_RULES}
 
 Return ONLY a valid JSON object in this exact schema, with no additional markdown or commentary:
 {
@@ -2954,7 +2981,12 @@ ${r1 ? `Assistant intro:\n"""${r1.substring(0, 500)}"""` : ""}
 
 Task:
 1. Name conversation title: Formulate a concise, intelligent title (2 to 5 words, no quotation marks).
-2. Select Lucide icon: Choose the single best Lucide icon name in PascalCase (e.g., Code, Terminal, Brain, Cpu, Database, Sparkles, Bug, FileCode, GitBranch, Globe, Server, Bot, Search, Shield, Zap, BookOpen, Palette, Compass, Workflow, Key, Package, Rocket, etc.).
+2. Select Lucide icon: Choose the single best Lucide icon name (PascalCase) that represents the context, domain, or theme of this conversation.
+
+Available Lucide icon catalog by domain:
+"""${LUCIDE_ICON_CATALOG}"""
+
+${LUCIDE_ICON_RULES}
 
 Return ONLY a valid JSON object:
 {
