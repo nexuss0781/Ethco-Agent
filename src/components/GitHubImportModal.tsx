@@ -488,45 +488,56 @@ export const GitHubImportModal: React.FC<GitHubImportModalProps> = ({
           </button>
         </div>
 
-        {/* User Account Bar - Renders Authorized Real Name, Avatar, Username and Intact Auth Gmail */}
+        {/* User Account Bar - Clearly shows GitHub connection state, Authorize action, and intact Auth Gmail */}
         <div className="px-5 py-3 bg-surface border-b border-line-soft flex flex-wrap items-center justify-between gap-3 text-xs">
-          {ghUser || authUser ? (
-            <div className="flex items-center gap-3">
-              {displayAvatar ? (
-                <img
-                  src={displayAvatar}
-                  alt={displayName}
-                  className="w-8 h-8 rounded-xl object-cover border border-teal/40 shrink-0"
-                />
-              ) : (
-                <div className="w-8 h-8 rounded-xl bg-surface-2 border border-teal/40 flex items-center justify-center shrink-0 text-teal font-bold text-xs">
-                  {displayName.charAt(0).toUpperCase()}
-                </div>
-              )}
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-semibold text-xs text-fg">{displayName}</span>
-                  <span className="text-[11px] font-mono text-teal">@{displayUsername}</span>
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-medium bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-                    <ShieldCheck className="w-2.5 h-2.5" /> Authorized
-                  </span>
-                </div>
-                {authEmail && (
-                  <div className="flex items-center gap-1.5 text-[11px] text-fg-muted mt-0.5">
-                    <Mail className="w-3 h-3 text-fg-muted" />
-                    <span className="font-mono text-fg-soft">{authEmail}</span>
+          <div className="flex items-center gap-3 min-w-0">
+            {ghUser || authUser ? (
+              <>
+                {displayAvatar ? (
+                  <img
+                    src={displayAvatar}
+                    alt={displayName}
+                    className="w-8 h-8 rounded-xl object-cover border border-teal/40 shrink-0"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-xl bg-surface-2 border border-teal/40 flex items-center justify-center shrink-0 text-teal font-bold text-xs">
+                    {displayName.charAt(0).toUpperCase()}
                   </div>
                 )}
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-semibold text-xs text-fg">{displayName}</span>
+                    <span className="text-[11px] font-mono text-teal">@{displayUsername}</span>
+                    {ghUser ? (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-medium bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                        <ShieldCheck className="w-2.5 h-2.5" /> Authorized
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-medium bg-amber-500/10 border border-amber-500/20 text-amber-400">
+                        <Lock className="w-2.5 h-2.5" /> GitHub not authorized
+                      </span>
+                    )}
+                  </div>
+                  {authEmail && (
+                    <div className="flex items-center gap-1.5 text-[11px] text-fg-muted mt-0.5">
+                      <Mail className="w-3 h-3 text-fg-muted" />
+                      <span className="font-mono text-fg-soft truncate">{authEmail}</span>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center gap-2 text-fg-muted">
+                <Lock className="w-3.5 h-3.5 text-teal" />
+                <span>
+                  GitHub not connected — <span className="text-fg font-medium">authorize</span> to
+                  browse your repositories.
+                </span>
               </div>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 text-fg-muted">
-              <Lock className="w-3.5 h-3.5 text-teal" />
-              <span>Connect GitHub to browse your private & public repositories</span>
-            </div>
-          )}
+            )}
+          </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {ghUser ? (
               <button
                 onClick={handleDisconnect}
