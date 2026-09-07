@@ -109,11 +109,6 @@ export const GitHubService = {
   // 3. Get Status (reads active token & user info from server or validated client storage)
   async getStatus(): Promise<GitHubStatus> {
     const localToken = this.getLocalToken();
-    let localUser: GitHubUser | null = null;
-    try {
-      const raw = localStorage.getItem('ethco_github_user');
-      if (raw) localUser = JSON.parse(raw);
-    } catch {}
 
     try {
       const res = await fetch('/api/github/status', {
@@ -160,10 +155,8 @@ export const GitHubService = {
       } catch {}
     }
 
-    if (localUser && localUser.login) {
-      return { connected: true, user: localUser, authProvider: 'github' };
-    }
-
+    // No stale cached-user fallback: authorization must be confirmed by the
+    // server or a live GitHub API check — otherwise we'd lie about being connected.
     try {
       localStorage.removeItem('ethco_github_user');
     } catch {}
