@@ -122,8 +122,15 @@ export default function App() {
   // Get active conversation object
   const activeConversation = conversations.find((c) => c.id === activeConversationId);
 
-  // Start new chat
+  // Start new chat — reuse an existing empty "New Chat" conversation so we never
+  // accumulate duplicate blank entries; only create one if none already exists.
   const handleNewChat = () => {
+    const existing = conversations.find((c) => c.messages.length === 0);
+    if (existing) {
+      setActiveConversationId(existing.id);
+      StorageService.setActiveConversationId(existing.id);
+      return;
+    }
     const newConvo = StorageService.createNewConversation('New Chat', "auto");
     setConversations(StorageService.getLocalConversations());
     setActiveConversationId(newConvo.id);
@@ -184,9 +191,16 @@ export default function App() {
 
     // If no active conversation or active has no messages, ensure target convo exists
     if (!targetConvo) {
-      targetConvo = StorageService.createNewConversation('New Chat', "auto");
-      isBrandNew = true;
-      setActiveConversationId(targetConvo.id);
+      const existingEmpty = conversations.find((c) => c.messages.length === 0);
+      if (existingEmpty) {
+        targetConvo = existingEmpty;
+        setActiveConversationId(existingEmpty.id);
+        StorageService.setActiveConversationId(existingEmpty.id);
+      } else {
+        targetConvo = StorageService.createNewConversation('New Chat', "auto");
+        isBrandNew = true;
+        setActiveConversationId(targetConvo.id);
+      }
     }
 
     const assistantPlaceholderId = 'msg_ast_' + Date.now();

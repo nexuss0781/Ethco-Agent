@@ -87,6 +87,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
     const olderList: Conversation[] = [];
 
     for (const c of filteredConversations) {
+      // Empty "New Chat" conversations are just the empty-state interface, not
+      // real history — keep them out of the sidebar so they never accumulate or
+      // look like duplicates.
+      if (!Array.isArray(c.messages) || c.messages.length === 0) continue;
+
       if (c.isPinned && !searchQuery.trim()) {
         pinnedList.push(c);
         continue;
