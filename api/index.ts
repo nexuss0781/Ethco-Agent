@@ -1972,7 +1972,14 @@ app.get("/api/github/login", (req, res) => {
   const redirectUri = `${origin}/api/github/callback`;
 
   if (!clientId) {
-    return res.status(400).send("GITHUB_CLIENT_ID is not configured in environment variables.");
+    // No direct GITHUB_CLIENT_ID configured → use the centralized GitHub authorization
+    // flow via Nexuss Auth (same as /api/github/auth-url) instead of erroring out.
+    const projectId = process.env.NEXUSS_AUTH_PROJECT_ID || process.env.VITE_NEXUSS_AUTH_PROJECT_ID || "ethco-agents";
+    const authUrl = (process.env.NEXUSS_AUTH_URL || process.env.VITE_NEXUSS_AUTH_URL || "https://nexuss-auth.vercel.app").replace(/\/+$/, "");
+    const configuredRedirect = process.env.NEXUSS_AUTH_REDIRECT_URI || process.env.VITE_NEXUSS_AUTH_REDIRECT_URI || "";
+    const nexussRedirectUri = configuredRedirect && !configuredRedirect.endsWith("/api/github/callback") ? configuredRedirect : `${origin}/api/auth/callback`;
+    const targetUrl = `${authUrl}/oauth/start/github?project_id=${encodeURIComponent(projectId)}&redirect_uri=${encodeURIComponent(nexussRedirectUri)}&handoff=1&purpose=github_authorization`;
+    return res.redirect(targetUrl);
   }
 
   const targetUrl = `https://github.com/login/oauth/authorize?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=repo,user`;
