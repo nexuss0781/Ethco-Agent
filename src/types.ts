@@ -28,6 +28,10 @@ export interface Message {
   toolInvocations?: ToolInvocation[];
   isStreaming?: boolean;
   model?: string;
+  /** Edit history for user prompts: every edit version, oldest first. */
+  versions?: string[];
+  /** Index into `versions` for the active branch; default-owned when undefined. */
+  versionIndex?: number;
 }
 
 export interface Conversation {

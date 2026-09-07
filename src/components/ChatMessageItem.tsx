@@ -8,6 +8,9 @@ import {
   RotateCcw,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
+  Pencil,
   Brain,
   FileText,
   User,
@@ -19,19 +22,32 @@ interface ChatMessageItemProps {
   message: Message;
   onRegenerate?: () => void;
   isLatestAssistant?: boolean;
+  onEditMessage?: (messageId: string, newContent: string) => void;
+  onRetryMessage?: (messageId: string) => void;
+  onBranchVersion?: (messageId: string, newIndex: number) => void;
 }
 
 export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
   message,
   onRegenerate,
   isLatestAssistant = false,
+  onEditMessage,
+  onRetryMessage,
+  onBranchVersion,
 }) => {
   const [copied, setCopied] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [thinkingExpanded, setThinkingExpanded] = useState(false);
   const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [editDraft, setEditDraft] = useState('');
 
   const isUser = message.role === 'user';
+
+  const versions = isUser && Array.isArray(message.versions) && message.versions.length > 1
+    ? message.versions
+    : null;
+  const versionIndex = versions ? Math.max(0, Math.min(message.versionIndex ?? versions.length - 1, versions.length - 1)) : null;
 
   // Copy full message content
   const handleCopyMessage = () => {
@@ -45,6 +61,17 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
     navigator.clipboard.writeText(codeText);
     setCopiedCodeId(id);
     setTimeout(() => setCopiedCodeId(null), 2000);
+  };
+
+  const startEdit = () => {
+    setEditDraft(message.content);
+    setEditing(true);
+  };
+
+  const saveEdit = () => {
+    if (!onEditMessage) return;
+    onEditMessage(message.id, editDraft);
+    setEditing(false);
   };
 
   // Text to Speech playback using Web Speech API
@@ -149,16 +176,50 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
           )}
 
           {/* Message Body */}
-          <div
-            className={`text-sm sm:text-[15px] leading-relaxed ${
-              isUser
-                ? 'px-4 py-3 rounded-2xl bg-surface-2 text-fg border border-line max-w-[85%] whitespace-pre-wrap'
-                : 'w-full text-fg'
-            }`}
-          >
-            {isUser ? (
-              message.content
-            ) : (
+          {isUser && editing ? (
+            <div className="w-full max-w-[85%] flex flex-col items-end gap-2">
+              <textarea
+                autoFocus
+                value={editDraft}
+                onChange={(e) => setEditDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') setEditing(false);
+                  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') saveEdit();
+                }}
+                rows={Math.min(8, Math.max(2, editDraft.split('\n').length))}
+                className="w-full resize-y rounded-2xl bg-canvas border border-brand/60 text-fg text-sm sm:text-[15px] leading-relaxed p-3 focus:outline-none focus:ring-2 focus:ring-brand/30"
+                aria-label="Edit prompt"
+              />
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={saveEdit}
+                  className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg bg-brand text-on-brand hover:opacity-90 transition-opacity cursor-pointer"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  Save &amp; Regenerate
+                </button>
+                <button
+                  onClick={() => setEditing(false)}
+                  className="text-xs px-3 py-1.5 rounded-lg bg-surface-2 border border-line text-fg-soft hover:text-fg cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+              {editDraft.trim() === '' && (
+                <span className="text-[11px] text-fg-muted">Empty edit erases this prompt and all later history.</span>
+              )}
+            </div>
+          ) : (
+            <div
+              className={`text-sm sm:text-[15px] leading-relaxed ${
+                isUser
+                  ? 'px-4 py-3 rounded-2xl bg-surface-2 text-fg border border-line max-w-[85%] whitespace-pre-wrap'
+                  : 'w-full text-fg'
+              }`}
+            >
+              {isUser ? (
+                message.content
+              ) : (
               <div className="markdown-body">
                 <ReactMarkdown
                   components={{
@@ -217,6 +278,75 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
               </div>
             )}
           </div>
+          )}
+
+          {/* Version branch chip for edited user prompts */}
+          {isUser && versions && versionIndex !== null && onBranchVersion && (
+            <div className="flex items-center gap-1 mt-1.5 select-none">
+              <button
+                onClick={() => onBranchVersion(message.id, versionIndex - 1)}
+                disabled={versionIndex <= 0}
+                className="flex items-center gap-0.5 text-[11px] px-1.5 py-0.5 rounded-md bg-surface-2 border border-line text-fg-soft hover:text-fg disabled:opacity-35 disabled:cursor-default transition-colors cursor-pointer"
+                title="Previous version"
+              >
+                <ChevronLeft className="w-3 h-3" />
+              </button>
+              <span className="text-[11px] px-2 py-0.5 rounded-md bg-surface border border-line text-fg-muted tabular-nums">
+                {versionIndex + 1}/{versions.length}
+              </span>
+              <button
+                onClick={() => onBranchVersion(message.id, versionIndex + 1)}
+                disabled={versionIndex >= versions.length - 1}
+                className="flex items-center gap-0.5 text-[11px] px-1.5 py-0.5 rounded-md bg-surface-2 border border-line text-fg-soft hover:text-fg disabled:opacity-35 disabled:cursor-default transition-colors cursor-pointer"
+                title="Next version"
+              >
+                <ChevronRight className="w-3 h-3" />
+              </button>
+            </div>
+          )}
+
+          {/* Action Toolbar for User prompts: Edit / Copy / Retry */}
+          {isUser && !editing && (
+            <div className="flex items-center gap-2 mt-2 pt-1 opacity-0 group-hover:opacity-100 transition-opacity text-fg-muted">
+              {onEditMessage && (
+                <button
+                  onClick={startEdit}
+                  className="flex items-center gap-1 text-xs hover:text-fg p-1.5 rounded-md hover:bg-surface transition-colors"
+                  title="Edit prompt"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  <span className="text-[11px]">Edit</span>
+                </button>
+              )}
+              <button
+                onClick={handleCopyMessage}
+                className="flex items-center gap-1 text-xs hover:text-fg p-1.5 rounded-md hover:bg-surface transition-colors"
+                title="Copy prompt"
+              >
+                {copied ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="text-[11px] text-emerald-400">Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5" />
+                    <span className="text-[11px]">Copy</span>
+                  </>
+                )}
+              </button>
+              {onRetryMessage && (
+                <button
+                  onClick={() => onRetryMessage(message.id)}
+                  className="flex items-center gap-1 text-xs hover:text-fg p-1.5 rounded-md hover:bg-surface transition-colors"
+                  title="Retry prompt"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span className="text-[11px]">Retry</span>
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Action Toolbar for Assistant Response */}
           {!isUser && !message.isStreaming && message.content && (

@@ -560,6 +560,99 @@ export default function App() {
     );
   };
 
+  // Resend a specific user prompt (retry) — trims everything after it and regenerates.
+  const handleRetryMessage = (messageId: string) => {
+    const convo = StorageService.getLocalConversations().find((c) => c.id === activeConversationId) || activeConversation;
+    if (!convo) return;
+    const idx = convo.messages.findIndex((m) => m.id === messageId && m.role === 'user');
+    if (idx === -1) return;
+    const userMessage = convo.messages[idx];
+    const trimmedMessages = convo.messages.slice(0, idx + 1);
+    const updatedConvo: Conversation = { ...convo, messages: trimmedMessages };
+    StorageService.updateConversation(convo.id, updatedConvo);
+    setConversations(StorageService.getLocalConversations());
+    handleSendMessage(
+      userMessage.content,
+      userMessage.attachments || [],
+      actionMode,
+      true,
+      trimmedMessages
+    );
+  };
+
+  // Edit a user prompt: commit an edit (new branch version), trim everything after
+  // it, and regenerate with the new text. An EMPTY edit erases the prompt and all
+  // remaining history from that point (empty-state interface, not persisted).
+  const handleEditMessage = (messageId: string, newContent: string) => {
+    const convo = StorageService.getLocalConversations().find((c) => c.id === activeConversationId) || activeConversation;
+    if (!convo) return;
+    const idx = convo.messages.findIndex((m) => m.id === messageId && m.role === 'user');
+    if (idx === -1) return;
+    const original = convo.messages[idx];
+
+    // Empty edit => wipe this prompt and all remaining history after it.
+    if (!newContent.trim()) {
+      const remaining = convo.messages.slice(0, idx);
+      const updatedConvo: Conversation = { ...convo, messages: remaining, updatedAt: Date.now() };
+      StorageService.updateConversation(convo.id, updatedConvo);
+      setConversations(StorageService.getLocalConversations());
+      return;
+    }
+
+    const versions = original.versions && original.versions.length > 0
+      ? [...original.versions, newContent]
+      : [original.content, newContent];
+    const versionIndex = versions.length - 1;
+    const updatedUser: Message = {
+      ...original,
+      content: newContent,
+      versions,
+      versionIndex,
+    };
+    const trimmedMessages = [...convo.messages.slice(0, idx), updatedUser];
+    const updatedConvo: Conversation = { ...convo, messages: trimmedMessages, updatedAt: Date.now() };
+    StorageService.updateConversation(convo.id, updatedConvo);
+    setConversations(StorageService.getLocalConversations());
+    handleSendMessage(
+      newContent,
+      updatedUser.attachments || [],
+      actionMode,
+      true,
+      trimmedMessages
+    );
+  };
+
+  // Switch to an older/newer prompt version (branch). Trims everything after and
+  // regenerates with that version — no warnings, instant.
+  const handleBranchVersion = (messageId: string, newIndex: number) => {
+    const convo = StorageService.getLocalConversations().find((c) => c.id === activeConversationId) || activeConversation;
+    if (!convo) return;
+    const idx = convo.messages.findIndex((m) => m.id === messageId && m.role === 'user');
+    if (idx === -1) return;
+    const original = convo.messages[idx];
+    const versions = original.versions;
+    if (!versions || versions.length < 2) return;
+    const clamped = Math.max(0, Math.min(newIndex, versions.length - 1));
+    if (clamped === original.versionIndex) return;
+    const updatedUser: Message = {
+      ...original,
+      content: versions[clamped],
+      versions,
+      versionIndex: clamped,
+    };
+    const trimmedMessages = [...convo.messages.slice(0, idx), updatedUser];
+    const updatedConvo: Conversation = { ...convo, messages: trimmedMessages, updatedAt: Date.now() };
+    StorageService.updateConversation(convo.id, updatedConvo);
+    setConversations(StorageService.getLocalConversations());
+    handleSendMessage(
+      versions[clamped],
+      updatedUser.attachments || [],
+      actionMode,
+      true,
+      trimmedMessages
+    );
+  };
+
   const hasMessages = Boolean(activeConversation && activeConversation.messages.length > 0);
 
   // Extract active plan / todos if agent planned tasks in this conversation
@@ -660,6 +753,9 @@ export default function App() {
               messages={activeConversation?.messages || []}
               onRegenerate={handleRegenerate}
               isLoading={isLoading}
+              onEditMessage={handleEditMessage}
+              onRetryMessage={handleRetryMessage}
+              onBranchVersion={handleBranchVersion}
             />
           )}
 

@@ -7,12 +7,18 @@ interface ChatMessageListProps {
   messages: Message[];
   onRegenerate: () => void;
   isLoading: boolean;
+  onEditMessage?: (messageId: string, newContent: string) => void;
+  onRetryMessage?: (messageId: string) => void;
+  onBranchVersion?: (messageId: string, newIndex: number) => void;
 }
 
 export const ChatMessageList: React.FC<ChatMessageListProps> = ({
   messages,
   onRegenerate,
   isLoading,
+  onEditMessage,
+  onRetryMessage,
+  onBranchVersion,
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
@@ -58,6 +64,9 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = ({
                 message={message}
                 isLatestAssistant={isLatestAssistant}
                 onRegenerate={onRegenerate}
+                onEditMessage={onEditMessage}
+                onRetryMessage={onRetryMessage}
+                onBranchVersion={onBranchVersion}
               />
             );
           })}
