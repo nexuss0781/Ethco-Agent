@@ -286,24 +286,7 @@ export const GitHubService = {
     return data.user;
   },
 
-  // 12. Native GitHub Client Config
-  async getClientConfig(): Promise<{ clientId: string; clientSecretConfigured: boolean }> {
-    const res = await fetch('/api/github/client-config');
-    if (!res.ok) return { clientId: '', clientSecretConfigured: false };
-    return res.json();
-  },
-
-  async saveClientConfig(clientId: string, clientSecret: string): Promise<void> {
-    const res = await fetch('/api/github/client-config', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clientId, clientSecret }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to save GitHub client configuration');
-  },
-
-  // 13. Local Selected Repos for AI Agent
+  // 12. Local Selected Repos for AI Agent
   getSelectedRepos(): SelectedRepoContext[] {
     try {
       const raw = localStorage.getItem('claude_selected_repos');

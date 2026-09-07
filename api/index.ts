@@ -1912,105 +1912,34 @@ function getStoredGitHubToken(req?: express.Request, explicitUserId?: string): {
 
 // 1. Get GitHub Repository Authorization URL via Nexuss Auth (Section 12 of INTEGRATION.md)
 // 1. Get GitHub Repository Authorization URL (Native OAuth or Handoff fallback)
-const GITHUB_OAUTH_CONFIG_FILE = path.join(process.cwd(), "data", "github_oauth_config.json");
-
-function loadGitHubOAuthConfig() {
-  try {
-    if (fs.existsSync(GITHUB_OAUTH_CONFIG_FILE)) {
-      return JSON.parse(fs.readFileSync(GITHUB_OAUTH_CONFIG_FILE, "utf-8"));
-    }
-  } catch {}
-  return {
-    clientId: process.env.GITHUB_CLIENT_ID || "",
-    clientSecret: process.env.GITHUB_CLIENT_SECRET || "",
-  };
-}
-
-function saveGitHubOAuthConfig(config: { clientId: string; clientSecret: string }) {
-  try {
-    if (!fs.existsSync(path.dirname(GITHUB_OAUTH_CONFIG_FILE))) {
-      fs.mkdirSync(path.dirname(GITHUB_OAUTH_CONFIG_FILE), { recursive: true });
-    }
-    fs.writeFileSync(GITHUB_OAUTH_CONFIG_FILE, JSON.stringify(config, null, 2), "utf-8");
-  } catch (e) {
-    console.error("Failed to save GitHub OAuth config:", e);
-  }
-}
-
-app.get("/api/github/client-config", (req, res) => {
-  const config = loadGitHubOAuthConfig();
-  res.json({
-    clientId: config.clientId || "",
-    clientSecretConfigured: Boolean(config.clientSecret),
-  });
-});
-
-app.post("/api/github/client-config", (req, res) => {
-  try {
-    const { clientId, clientSecret } = req.body;
-    const current = loadGitHubOAuthConfig();
-    const updated = {
-      clientId: clientId !== undefined ? clientId.trim() : current.clientId,
-      clientSecret: clientSecret !== undefined ? clientSecret.trim() : current.clientSecret,
-    };
-    saveGitHubOAuthConfig(updated);
-    res.json({ success: true, clientId: updated.clientId });
-  } catch (err: any) {
-    res.status(400).json({ error: err.message || "Failed to save config" });
-  }
-});
-
-// 1. Direct GitHub Login Redirect
+// 1. GitHub Login — always routed through central Nexuss Auth (no direct GitHub OAuth app)
 app.get("/api/github/login", (req, res) => {
-  const config = loadGitHubOAuthConfig();
-  const clientId = process.env.GITHUB_CLIENT_ID || config.clientId;
-
   const host = req.headers["x-forwarded-host"] || req.headers.host || "localhost:3000";
   const proto = req.headers["x-forwarded-proto"] || "https";
   const defaultAppUrl = process.env.NODE_ENV === "production" ? "https://ethco-agent.vercel.app" : `${proto}://${host}`;
   const origin = (req.query.origin as string) || process.env.APP_URL || defaultAppUrl;
-  const redirectUri = `${origin}/api/github/callback`;
 
-  if (!clientId) {
-    // No direct GITHUB_CLIENT_ID configured → use the centralized GitHub authorization
-    // flow via Nexuss Auth (same as /api/github/auth-url) instead of erroring out.
-    const projectId = process.env.NEXUSS_AUTH_PROJECT_ID || process.env.VITE_NEXUSS_AUTH_PROJECT_ID || "ethco-agents";
-    const authUrl = (process.env.NEXUSS_AUTH_URL || process.env.VITE_NEXUSS_AUTH_URL || "https://nexuss-auth.vercel.app").replace(/\/+$/, "");
-    const configuredRedirect = process.env.NEXUSS_AUTH_REDIRECT_URI || process.env.VITE_NEXUSS_AUTH_REDIRECT_URI || "";
-    const nexussRedirectUri = configuredRedirect && !configuredRedirect.endsWith("/api/github/callback") ? configuredRedirect : `${origin}/api/auth/callback`;
-    const targetUrl = `${authUrl}/oauth/start/github?project_id=${encodeURIComponent(projectId)}&redirect_uri=${encodeURIComponent(nexussRedirectUri)}&handoff=1&purpose=github_authorization`;
-    return res.redirect(targetUrl);
-  }
-
-  const targetUrl = `https://github.com/login/oauth/authorize?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=repo,user`;
-  res.redirect(targetUrl);
-});
-
-// 2. Get GitHub Repository Authorization URL
-app.get("/api/github/auth-url", (req, res) => {
-  const config = loadGitHubOAuthConfig();
-  const clientId = process.env.GITHUB_CLIENT_ID || config.clientId;
-
-  const host = req.headers["x-forwarded-host"] || req.headers.host || "localhost:3000";
-  const proto = req.headers["x-forwarded-proto"] || "https";
-  const defaultAppUrl = process.env.NODE_ENV === "production" ? "https://ethco-agent.vercel.app" : `${proto}://${host}`;
-  const origin = (req.query.origin as string) || process.env.APP_URL || defaultAppUrl;
-  const redirectUri = `${origin}/api/github/callback`;
-
-  if (clientId) {
-    const targetUrl = `https://github.com/login/oauth/authorize?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=repo,user`;
-    return res.json({
-      url: targetUrl,
-      configured: true,
-      redirectUri,
-    });
-  }
-
-  // Central GitHub repository authorization flow via Nexuss Auth
   const projectId = process.env.NEXUSS_AUTH_PROJECT_ID || process.env.VITE_NEXUSS_AUTH_PROJECT_ID || "ethco-agents";
   const authUrl = (process.env.NEXUSS_AUTH_URL || process.env.VITE_NEXUSS_AUTH_URL || "https://nexuss-auth.vercel.app").replace(/\/+$/, "");
   const configuredRedirect = process.env.NEXUSS_AUTH_REDIRECT_URI || process.env.VITE_NEXUSS_AUTH_REDIRECT_URI || "";
-  const nexussRedirectUri = configuredRedirect && !configuredRedirect.endsWith("/api/github/callback") ? configuredRedirect : `${origin}/api/auth/callback`;
+  const nexussRedirectUri = configuredRedirect ? configuredRedirect : `${origin}/api/auth/callback`;
+
+  const targetUrl = `${authUrl}/oauth/start/github?project_id=${encodeURIComponent(projectId)}&redirect_uri=${encodeURIComponent(nexussRedirectUri)}&handoff=1&purpose=github_authorization`;
+  res.redirect(targetUrl);
+});
+
+// 2. Get GitHub Repository Authorization URL (Nexuss Auth controlled)
+app.get("/api/github/auth-url", (req, res) => {
+  const host = req.headers["x-forwarded-host"] || req.headers.host || "localhost:3000";
+  const proto = req.headers["x-forwarded-proto"] || "https";
+  const defaultAppUrl = process.env.NODE_ENV === "production" ? "https://ethco-agent.vercel.app" : `${proto}://${host}`;
+  const origin = (req.query.origin as string) || process.env.APP_URL || defaultAppUrl;
+
+  const projectId = process.env.NEXUSS_AUTH_PROJECT_ID || process.env.VITE_NEXUSS_AUTH_PROJECT_ID || "ethco-agents";
+  const authUrl = (process.env.NEXUSS_AUTH_URL || process.env.VITE_NEXUSS_AUTH_URL || "https://nexuss-auth.vercel.app").replace(/\/+$/, "");
+  const configuredRedirect = process.env.NEXUSS_AUTH_REDIRECT_URI || process.env.VITE_NEXUSS_AUTH_REDIRECT_URI || "";
+  const nexussRedirectUri = configuredRedirect ? configuredRedirect : `${origin}/api/auth/callback`;
+
   const targetUrl = `${authUrl}/oauth/start/github?project_id=${encodeURIComponent(projectId)}&redirect_uri=${encodeURIComponent(nexussRedirectUri)}&handoff=1&purpose=github_authorization`;
 
   return res.json({
@@ -2020,203 +1949,8 @@ app.get("/api/github/auth-url", (req, res) => {
   });
 });
 
-// 2. GitHub Repository Authorization Callback (Direct GitHub OAuth Code Exchange)
-const githubCallbackHandler = async (req: express.Request, res: express.Response) => {
-  const code = req.query.code as string;
-
-  if (!code) {
-    return res.status(400).send("Missing authorization code from GitHub callback.");
-  }
-
-  try {
-    const config = loadGitHubOAuthConfig();
-    const clientId = process.env.GITHUB_CLIENT_ID || config.clientId;
-    const clientSecret = process.env.GITHUB_CLIENT_SECRET || config.clientSecret;
-
-    if (!clientId || !clientSecret) {
-      return res.status(400).send("GitHub Client ID and Client Secret are not configured in environment variables.");
-    }
-
-    const host = req.headers["x-forwarded-host"] || req.headers.host || "localhost:3000";
-    const proto = req.headers["x-forwarded-proto"] || "https";
-    const defaultAppUrl = process.env.NODE_ENV === "production" ? "https://ethco-agent.vercel.app" : `${proto}://${host}`;
-    const origin = process.env.APP_URL || defaultAppUrl;
-    const redirectUri = `${origin}/api/github/callback`;
-
-    const tokenRes = await fetch("https://github.com/login/oauth/access_token", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "User-Agent": "Ethco-Dev-Workspace",
-      },
-      body: JSON.stringify({
-        client_id: clientId,
-        client_secret: clientSecret,
-        code,
-        redirect_uri: redirectUri,
-      }),
-    });
-
-    const tokenData = await tokenRes.json();
-    const accessToken = tokenData.access_token;
-    if (!accessToken) {
-      return res.status(400).send(`Failed to obtain access token from GitHub: ${JSON.stringify(tokenData)}`);
-    }
-
-    const userRes = await fetch("https://api.github.com/user", {
-      headers: {
-        "Authorization": `Bearer ${accessToken}`,
-        "Accept": "application/vnd.github.v3+json",
-        "User-Agent": "Ethco-Dev-Workspace",
-      },
-    });
-
-    if (!userRes.ok) {
-      return res.status(400).send("Failed to fetch GitHub user profile with access token.");
-    }
-
-    const githubUser = await userRes.json();
-    const userId = getActiveUserIdentifier(req);
-    const tokens = loadGitHubTokens();
-    const tokenRecord = {
-      token: accessToken,
-      user: {
-        id: githubUser.id || 1,
-        login: githubUser.login || "user",
-        name: githubUser.name || githubUser.login || "GitHub User",
-        avatar_url: githubUser.avatar_url || "",
-        html_url: githubUser.html_url || "",
-        public_repos: githubUser.public_repos || 0,
-        total_private_repos: githubUser.total_private_repos || 0,
-      },
-      authProvider: "github-oauth",
-      updatedAt: new Date().toISOString(),
-    };
-    tokens[userId] = tokenRecord;
-    tokens["default_user"] = tokenRecord;
-    tokens["latest"] = tokenRecord;
-    if (githubUser.login) {
-      tokens[githubUser.login] = tokenRecord;
-    }
-    saveGitHubTokens(tokens);
-
-    // Set cookie so all browser API calls include it
-    res.cookie("ethco_github_token", accessToken, {
-      httpOnly: false,
-      secure: true,
-      sameSite: "lax",
-      maxAge: 30 * 24 * 60 * 60 * 1000,
-      path: "/",
-    });
-
-    res.setHeader("Content-Type", "text/html; charset=utf-8");
-    return res.send(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>GitHub Authorized</title>
-          <style>
-            body {
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-              background: #0d0d0d;
-              color: #ecece7;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              min-height: 100vh;
-              margin: 0;
-              padding: 20px;
-              box-sizing: border-box;
-            }
-            .card {
-              background: #141412;
-              padding: 32px 28px;
-              border-radius: 16px;
-              border: 1px solid #262626;
-              text-align: center;
-              max-width: 360px;
-              width: 100%;
-              box-shadow: 0 20px 40px rgba(0,0,0,0.6);
-            }
-            .avatar {
-              width: 64px;
-              height: 64px;
-              border-radius: 50%;
-              border: 2px solid #d97757;
-              margin: 0 auto 16px;
-              display: block;
-              object-fit: cover;
-            }
-            h2 { color: #ffffff; margin: 0 0 8px 0; font-size: 18px; }
-            p { font-size: 13px; color: #85857a; margin: 0 0 20px 0; line-height: 1.4; }
-            .btn {
-              display: inline-block;
-              width: 100%;
-              padding: 12px 16px;
-              background: #d97757;
-              color: #ffffff;
-              font-weight: 600;
-              font-size: 14px;
-              border-radius: 10px;
-              text-decoration: none;
-              border: none;
-              cursor: pointer;
-              box-sizing: border-box;
-            }
-            .btn:hover { background: #c66647; }
-          </style>
-        </head>
-        <body>
-          <div class="card">
-            ${githubUser.avatar_url ? `<img src="${githubUser.avatar_url}" class="avatar" alt="${githubUser.login}">` : ''}
-            <h2>GitHub Connected!</h2>
-            <p>Authorized as <strong style="color: #ffffff;">@${githubUser.login || 'user'}</strong></p>
-            <a href="/app" class="btn" id="continue-btn">Continue to Workspace</a>
-          </div>
-          <script>
-            const userData = ${JSON.stringify(githubUser)};
-            const token = ${JSON.stringify(accessToken)};
-
-            try {
-              localStorage.setItem('ethco_github_user', JSON.stringify(userData));
-              localStorage.setItem('ethco_github_token', token);
-            } catch (e) {}
-
-            try {
-              const bc = new BroadcastChannel('github_oauth_channel');
-              bc.postMessage({ type: 'OAUTH_AUTH_SUCCESS', provider: 'github', user: userData, token: token });
-            } catch (e) {}
-
-            let openerNotified = false;
-            try {
-              if (window.opener && !window.opener.closed) {
-                window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS', provider: 'github', user: userData, token: token }, '*');
-                openerNotified = true;
-                setTimeout(() => {
-                  try { window.close(); } catch (e) {}
-                }, 600);
-              }
-            } catch (e) {}
-
-            if (!openerNotified) {
-              setTimeout(() => {
-                window.location.href = '/app?github_auth=success';
-              }, 1000);
-            }
-          </script>
-        </body>
-      </html>
-    `);
-  } catch (err: any) {
-    console.error("GitHub OAuth error:", err);
-    return res.status(500).send(`GitHub OAuth error: ${err.message || err}`);
-  }
-};
-
-app.get(["/api/github/callback", "/api/github/callback/"], githubCallbackHandler);
+// GitHub authorization is fully controlled by Nexuss Auth — the OAuth handoff is
+// finalized by /api/auth/callback, which stores the github_grant_token and GitHub profile.
 
 // 4. GitHub Connection Status (checks actual GitHub OAuth token & profile)
 app.get("/api/github/status", async (req, res) => {
