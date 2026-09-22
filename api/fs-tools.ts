@@ -86,10 +86,6 @@ function lineOptions(args: Record<string, any>): Record<string, any> {
   return typeof args.limit === "number" ? { head: args.limit } : {};
 }
 
-function globOptions(pathValue: unknown): Record<string, any> {
-  return { cwd: workspaceCwd(pathValue) };
-}
-
 async function listTree(directory: string, depth = 0): Promise<any[]> {
   if (depth > MAX_DEPTH) return [];
   const entries = await list(directory);
@@ -155,7 +151,9 @@ export async function executeFsTool(name: string, args: Record<string, any>): Pr
 
       case "glob": {
         if (typeof args.pattern !== "string" || !args.pattern) return { error: "pattern is required and must be a string." };
-        const matches = await glob(args.pattern, globOptions(args.path));
+        const searchPath = typeof args.path === "string" && args.path.trim() ? args.path.replace(/\/+$/, "") : ".";
+        const pattern = searchPath === "." ? args.pattern : `${searchPath}/${args.pattern.replace(/^\/+/, "")}`;
+        const matches = await glob(pattern);
         return { pattern: args.pattern, path: args.path || ".", totalMatches: matches.length, matches };
       }
 
