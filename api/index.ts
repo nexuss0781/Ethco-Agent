@@ -7,10 +7,6 @@ import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import jwt from "jsonwebtoken";
 import {
-  MYCOMPUTER_TOOL_DECLARATIONS,
-  executeMyComputerTool,
-} from "./mycomputer.js";
-import {
   FS_TOOL_DECLARATIONS,
   FS_TOOL_NAMES,
   executeFsTool,
@@ -157,7 +153,6 @@ export const WORKSPACE_TOOL_DECLARATIONS: ToolDefinition[] = [
 
 export const ALL_TOOL_DECLARATIONS: ToolDefinition[] = [
   ...WORKSPACE_TOOL_DECLARATIONS,
-  ...MYCOMPUTER_TOOL_DECLARATIONS,
 ];
 
 export const WORKSPACE_TOOL_NAMES = WORKSPACE_TOOL_DECLARATIONS.map((t) => t.name).join(", ");
@@ -347,9 +342,6 @@ export async function executeWorkspaceTool(name: string, args: Record<string, an
       }
 
       default:
-        if (name.startsWith("mc_")) {
-          return executeMyComputerTool(name, args);
-        }
         return { error: `Tool "${name}" is not implemented or recognized.` };
     }
   } catch (err: any) {
@@ -2320,10 +2312,10 @@ app.post("/api/chat/stream", async (req, res) => {
     let modeDirective = "";
     if (actionMode === "planning") {
       modeDirective = `\n\n## ACTIVE MODE: PLANNING
-You are in Planning Mode. Structure your analysis with deep architectural clarity, systematic step-by-step roadmaps, edge-case breakdowns, component interaction diagrams (ASCII/markdown), and validation strategies before writing final code. Provide clear choices and trade-offs. You have access to workspace tools (${WORKSPACE_TOOL_NAMES}) plus virtual-filesystem tools (mc_write, mc_read, mc_append, mc_list, mc_stat, mc_mkdir, mc_rm, mc_mv, mc_cp, mc_fsync) to inspect or draft specs.`;
+You are in Planning Mode. Structure your analysis with deep architectural clarity, systematic step-by-step roadmaps, edge-case breakdowns, component interaction diagrams (ASCII/markdown), and validation strategies before writing final code. Provide clear choices and trade-offs. You have access to workspace tools (${WORKSPACE_TOOL_NAMES}) to inspect or draft specs.`;
     } else if (actionMode === "build") {
       modeDirective = `\n\n## ACTIVE MODE: BUILD
-You are in Build Mode. Focus on concrete, production-ready implementation, complete file artifacts, clean modular code without placeholders, and direct actionable solutions with robust error handling. You have access to workspace tools (${WORKSPACE_TOOL_NAMES}) plus virtual-filesystem tools (mc_write, mc_read, mc_append, mc_list, mc_stat, mc_mkdir, mc_rm, mc_mv, mc_cp, mc_fsync) to directly read, create, update files, execute terminal commands, or edit the remote my-computer virtual disk.`;
+	You are in Build Mode. Focus on concrete, production-ready implementation, complete file artifacts, clean modular code without placeholders, and direct actionable solutions with robust error handling. You have access to workspace tools (${WORKSPACE_TOOL_NAMES}) to directly read, create, update files, and execute terminal commands.`;
     }
 
     // Selected Repositories Context Directive for the AI Agent
